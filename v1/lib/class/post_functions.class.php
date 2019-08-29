@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 ob_start();
 
@@ -8,18 +8,20 @@ require('quote_general_new.class.php');
 
 ob_end_clean();
 
-class post_functions extends general_functions{
-    function __construct(){
-		$this->data	= ($_POST)?$_POST:$this->getInputs('php://input');
+class post_functions extends general_functions
+{
+	function __construct()
+	{
+		$this->data	= ($_POST) ? $_POST : $this->getInputs('php://input');
 		$this->api 	= $this->data['token'];
 	}
-    public function postFunctions($function,$apikey){
-        $format=$this->data['format'];
-        $response = $this->$function();
-		$countResponse=count($response); 
-		$this->logsave(json_encode($filters),json_encode($response),$function,'4',$apikey);
-		($countResponse!=0)?$this->response($response,'',$format):$this->getError(9015,'',$format);
-		
+	public function postFunctions($function, $apikey)
+	{
+		$format = $this->data['format'];
+		$response   = $this->$function($_POST, $apikey);
+		$countResponse = count($response);
+		$this->logsave(array_merge($_POST, $_GET), json_encode($response), $function, '4', $apikey);
+		($countResponse != 0) ? $this->response($response, '', $format) : $this->getError(9015, '', $format);
 	}
 	public function sendQuote()
 	{
@@ -34,12 +36,12 @@ class post_functions extends general_functions{
 		$emailQuote	 = $this->data['email'];
 		$nameQuote	 = $this->data['name'];
 		$agesQuote 	 = $this->data['ages'];
-		$passQuote 	 = count(explode(',',$agesQuote));
+		$passQuote 	 = count(explode(',', $agesQuote));
 		$dataValida			= [
 			"6027"  => $origin,
 			'6036'	=> $nameQuote,
 			'4004'	=> $emailQuote,
-			"1080"  => !empty($destination)?in_array($destination,[1,2,9]):true,
+			"1080"  => !empty($destination) ? in_array($destination, [1, 2, 9]) : true,
 			"6029"  => $startDate,
 			"9094"  => $category,
 			"6030"  => $endDate,
@@ -51,7 +53,7 @@ class post_functions extends general_functions{
 		$validatEmpty		= $this->validatEmpty($dataValida);
 		$departureTrans     = $this->transformerDate($startDate);
 		$arrivalTrans     	= $this->transformerDate($endDate);
-		$daysByPeople 		= $this->betweenDates($departureTrans ,$arrivalTrans);
+		$daysByPeople 		= $this->betweenDates($departureTrans, $arrivalTrans);
 		$dataQuote = [
 			'plan_tipo'	=> $category,
 			'PlanSel'	=> $plans,
@@ -66,12 +68,12 @@ class post_functions extends general_functions{
 			'email_cliente'	=> $emailQuote,
 			'idBroker'	=> '118',
 			'type'		=> 'enviar_correo',
-			'selectLanguage'=>'es'
+			'selectLanguage' => 'es'
 		];
-		$link 		= $this->selectDynamic(['prefix'=>$prefix],'clients',"data_activa='si'",['web'])[0]['web'];
-		$linkQuote 	= $link."/app/pages/async_cotizador.php";
+		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkQuote 	= $link . "/app/pages/async_cotizador.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
-		$resp = $this->curlGeneral($linkQuote,$dataQuote,$headers,'GET');
+		$resp = $this->curlGeneral($linkQuote, $dataQuote, $headers, 'GET');
 		return [
 			'resp'      => $resp,
 			'status'	=> 'OK'
@@ -85,7 +87,7 @@ class post_functions extends general_functions{
 		];
 		$validatEmpty		= $this->validatEmpty($dataValida);
 		$data = [
-			'querys'=>"SELECT
+			'querys' => "SELECT
 			parameter_key,
 			parameter_value
 		FROM
@@ -95,21 +97,21 @@ class post_functions extends general_functions{
 		ORDER BY
 			parameter_key ASC"
 		];
-		$link 		= $this->selectDynamic(['prefix'=>$prefix],'clients',"data_activa='si'",['web'])[0]['web'];
-		$linkParam 	= $link."/app/api/selectDynamic";
+		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
-		$response = $this->curlGeneral($linkParam,json_encode($data),$headers);
-		if (empty ($response)) {
+		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+		if (empty($response)) {
 			$data = [
-				'querys'=>"INSERT INTO parameters (parameter_key, parameter_value, description) VALUES
+				'querys' => "INSERT INTO parameters (parameter_key, parameter_value, description) VALUES
 				('DOWNLOAD_PDF_VOUCHER_APP', 'Y', 'APPIONIC'),
 				('SEND_EMAIL_APP', 'Y', 'APPIONIC'),
 				('SEND_SMS_APP', 'Y', 'APPIONIC')"
 			];
-			$response = $this->curlGeneral($linkParam,json_encode($data),$headers);
-			
+			$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+
 			$data = [
-				'querys'=>"SELECT
+				'querys' => "SELECT
 				parameter_key,
 				parameter_value
 			FROM
@@ -119,21 +121,21 @@ class post_functions extends general_functions{
 			ORDER BY
 				parameter_key ASC"
 			];
-			$response = $this->curlGeneral($linkParam,json_encode($data),$headers);
+			$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
 			return json_decode($response);
-		}else{
+		} else {
 			return json_decode($response);
 		}
-		 
 	}
-	public function postInformAgency(){
+	public function postInformAgency()
+	{
 		$prefix   = $this->data['prefix'];
 		$dataValida			= [
 			'9092'	=> $prefix
 		];
 		$validatEmpty		= $this->validatEmpty($dataValida);
 		$data = [
-			'querys'=>"SELECT
+			'querys' => "SELECT
 						parameter_key,
 						parameter_value,
 						NAME,
@@ -172,11 +174,11 @@ class post_functions extends general_functions{
 					ORDER BY
 						parameter_key ASC"
 		];
-		$link 		= $this->selectDynamic(['prefix'=>$prefix],'clients',"data_activa='si'",['web'])[0]['web'];
-		$linkParam 	= $link."/app/api/selectDynamic";
+		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
-		$response = $this->curlGeneral($linkParam,json_encode($data),$headers);
-		return json_decode($response,$response2) ;
+		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+		return json_decode($response, $response2);
 	}
 	public function sendSms()
 	{
@@ -201,7 +203,7 @@ class post_functions extends general_functions{
 		if (empty($name)) {
 			//$message = "$nomClient le desea un Feliz Viaje que inicia el $salida, su Numero de Voucher es $code. Puede recuperar una copia de la misma aqui $linkVoucher";
 			$message = "$nomClient le desea Feliz Viaje, inicio:$salida, Voucher:$code $linkVoucher";
-		}else {
+		} else {
 			$message = "$nomClient le desea Feliz Viaje, inicio:$salida, Voucher:$code $linkVoucher";
 		}
 		$dataSms = [
@@ -214,14 +216,15 @@ class post_functions extends general_functions{
 		$dataSmsResponse = [
 			"type"			=> "Response_sms",
 		];
-		$link 		= $this->selectDynamic(['prefix'=>$prefix],'clients',"data_activa='si'",['web'])[0]['web'];
-		$linkSms 	= $link."/app/admin/sms.php";
+		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkSms 	= $link . "/app/admin/sms.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
-		$response = $this->curlGeneral($linkSms,http_build_query($dataSms),$headers) ;
-		$this->curlGeneral($linkSms,http_build_query($dataSmsResponse),$headers);
+		$response = $this->curlGeneral($linkSms, http_build_query($dataSms), $headers);
+		$this->curlGeneral($linkSms, http_build_query($dataSmsResponse), $headers);
 		return $response;
 	}
-	public function sendVouchEmail(){
+	public function sendVouchEmail()
+	{
 		$id_orden = $this->data['id_orden'];
 		$email    = $this->data['email'];
 		$prefix   = $this->data['prefix'];
@@ -235,116 +238,130 @@ class post_functions extends general_functions{
 			"id_orden" => $id_orden,
 			"email"    => $email
 		];
-		$link 		= $this->selectDynamic(['prefix'=>$prefix],'clients',"data_activa='si'",['web'])[0]['web'];
-		$linkEmail 	= $link."/app/reports/email_compra.php";
+		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkEmail 	= $link . "/app/reports/email_compra.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
-		$response = $this->curlGeneral($linkEmail,http_build_query($dataEmail),$headers) ;
+		$response = $this->curlGeneral($linkEmail, http_build_query($dataEmail), $headers);
 		return $response;
 	}
-	public function loginIls(){
+	public function loginIls()
+	{
 		$user 		= $this->data['user'];
 		$password 	= $this->data['password'];
 		$dataValida			= [
-			'6037'	=> !(empty($user) AND empty($password)),
+			'6037'	=> !(empty($user) and empty($password)),
 			'6040'	=> $user,
 			'6041'	=> $password
 		];
 		$validatEmpty	= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
 		$data				= [
 			"user_type",
-			"lastname"
+			"firstname",
+			"lastname",
+			"id"
 		];
-		$userExist	= $this->selectDynamic('','users',"users='$user'",$data);
-		if($userExist){
-				$userActive	= $this->selectDynamic(['id_status'=>'1', 'user_type'=>'1'],'users',"users='$user'",$data);
-				if($userActive){
-						$passwordEncript 	= $this->encriptKey($password);
-						$dataUser			= $this->selectDynamic(['users'=>$user,'id_status'=>'1'],'users',"password='$passwordEncript'",$data);
-					if($dataUser){
-						return [
-							'status'   => 'OK',
-							'userType' => $dataUser[0]["user_type"]
-						];
-					}else{
-						return $this->getError(9090);
-					}
-				}else{
-					return $this->getError(9089);
+		$userExist	= $this->selectDynamic('', 'users', "users='$user'", $data);
+		if ($userExist) {
+			$userActive	= $this->selectDynamic(['id_status' => '1', 'user_type' => '1'], 'users', "users='$user'", $data);
+			if ($userActive) {
+				$passwordEncript 	= $this->encriptKey($password);
+				$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1'], 'users', "password='$passwordEncript'", $data);
+				if ($dataUser) {
+					return [
+						'status'   	=> 'OK',
+						'userType' 	=> $dataUser[0]["user_type"],
+						'id_user'  	=> $dataUser[0]["id"],
+						'firstname' => $dataUser[0]["firstname"],
+						'lastname' 	=> $dataUser[0]["lastname"]
+					];
+				} else {
+					return $this->getError(9090);
 				}
+			} else {
+				return $this->getError(9089);
 			}
-		else{
+		} else {
 			return $this->getError(9088);
 		}
 	}
-	public function login(){
+	public function login()
+	{
 		$user 		= $this->data['user'];
 		$password 	= $this->data['password'];
 		$prefix 	= $this->data['prefix'];
 		$dataValida			= [
-			'6037'	=> !(empty($user) AND empty($password)),
+			'6037'	=> !(empty($user) and empty($password)),
 			'6040'	=> $user,
 			'6041'	=> $password,
 			'9092'	=> $prefix
 		];
 		$validatEmpty	= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
 		$data				= [
 			"user_type",
 			"language_id",
 			"prefijo",
+			"firstname",
+			"lastname",
+			"id"
 		];
-		$userExist	= $this->selectDynamic('','users_extern',"users='$user'",$data);
-		if($userExist){
-			$prefijExist	= $this->selectDynamic(['prefix'=>$prefix],'clients',"data_activa='si'",['prefix']);
-			if($prefijExist){
-				$userActive	= $this->selectDynamic(['id_status'=>'1','user_type'=>'1'],'users_extern',"users='$user'",$data);
-				if($userActive){
-					if ($prefix == 'CT' || $prefix == 'CE' ) {
-						$dataUser			= $this->selectDynamic(['users'=>$user,'id_status'=>'1','prefijo'=>$prefix],'users_extern',"password='$password'",$data);
-					}else{
+		$userExist	= $this->selectDynamic('', 'users_extern', "users='$user'", $data);
+		if ($userExist) {
+			$prefijExist	= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['prefix']);
+			if ($prefijExist) {
+				$userActive	= $this->selectDynamic(['id_status' => '1', 'user_type' => '1'], 'users_extern', "users='$user'", $data);
+				if ($userActive) {
+					if ($prefix == 'CT' || $prefix == 'CE') {
+						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$password'", $data);
+					} else {
 						$passwordEncript 	= $this->encriptKey($password);
-						$dataUser			= $this->selectDynamic(['users'=>$user,'id_status'=>'1','prefijo'=>$prefix],'users_extern',"password='$passwordEncript'",$data);
+						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$passwordEncript'", $data);
 					}
-					if($dataUser){
+					if ($dataUser) {
 						return [
-							'status'   => 'OK',
-							'userType' => $dataUser[0]["user_type"],
-							'prefijo'  => $dataUser[0]["prefijo"],
+							'status'   	=> 'OK',
+							'userType' 	=> $dataUser[0]["user_type"],
+							'prefijo'  	=> $dataUser[0]["prefijo"],
+							'id_user'  	=> $dataUser[0]["id"],
+							'firstname' => $dataUser[0]["firstname"],
+							'lastname' 	=> $dataUser[0]["lastname"]
 						];
-					}else{
+					} else {
 						return $this->getError(9090);
 					}
-				}else{
+				} else {
 					return $this->getError(9089);
 				}
-			}else{
+			} else {
 				return $this->getError(9093);
 			}
-		}else{
+		} else {
 			return $this->getError(9088);
 		}
 	}
-    public function getoken(){
-        $ArrayValida= array('6040'=>$this->data['user'],'6041'=>$this->data['pass']);
-        $this->validatEmpty($ArrayValida);
-        return $this->getApiKey($this->data['user'], $this->data['pass']); 
+	public function getoken()
+	{
+		$ArrayValida = array('6040' => $this->data['user'], '6041' => $this->data['pass']);
+		$this->validatEmpty($ArrayValida);
+		return $this->getApiKey($this->data['user'], $this->data['pass']);
 	}
-	public function addOrder(){
+	public function addOrder()
+	{
 		$quoteGeneral 					= new quote_general_new();
-        $api	      					= $this->api;
-        $departure   					= $this->data['fecha_salida'];
-        $arrival     					= $this->data['fecha_llegada'];
-        $reference   					= $this->data['referencia'];
-        $plan        					= $this->data['id_plan'];
-        $destination 					= $this->data['pais_destino'];
-        $origin      					= $this->data['pais_origen'];
-        $coin        					= $this->data['moneda'];
-        $numberPassengers   			= $this->data['pasajeros'];
+		$api	      					= $this->api;
+		$departure   					= $this->data['fecha_salida'];
+		$arrival     					= $this->data['fecha_llegada'];
+		$reference   					= $this->data['referencia'];
+		$plan        					= $this->data['id_plan'];
+		$destination 					= $this->data['pais_destino'];
+		$origin      					= $this->data['pais_origen'];
+		$coin        					= $this->data['moneda'];
+		$numberPassengers   			= $this->data['pasajeros'];
 		$language    					= $this->data['lenguaje'];
 		$exchangeRate					= $this->data['tasa_cambio'];
 		$nameContact					= $this->data['nombre_contacto'];
@@ -362,9 +379,9 @@ class post_functions extends general_functions{
 		$phonePassenger					= $this->data['telefonos'];
 		$medicalConditionsPassenger		= $this->data['observaciones_medicas'];
 		$dataValida			= [
-			'6037'	=> !(empty($departure) AND empty($arrival) AND empty($plan) AND empty($destination) AND empty($origin) AND  empty($coin) AND empty($exchangeRate) AND empty($numberPassengers) AND empty($birthDayPassenger) AND  empty($documentPassenger) AND  empty($namePassenger) AND empty($lastNamePassenger) AND empty($phonePassenger) AND empty($emailPassenger) AND empty($medicalConditionsPassenger) AND empty($nameContact) AND empty($phoneContact) AND empty($emailContact) AND empty($lenguaje) AND empty($upgrade)),
-	        '6029'	=> $departure,
-	        '6030'	=> $arrival, 
+			'6037'	=> !(empty($departure) and empty($arrival) and empty($plan) and empty($destination) and empty($origin) and  empty($coin) and empty($exchangeRate) and empty($numberPassengers) and empty($birthDayPassenger) and  empty($documentPassenger) and  empty($namePassenger) and empty($lastNamePassenger) and empty($phonePassenger) and empty($emailPassenger) and empty($medicalConditionsPassenger) and empty($nameContact) and empty($phoneContact) and empty($emailContact) and empty($lenguaje) and empty($upgrade)),
+			'6029'	=> $departure,
+			'6030'	=> $arrival,
 			'6022'	=> $plan,
 			'6028'	=> $destination,
 			'6027'	=> $origin,
@@ -375,35 +392,35 @@ class post_functions extends general_functions{
 			'4009'	=> $phoneContact,
 			'4004'	=> $emailContact,
 			'6035'	=> $issue,
-			'4004'	=> (!$this->verifyMail($emailContact))?0:1,
-			'5010'	=> (!is_numeric($phoneContact))?0:1,
-			'4029'	=> (empty($numberPassengers) or $numberPassengers == 0 or !is_numeric($numberPassengers))?0:1,
-			'1080'	=> ($destination == "1" OR $destination == "2" OR $destination == "9")?1:0,
-			'9011'	=> ($exchangeRate<=0 or is_float($exchangeRate))?0:1,
-			'9012'	=> ($issue<1 || !is_numeric($issue) || $issue>3 )?0:1,
-			'1022'	=> (!$this->selectDynamic('','currency',"value_iso='$coin'",array("desc_small")))?0:1,
+			'4004'	=> (!$this->verifyMail($emailContact)) ? 0 : 1,
+			'5010'	=> (!is_numeric($phoneContact)) ? 0 : 1,
+			'4029'	=> (empty($numberPassengers) or $numberPassengers == 0 or !is_numeric($numberPassengers)) ? 0 : 1,
+			'1080'	=> ($destination == "1" or $destination == "2" or $destination == "9") ? 1 : 0,
+			'9011'	=> ($exchangeRate <= 0 or is_float($exchangeRate)) ? 0 : 1,
+			'9012'	=> ($issue < 1 || !is_numeric($issue) || $issue > 3) ? 0 : 1,
+			'1022'	=> (!$this->selectDynamic('', 'currency', "value_iso='$coin'", array("desc_small"))) ? 0 : 1,
 			'1030'	=> $this->validLanguage($language),
-			'9049'	=> ($this->countData($namePassenger ,$numberPassengers))?0:1,
-			'9053'	=> ($this->countData($lastNamePassenger ,$numberPassengers))?0:1,
-			'9051'	=> ($this->countData($birthDayPassenger ,$numberPassengers))?0:1,
-			'9050'	=> ($this->countData($documentPassenger ,$numberPassengers))?0:1,
-			'9052'	=> ($this->countData($emailPassenger ,$numberPassengers))?0:1,
-			'9054'	=> ($this->countData($phonePassenger ,$numberPassengers))?0:1,
-			'9055'	=> ($this->countData($medicalConditionsPassenger ,$numberPassengers))?0:1,
+			'9049'	=> ($this->countData($namePassenger, $numberPassengers)) ? 0 : 1,
+			'9053'	=> ($this->countData($lastNamePassenger, $numberPassengers)) ? 0 : 1,
+			'9051'	=> ($this->countData($birthDayPassenger, $numberPassengers)) ? 0 : 1,
+			'9050'	=> ($this->countData($documentPassenger, $numberPassengers)) ? 0 : 1,
+			'9052'	=> ($this->countData($emailPassenger, $numberPassengers)) ? 0 : 1,
+			'9054'	=> ($this->countData($phonePassenger, $numberPassengers)) ? 0 : 1,
+			'9055'	=> ($this->countData($medicalConditionsPassenger, $numberPassengers)) ? 0 : 1,
 			'2001'	=> $this->checkDates($departure),
 			'2002'	=> $this->checkDates($arrival),
 			'9059'	=> $this->verifyOrigin($origin),
-			'9060'	=> (!preg_match('(^[a-zA-Z ]*$)',$nameContact))?0:1
+			'9060'	=> (!preg_match('(^[a-zA-Z ]*$)', $nameContact)) ? 0 : 1
 		];
 		$validatEmpty			= $this->validatEmpty($dataValida);
-		if($validatEmpty){
+		if ($validatEmpty) {
 			return $validatEmpty;
 		}
-		$validateDataPassenger	= $this->validateDataPassenger($numberPassengers ,$namePassenger ,$lastNamePassenger ,$birthDayPassenger ,$documentPassenger ,$emailPassenger ,$phonePassenger ,$medicalConditionsPassenger);
-		if($validateDataPassenger){
+		$validateDataPassenger	= $this->validateDataPassenger($numberPassengers, $namePassenger, $lastNamePassenger, $birthDayPassenger, $documentPassenger, $emailPassenger, $phonePassenger, $medicalConditionsPassenger);
+		if ($validateDataPassenger) {
 			return $validateDataPassenger;
 		}
-		$dataPlan			= $this->selectDynamic('','plans',"id='$plan'",array("id_plan_categoria","name","num_pas"));
+		$dataPlan			= $this->selectDynamic('', 'plans', "id='$plan'", array("id_plan_categoria", "name", "num_pas"));
 		$datAgency			= $this->datAgency($api);
 		$idCategoryPlan 	= $dataPlan[0]['id_plan_categoria'];
 		$namePlan			= $dataPlan[0]['name'];
@@ -412,60 +429,61 @@ class post_functions extends general_functions{
 		$nameAgency			= $datAgency[0]['broker'];
 		$userAgency			= $datAgency[0]['user_id'];
 		$cantPassengerPlan	= $dataPlan[0]['num_pas'];
-		$prefix				= ($datAgency[0]['prefijo'])?$datAgency[0]['prefijo']:'IX';
+		$prefix				= ($datAgency[0]['prefijo']) ? $datAgency[0]['prefijo'] : 'IX';
 		$arrivalTrans		= $this->transformerDate($arrival);
 		$departureTrans		= $this->transformerDate($departure);
-		$daysByPeople 		= $this->betweenDates($departureTrans ,$arrivalTrans);
-		$validateDateOrder	= $this->validateDateOrder($arrivalTrans ,$departureTrans ,$isoCountry);
-		if($validateDateOrder){
+		$daysByPeople 		= $this->betweenDates($departureTrans, $arrivalTrans);
+		$validateDateOrder	= $this->validateDateOrder($arrivalTrans, $departureTrans, $isoCountry);
+		if ($validateDateOrder) {
 			return $validateDateOrder;
 		}
-		$validatePlans		= $this->validatePlans($plan ,$idAgency ,$origin ,$destination ,$daysByPeople);
-		if($validatePlans){
+		$validatePlans		= $this->validatePlans($plan, $idAgency, $origin, $destination, $daysByPeople);
+		if ($validatePlans) {
 			return $validatePlans;
 		}
-		$agesPassenger		= $this->setAges($birthDayPassenger ,$isoCountry);
+		$agesPassenger		= $this->setAges($birthDayPassenger, $isoCountry);
 		$countryAgency		= $this->getCountryAgency($api);
-		$dataQuoteGeneral	= $quoteGeneral->quotePlanbenefis($idCategoryPlan ,$daysByPeople ,$countryAgency ,$destination ,$origin ,$agesPassenger ,$departure ,$arrival ,$idAgency ,$plan);
+		$dataQuoteGeneral	= $quoteGeneral->quotePlanbenefis($idCategoryPlan, $daysByPeople, $countryAgency, $destination, $origin, $agesPassenger, $departure, $arrival, $idAgency, $plan);
 		$validatBenefits	= $this->verifyBenefits($dataQuoteGeneral);
-		if($validatBenefits){
+		if ($validatBenefits) {
 			return $validatBenefits;
 		}
 		$cost							= $dataQuoteGeneral[0]['total_costo'];
 		$price							= $dataQuoteGeneral[0]['total'];
 		$familyPlan						= $dataQuoteGeneral[0]['family_plan'];
-		if($dataQuoteGeneral[0]['banda']=="si"){
-			for ($i=0; $i <$dataQuoteGeneral[0]["total_rangos"] ; $i++) {
-				$pricePassenger[] 		= $price/$numberPassengers; 
+		if ($dataQuoteGeneral[0]['banda'] == "si") {
+			for ($i = 0; $i < $dataQuoteGeneral[0]["total_rangos"]; $i++) {
+				$pricePassenger[] 		= $price / $numberPassengers;
 				$costPassenger[]		= $dataQuoteGeneral[0]["costo_banda$i"];
 			}
-		}else{
-			if($dataQuoteGeneral[0]['numero_menores']>0){
-				for ($i=0; $i < $dataQuoteGeneral[0]['numero_menores'] ; $i++) { 
+		} else {
+			if ($dataQuoteGeneral[0]['numero_menores'] > 0) {
+				for ($i = 0; $i < $dataQuoteGeneral[0]['numero_menores']; $i++) {
 					$pricePassenger[] 	= $dataQuoteGeneral[0]['valorMenor'];
 					$costPassenger[] 	= $dataQuoteGeneral[0]['costoMenor'];
 				}
-			}if($dataQuoteGeneral[0]['numero_mayores']>0){
-				for ($i=0; $i < $dataQuoteGeneral[0]['numero_mayores'] ; $i++) { 
+			}
+			if ($dataQuoteGeneral[0]['numero_mayores'] > 0) {
+				for ($i = 0; $i < $dataQuoteGeneral[0]['numero_mayores']; $i++) {
 					$pricePassenger[] 	= $dataQuoteGeneral[0]['valorMayor'];
 					$costPassenger[] 	= $dataQuoteGeneral[0]['costoMayor'];
 				}
 			}
 		}
-		for ($i=0; $i < $numberPassengers ; $i++) { 
+		for ($i = 0; $i < $numberPassengers; $i++) {
 			$birthDayPassengerTrans[]	= $this->transformerDate($birthDayPassenger[$i]);
 		}
-		$verifiedOrderDuplicate 		= $this->verifiedOrderDuplicate($departureTrans ,$arrivalTrans ,$origin ,$destination);
-		if(!empty($verifiedOrderDuplicate)){
-			$Verified_Beneficiaries		= $this->verifiedBeneficiariesDuplicate($verifiedOrderDuplicate ,$documentPassenger ,$birthDayPassengerTrans);
-			if($Verified_Beneficiaries){
+		$verifiedOrderDuplicate 		= $this->verifiedOrderDuplicate($departureTrans, $arrivalTrans, $origin, $destination);
+		if (!empty($verifiedOrderDuplicate)) {
+			$Verified_Beneficiaries		= $this->verifiedBeneficiariesDuplicate($verifiedOrderDuplicate, $documentPassenger, $birthDayPassengerTrans);
+			if ($Verified_Beneficiaries) {
 				return $Verified_Beneficiaries;
 			}
 		}
-		$code			= $prefix.'-'.$this->valueRandom(6);
-		$exchangeRate	= (empty($exchangeRate))?0:$exchangeRate;
-		$language		= ($language=="spa")?"es":"en";
-		if(!empty($upgrade)){
+		$code			= $prefix . '-' . $this->valueRandom(6);
+		$exchangeRate	= (empty($exchangeRate)) ? 0 : $exchangeRate;
+		$language		= ($language == "spa") ? "es" : "en";
+		if (!empty($upgrade)) {
 			$data	= [
 				"api"				=> $api,
 				"upgrades"			=> $upgrade,
@@ -480,10 +498,10 @@ class post_functions extends general_functions{
 				"precio_vta"		=> $pricePassenger,
 				"precio_cost"		=> $costPassenger
 			];
-			$dataUpgrade			= $this->addUpgrades($data,false);
-			if(count($dataUpgrade["id"])==0){
+			$dataUpgrade			= $this->addUpgrades($data, false);
+			if (count($dataUpgrade["id"]) == 0) {
 				return $dataUpgrade;
-			}else{
+			} else {
 				$price		= $dataUpgrade["price"];
 				$cost		= $dataUpgrade["cost"];
 				$idUpgrade 	= $dataUpgrade["id"];
@@ -520,259 +538,263 @@ class post_functions extends general_functions{
 			'tasa_cambio'			=> $exchangeRate,
 			'alter_cur'				=> $coin,
 			'territory'				=> $destination,
-			'total_mlc'				=> $price/$exchangeRate,
-			'neto_prov_mlc'			=> $cost/$exchangeRate,
+			'total_mlc'				=> $price / $exchangeRate,
+			'neto_prov_mlc'			=> $cost / $exchangeRate,
 			'total_tax'				=> $dataQuoteGeneral[0]['total_tax1'],
-			'total_tax_mlc'			=> $dataQuoteGeneral[0]['total_tax1']/$exchangeRate,
+			'total_tax_mlc'			=> $dataQuoteGeneral[0]['total_tax1'] / $exchangeRate,
 			'lang'					=> $language,
 			'procedencia_funcion'	=> '0'
 		];
-		$idOrden	= $this->insertDynamic($data,'orders');
-		for($i=0;$i < $numberPassengers;$i++){
-			$addBeneficiaries[$i]	= $this->addBeneficiares($documentPassenger[$i] ,$birthDayPassengerTrans[$i] ,$namePassenger[$i] ,$lastNamePassenger[$i] ,$phonePassenger[$i] ,$emailPassenger[$i] ,$idOrden,'1' ,$pricePassenger[$i] ,$costPassenger[$i] ,$medicalConditionsPassenger[$i] ,$pricePassenger[$i]/$exchangeRate ,$costPassenger[$i]/$exchangeRate,0,0);  
+		$idOrden	= $this->insertDynamic($data, 'orders');
+		for ($i = 0; $i < $numberPassengers; $i++) {
+			$addBeneficiaries[$i]	= $this->addBeneficiares($documentPassenger[$i], $birthDayPassengerTrans[$i], $namePassenger[$i], $lastNamePassenger[$i], $phonePassenger[$i], $emailPassenger[$i], $idOrden, '1', $pricePassenger[$i], $costPassenger[$i], $medicalConditionsPassenger[$i], $pricePassenger[$i] / $exchangeRate, $costPassenger[$i] / $exchangeRate, 0, 0);
 		}
-		if(!empty($addBeneficiaries) && !empty($idOrden)){
-			$this->addCommission($idAgency ,$idCategoryPlan ,$price ,$idOrden);
-			if(count($idUpgrade)>0){
+		if (!empty($addBeneficiaries) && !empty($idOrden)) {
+			$this->addCommission($idAgency, $idCategoryPlan, $price, $idOrden);
+			if (count($idUpgrade) > 0) {
 				foreach ($idUpgrade as $value) {
-					$this->updateDynamic('orders_raider','id' ,$value ,['id_orden'=>$idOrden]);
+					$this->updateDynamic('orders_raider', 'id', $value, ['id_orden' => $idOrden]);
 				}
 			}
-			$link = LINK_REPORTE_VENTAS.$code."&selectLanguage=$language&broker_sesion=$idAgency";
+			$link = LINK_REPORTE_VENTAS . $code . "&selectLanguage=$language&broker_sesion=$idAgency";
 			switch ($issue) {
 				case '1':
 					return [
-						"status"		=> "OK", 
+						"status"		=> "OK",
 						"codigo"		=> $code,
 						"valor"			=> $price,
 						"ruta"			=> $link,
-						"documento"		=> implode("," ,$documentPassenger),
+						"documento"		=> implode(",", $documentPassenger),
 						"referencia"	=> $reference
 					];
 					break;
 				case '2':
-					$this->Enviar_orden($emailPassenger[0] ,$idOrden ,$language ,$language);
+					$this->Enviar_orden($emailPassenger[0], $idOrden, $language, $language);
 					return [
-						"status"		=> "OK", 
-						"codigo"		=> $code, 
+						"status"		=> "OK",
+						"codigo"		=> $code,
 						"valor"			=> $price,
 						"referencia"	=> $reference
 					];
 					break;
 				default:
-					$this->Enviar_orden($emailPassenger[0] ,$idOrden ,$language ,$language);
+					$this->Enviar_orden($emailPassenger[0], $idOrden, $language, $language);
 					return [
-						"status"		=> "OK", 
+						"status"		=> "OK",
 						"codigo"		=> $code,
-						"documento"		=> implode("," ,$documentPassenger),
+						"documento"		=> implode(",", $documentPassenger),
 						"referencia"	=> $reference
 					];
 					break;
 			}
 		}
 	}
-    public function reportOrder(){
-		$quoteGeneral= new quote_general_new();
-        $apikey      				=$this->data['apikey'];
-        $code        				=$this->data['code'];
-        $departure   				=$this->data['departure'];
-        $arrival     				=$this->data['arrival'];
-        $reference   				=$this->data['reference'];
-        $plan        				=$this->data['plan'];
-        $destination 				=$this->data['destination'];
-        $origin      				=$this->data['origin'];
-        $coin        				=$this->data['coin'];
-        $numberPassengers   		=$this->data['numberpassengers'];
-        $language    				=$this->data['language'];
-		$price       				=$this->data['price'];
-		$exchangeRate				=$this->data['exchangerate'];
-		$namePassenger				=$this->data['namepassenger'];
-		$lastNamePassenger			=$this->data['lastnamepassenger'];
-		$birthDayPassenger  		=$this->data['birthdaypassenger'];
-		$documentPassenger  		=$this->data['documentpassenger'];
-		$emailPassenger				=$this->data['emailpassenger'];
-		$medicalConditionsPassenger	=$this->data['medicalConditionsPassenger'];
-		$phonePassenger				=$this->data['phonepassenger'];
-		$nameContact				=$this->data['namecontact'];
-		$phoneContact				=$this->data['phonecontact'];
-		$emailContact				=$this->data['emailcontact'];
-		$issue						=$this->data['issue'];
-		$generalConsiderations		=$this->data['generalconsiderations'];
-        $dataValida= array(
-			'6020'=>$apikey,
-	        '6048'=>$code,
-	        '6029'=>$departure,
-	        '6030'=>$arrival, 
-			'6022'=>$plan,
-			'6028'=>$destination,
-			'6027'=>$origin,
-			'6034'=>$coin,
-			"6026"=>$numberPassengers,
-			'6021'=>$language,
-			'4006'=>$namePassenger,
-			'4007'=>$lastNamePassenger,
-			'5005'=>$birthDayPassenger,
-			'4006'=>$documentPassenger,
-			'5012'=>$emailPassenger,
-			'4008'=>$phonePassenger,
-			'5006'=>$medicalConditionsPassenger,
-			'6036'=>$nameContact,
-			'4009'=>$phoneContact,
-			'4004'=>$emailContact,
-			'1005'=>($this->checkapiKey($apikey))?1:0,
-			'4004'=>(!$this->verifyMail($emailContact))?0:1,
-			'4010'=>(!$this->verifyMail($emailPassenger))?0:1,
-			'5010'=>(!is_numeric($phoneContact))?0:1,
-			'5008'=>($issue < 1 || $issue > 3 || !is_numeric($issue))?0:1,
-			'3150'=>(empty($numberPassengers) or $numberPassengers == 0 or !is_numeric($numberPassengers))?0:1,
-			'6052'=>($price<0 || !is_numeric($price) )?0:1,
-			'9011'=>($exchangeRate<=0 or is_float($exchangeRate))?0:1,
-			'6049'=>(strlen($code)>30)?0:1,
-			'1022'=>(!$this->selectDynamic('','currency',"value_iso='$coin'",array("desc_small")))?0:1,
-			'1030'=>(!$this->selectDynamic('active = 1','languages',"lg_id='$language'",array("id")))?0:1,
-			'6054'=>($this->selectDynamic('','orders',"codigo='$code'",array("codigo")))?0:1,
-			'4005'=>($this->countData($namePassenger,$numberPassengers))?0:1,
-			'4007'=>($this->countData($lastNamePassenger,$numberPassengers))?0:1,
-			'5006'=>($this->countData($birthDayPassenger,$numberPassengers))?0:1,
-			'4006'=>($this->countData($documentPassenger,$numberPassengers))?0:1,
-			'5012'=>($this->countData($emailPassenger,$numberPassengers))?0:1,
-			'4008'=>($this->countData($phonePassenger,$numberPassengers))?0:1,
-			'5006'=>($this->countData($medicalConditionsPassenger,$numberPassengers))?0:1
+	public function reportOrder()
+	{
+		$quoteGeneral = new quote_general_new();
+		$apikey      				= $this->data['apikey'];
+		$code        				= $this->data['code'];
+		$departure   				= $this->data['departure'];
+		$arrival     				= $this->data['arrival'];
+		$reference   				= $this->data['reference'];
+		$plan        				= $this->data['plan'];
+		$destination 				= $this->data['destination'];
+		$origin      				= $this->data['origin'];
+		$coin        				= $this->data['coin'];
+		$numberPassengers   		= $this->data['numberpassengers'];
+		$language    				= $this->data['language'];
+		$price       				= $this->data['price'];
+		$exchangeRate				= $this->data['exchangerate'];
+		$namePassenger				= $this->data['namepassenger'];
+		$lastNamePassenger			= $this->data['lastnamepassenger'];
+		$birthDayPassenger  		= $this->data['birthdaypassenger'];
+		$documentPassenger  		= $this->data['documentpassenger'];
+		$emailPassenger				= $this->data['emailpassenger'];
+		$medicalConditionsPassenger	= $this->data['medicalConditionsPassenger'];
+		$phonePassenger				= $this->data['phonepassenger'];
+		$nameContact				= $this->data['namecontact'];
+		$phoneContact				= $this->data['phonecontact'];
+		$emailContact				= $this->data['emailcontact'];
+		$issue						= $this->data['issue'];
+		$generalConsiderations		= $this->data['generalconsiderations'];
+		$dataValida = array(
+			'6020' => $apikey,
+			'6048' => $code,
+			'6029' => $departure,
+			'6030' => $arrival,
+			'6022' => $plan,
+			'6028' => $destination,
+			'6027' => $origin,
+			'6034' => $coin,
+			"6026" => $numberPassengers,
+			'6021' => $language,
+			'4006' => $namePassenger,
+			'4007' => $lastNamePassenger,
+			'5005' => $birthDayPassenger,
+			'4006' => $documentPassenger,
+			'5012' => $emailPassenger,
+			'4008' => $phonePassenger,
+			'5006' => $medicalConditionsPassenger,
+			'6036' => $nameContact,
+			'4009' => $phoneContact,
+			'4004' => $emailContact,
+			'1005' => ($this->checkapiKey($apikey)) ? 1 : 0,
+			'4004' => (!$this->verifyMail($emailContact)) ? 0 : 1,
+			'4010' => (!$this->verifyMail($emailPassenger)) ? 0 : 1,
+			'5010' => (!is_numeric($phoneContact)) ? 0 : 1,
+			'5008' => ($issue < 1 || $issue > 3 || !is_numeric($issue)) ? 0 : 1,
+			'3150' => (empty($numberPassengers) or $numberPassengers == 0 or !is_numeric($numberPassengers)) ? 0 : 1,
+			'6052' => ($price < 0 || !is_numeric($price)) ? 0 : 1,
+			'9011' => ($exchangeRate <= 0 or is_float($exchangeRate)) ? 0 : 1,
+			'6049' => (strlen($code) > 30) ? 0 : 1,
+			'1022' => (!$this->selectDynamic('', 'currency', "value_iso='$coin'", array("desc_small"))) ? 0 : 1,
+			'1030' => (!$this->selectDynamic('active = 1', 'languages', "lg_id='$language'", array("id"))) ? 0 : 1,
+			'6054' => ($this->selectDynamic('', 'orders', "codigo='$code'", array("codigo"))) ? 0 : 1,
+			'4005' => ($this->countData($namePassenger, $numberPassengers)) ? 0 : 1,
+			'4007' => ($this->countData($lastNamePassenger, $numberPassengers)) ? 0 : 1,
+			'5006' => ($this->countData($birthDayPassenger, $numberPassengers)) ? 0 : 1,
+			'4006' => ($this->countData($documentPassenger, $numberPassengers)) ? 0 : 1,
+			'5012' => ($this->countData($emailPassenger, $numberPassengers)) ? 0 : 1,
+			'4008' => ($this->countData($phonePassenger, $numberPassengers)) ? 0 : 1,
+			'5006' => ($this->countData($medicalConditionsPassenger, $numberPassengers)) ? 0 : 1
 		);
 		$this->validatEmpty($dataValida);
-		$dataPlan=$this->selectDynamic('','plans',"id='$plan'",array("id_plan_categoria","name","num_pas"));
-		$datAgency=$this->datAgency($apikey);
+		$dataPlan = $this->selectDynamic('', 'plans', "id='$plan'", array("id_plan_categoria", "name", "num_pas"));
+		$datAgency = $this->datAgency($apikey);
 		$idCategoryPlan = $dataPlan[0]['id_plan_categoria'];
-		$namePlan= $dataPlan[0]['name'];
-		$idAgency=$datAgency[0]['id_broker'];
-		$isoCountry=$datAgency[0]['id_country'];
-		$nameAgency=$datAgency[0]['broker'];
-		$userAgency=$datAgency[0]['user_id'];
-		$cantPassengerPlan=$dataPlan[0]['num_pas'];
-		$arrivalTrans=$this->transformerDate($arrival);
-		$departureTrans=$this->transformerDate($departure);
-		for ($i=0; $i < $numberPassengers ; $i++) { 
-			$birthDayPassengerTrans[]=$this->transformerDate($birthDayPassenger[$i]);
+		$namePlan = $dataPlan[0]['name'];
+		$idAgency = $datAgency[0]['id_broker'];
+		$isoCountry = $datAgency[0]['id_country'];
+		$nameAgency = $datAgency[0]['broker'];
+		$userAgency = $datAgency[0]['user_id'];
+		$cantPassengerPlan = $dataPlan[0]['num_pas'];
+		$arrivalTrans = $this->transformerDate($arrival);
+		$departureTrans = $this->transformerDate($departure);
+		for ($i = 0; $i < $numberPassengers; $i++) {
+			$birthDayPassengerTrans[] = $this->transformerDate($birthDayPassenger[$i]);
 		}
-		$this->validateDateOrder($arrivalTrans,$departureTrans,$isoCountry);
-		$daysByPeople = $this->getDaysByPeople($departureTrans,$arrivalTrans);
-		$this->validatePlans($plan,$idAgency,$origin,$destination,$daysByPeople);
-		($cantPassengerPlan > $numberPassengers)?:$this->getError('5003'); 
-		$agesPassenger=$this->setAges($birthDayPassenger,$isoCountry);
-		$countryAgency=$this->getCountryAgency($apikey);
-		$dataQuoteGeneral=$quoteGeneral->quotePlanbenefis($idCategoryPlan,$daysByPeople,$countryAgency,$destination,$origin,$agesPassenger,$departure,$arrival,$idAgency,$plan);
-		$cost=$dataQuoteGeneral[0]['total_costo'];
-		$familyPlan=$dataQuoteGeneral[0]['family_plan'];
-		if($dataQuoteGeneral[0]['banda']=="si"){
-			for ($i=0; $i <$dataQuoteGeneral[0]["total_rangos"] ; $i++) {
-				$pricePassenger[] = $price/$numberPassengers; 
-				$costPassenger[]=$dataQuoteGeneral[0]["costo_banda$i"];
+		$this->validateDateOrder($arrivalTrans, $departureTrans, $isoCountry);
+		$daysByPeople = $this->getDaysByPeople($departureTrans, $arrivalTrans);
+		$this->validatePlans($plan, $idAgency, $origin, $destination, $daysByPeople);
+		($cantPassengerPlan > $numberPassengers) ?: $this->getError('5003');
+		$agesPassenger = $this->setAges($birthDayPassenger, $isoCountry);
+		$countryAgency = $this->getCountryAgency($apikey);
+		$dataQuoteGeneral = $quoteGeneral->quotePlanbenefis($idCategoryPlan, $daysByPeople, $countryAgency, $destination, $origin, $agesPassenger, $departure, $arrival, $idAgency, $plan);
+		$cost = $dataQuoteGeneral[0]['total_costo'];
+		$familyPlan = $dataQuoteGeneral[0]['family_plan'];
+		if ($dataQuoteGeneral[0]['banda'] == "si") {
+			for ($i = 0; $i < $dataQuoteGeneral[0]["total_rangos"]; $i++) {
+				$pricePassenger[] = $price / $numberPassengers;
+				$costPassenger[] = $dataQuoteGeneral[0]["costo_banda$i"];
 			}
-		}else{
-			if($dataQuoteGeneral[0]['numero_menores']>0){
-				for ($i=0; $i <$dataQuoteGeneral[0]['numero_menores'] ; $i++) { 
-					$pricePassenger[] 	= $price/$numberPassengers;
+		} else {
+			if ($dataQuoteGeneral[0]['numero_menores'] > 0) {
+				for ($i = 0; $i < $dataQuoteGeneral[0]['numero_menores']; $i++) {
+					$pricePassenger[] 	= $price / $numberPassengers;
 					$costPassenger[] 	= $dataQuoteGeneral[0]['costoMenor'];
 				}
-			}if($dataQuoteGeneral[0]['numero_mayores']>0){
-				for ($i=0; $i <$dataQuoteGeneral[0]['numero_mayores'] ; $i++) { 
-					$pricePassenger[] 	= $price/$numberPassengers;
+			}
+			if ($dataQuoteGeneral[0]['numero_mayores'] > 0) {
+				for ($i = 0; $i < $dataQuoteGeneral[0]['numero_mayores']; $i++) {
+					$pricePassenger[] 	= $price / $numberPassengers;
 					$costPassenger[] 	= $dataQuoteGeneral[0]['costoMayor'];
 				}
 			}
 		}
-		$verifiedOrderDuplicate = $this->verifiedOrderDuplicate($departureTrans,$arrivalTrans,$origin,$destination);
-		if(!empty($verifiedOrderDuplicate)){
-			$Verified_Beneficiaries=$this->verifiedBeneficiariesDuplicate($verifiedOrderDuplicate,$documentPassenger,$birthDayPassenger);
+		$verifiedOrderDuplicate = $this->verifiedOrderDuplicate($departureTrans, $arrivalTrans, $origin, $destination);
+		if (!empty($verifiedOrderDuplicate)) {
+			$Verified_Beneficiaries = $this->verifiedBeneficiariesDuplicate($verifiedOrderDuplicate, $documentPassenger, $birthDayPassenger);
 		}
-		$exchangeRate=(empty($exchangeRate))?0:$exchangeRate;
-		$data=[
-			'codigo'=>$code,
-			'salida'=>$departureTrans,
-			'retorno'=>$arrivalTrans,
-			'referencia'=>$reference,
-			'producto'=>$plan,
-			'destino'=>$destination,
-			'origen'=>$origin,
-			'nombre_contacto'=>$nameContact,
-			'telefono_contacto'=>$phoneContact,
-			'agencia'=>$idAgency,
-			'nombre_agencia'=>$nameAgency,
-			'vendedor'=>$userAgency,
-			'programaplan'=>$idCategoryPlan,
-			'family_plan'=>$familyPlan,
-			'fecha'=>'now()',
-			'cantidad'=>$numberPassengers,
-			'status'=>'1',
-			'origin_ip'=>$_SERVER['REMOTE_ADDR'],
-			'email_contacto'=>$emailContact,
-			'comentarios'=>$generalConsiderations,
-			'total'=>$price,
-			'tiempo_x_producto'=>$daysByPeople,
-			'neto_prov'=>$cost,
-			'comentario_medicas'=>$generalConsiderations,
-			'id_emision_type'=>'4',
-			'validez'=>'1',
-			'hora'=>'now()',
-			'tasa_cambio'=>$exchangeRate,
-			'alter_cur'=>$coin,
-			'territory'=>$price/$exchangeRate,
-			'total_mlc'=>$cost/$exchangeRate,
-			'neto_prov_mlc'=>$dataQuoteGeneral[0]['total_neto']/$exchangeRate,
-			'total_tax'=>$dataQuoteGeneral[0]['total_tax1'],
-			'total_tax_mlc'=>$dataQuoteGeneral[0]['total_tax1']/$exchangeRate,
-			'lang'=>$language
+		$exchangeRate = (empty($exchangeRate)) ? 0 : $exchangeRate;
+		$data = [
+			'codigo' => $code,
+			'salida' => $departureTrans,
+			'retorno' => $arrivalTrans,
+			'referencia' => $reference,
+			'producto' => $plan,
+			'destino' => $destination,
+			'origen' => $origin,
+			'nombre_contacto' => $nameContact,
+			'telefono_contacto' => $phoneContact,
+			'agencia' => $idAgency,
+			'nombre_agencia' => $nameAgency,
+			'vendedor' => $userAgency,
+			'programaplan' => $idCategoryPlan,
+			'family_plan' => $familyPlan,
+			'fecha' => 'now()',
+			'cantidad' => $numberPassengers,
+			'status' => '1',
+			'origin_ip' => $_SERVER['REMOTE_ADDR'],
+			'email_contacto' => $emailContact,
+			'comentarios' => $generalConsiderations,
+			'total' => $price,
+			'tiempo_x_producto' => $daysByPeople,
+			'neto_prov' => $cost,
+			'comentario_medicas' => $generalConsiderations,
+			'id_emision_type' => '4',
+			'validez' => '1',
+			'hora' => 'now()',
+			'tasa_cambio' => $exchangeRate,
+			'alter_cur' => $coin,
+			'territory' => $price / $exchangeRate,
+			'total_mlc' => $cost / $exchangeRate,
+			'neto_prov_mlc' => $dataQuoteGeneral[0]['total_neto'] / $exchangeRate,
+			'total_tax' => $dataQuoteGeneral[0]['total_tax1'],
+			'total_tax_mlc' => $dataQuoteGeneral[0]['total_tax1'] / $exchangeRate,
+			'lang' => $language
 		];
-		$idOrden=$this->insertDynamic($data,'orders');
-		for($i=0;$i < $numberPassengers;$i++){
-			$addBeneficiaries[$i]=$this->add_beneficiaries($documentPassenger[$i],$birthDayPassengerTrans[$i],$namePassenger[$i],$lastNamePassenger[$i],$phonePassenger[$i],$emailPassenger[$i],$idOrden,'1',$pricePassenger[$i],$costPassenger[$i],$medicalConditionsPassenger[$i],$pricePassenger[$i]/$exchangeRate,$costPassenger[$i]/$exchangeRate,0,0);  
+		$idOrden = $this->insertDynamic($data, 'orders');
+		for ($i = 0; $i < $numberPassengers; $i++) {
+			$addBeneficiaries[$i] = $this->add_beneficiaries($documentPassenger[$i], $birthDayPassengerTrans[$i], $namePassenger[$i], $lastNamePassenger[$i], $phonePassenger[$i], $emailPassenger[$i], $idOrden, '1', $pricePassenger[$i], $costPassenger[$i], $medicalConditionsPassenger[$i], $pricePassenger[$i] / $exchangeRate, $costPassenger[$i] / $exchangeRate, 0, 0);
 		}
 		$response	= [
 			"status"	=> "OK",
 			'code'		=> $code
 		];
-		if(!empty($addBeneficiaries) && !empty($idOrden)){
+		if (!empty($addBeneficiaries) && !empty($idOrden)) {
 			$this->response($response);
 		}
 	}
-	public function cancelOrder() {
+	public function cancelOrder()
+	{
 		$api		= $this->api;
 		$code		= $this->data['codigo'];
-		$notify		= $this->data['notificar']; 
+		$notify		= $this->data['notificar'];
 		$language	= $this->arrLanguage[$datAgency[0]['language_id']];
 		$dataValida	= [
-			'6037'	=> !(empty($code) AND empty($notify)),
+			'6037'	=> !(empty($code) and empty($notify)),
 			'6023'	=> $code,
 			'9089'	=> $notify,
 			'4050'	=> !($notify > 2 || $notify < 1)
 		];
 		$validatEmpty	= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
 		$datAgency 	= $this->datAgency($api);
 		$idAgency	= $datAgency[0]['id_broker'];
 		$idUser		= $datAgency[0]['user_id'];
 		$isoCountry = $datAgency[0]['id_country'];
-		$verifyVoucher	= $this->verifyVoucher($code,$idUser,$isoCountry,'ADD');
-		if($verifyVoucher){
+		$verifyVoucher	= $this->verifyVoucher($code, $idUser, $isoCountry, 'ADD');
+		if ($verifyVoucher) {
 			return $verifyVoucher;
 		}
 		$data	= [
-            'status'	=>	'5',
-            'f_anulado'	=>	'NOW()'
-        ];
-        $cancelOrder	= $this->updateDynamic('orders','codigo',$code,$data);
-		if($notify=='2'){
-			$this ->sendMailCancel($code,$idAgency,$language);
+			'status'	=>	'5',
+			'f_anulado'	=>	'NOW()'
+		];
+		$cancelOrder	= $this->updateDynamic('orders', 'codigo', $code, $data);
+		if ($notify == '2') {
+			$this->sendMailCancel($code, $idAgency, $language);
 		}
-		if($cancelOrder){
+		if ($cancelOrder) {
 			return [
-				"status"=> "OK"
+				"status" => "OK"
 			];
 		}
 	}
-	public function getOrderPrice(){
+	public function getOrderPrice()
+	{
 		$quoteGeneral 			= new quote_general_new();
 		$api					= $this->api;
 		$plan					= $this->data['plan'];
@@ -784,35 +806,35 @@ class post_functions extends general_functions{
 		$typeRange				= $this->data['typeRange'];
 		$returnRange			= $this->data['typeResponse'];
 		$prefix					= $this->data['prefix'];
-        $dataRange				= ($typeRange==1)?$this->data['fecha_nacimiento']:$this->data['edad'];
+		$dataRange				= ($typeRange == 1) ? $this->data['fecha_nacimiento'] : $this->data['edad'];
 		$calculateRange  		= $dataRange;
 		$arrayMerge				= [];
 		$arrayRange				= [];
-        if($typeRange==1){
-            $dataRange			= $this->data['fecha_nacimiento'];
-            $nameRange          = "nacimientos";
-            $errorRange         = "6031";
-        }else{
-            $dataRange          = $this->data['edad'];
-            $nameRange          = "edades";
-            $errorRange         = "6026";
-        }
-        if($returnRange==3){
-        	$plan="0";
+		if ($typeRange == 1) {
+			$dataRange			= $this->data['fecha_nacimiento'];
+			$nameRange          = "nacimientos";
+			$errorRange         = "6031";
+		} else {
+			$dataRange          = $this->data['edad'];
+			$nameRange          = "edades";
+			$errorRange         = "6026";
+		}
+		if ($returnRange == 3) {
+			$plan = "0";
 		}
 		$dataValidate	= [
-			'6037'				=> !(empty($numberPassengers) AND empty($origin) AND empty($destination) AND empty($departure) AND empty($arrival)),
-			'9058'				=> (!is_numeric($plan))?0:1,
+			'6037'				=> !(empty($numberPassengers) and empty($origin) and empty($destination) and empty($departure) and empty($arrival)),
+			'9058'				=> (!is_numeric($plan)) ? 0 : 1,
 			'6027'				=> $origin,
 			'6028'				=> $destination,
 			'6029'				=> $departure,
-	        '6030'				=> $arrival, 
+			'6030'				=> $arrival,
 			'6026'				=> $numberPassengers,
 			$errorRange			=> count($calculateRange),
-			'4029'				=> (empty($numberPassengers) || $numberPassengers == 0 || !is_numeric($numberPassengers))?0:1,
-			'6043'				=> ($this->countData($calculateRange ,$numberPassengers))?0:1,
+			'4029'				=> (empty($numberPassengers) || $numberPassengers == 0 || !is_numeric($numberPassengers)) ? 0 : 1,
+			'6043'				=> ($this->countData($calculateRange, $numberPassengers)) ? 0 : 1,
 			'2001'				=> $this->checkDates($departure),
-			'1080'				=> ($destination == "1" OR $destination == "2" OR $destination == "9"),
+			'1080'				=> ($destination == "1" or $destination == "2" or $destination == "9"),
 			'2002'				=> $this->checkDates($arrival),
 			'9059'				=> $this->verifyOrigin($origin),
 		];
@@ -824,53 +846,53 @@ class post_functions extends general_functions{
 				break;
 			case '2':
 				$arrayRange		= [
-					'5016'		=> (is_numeric(implode('',$calculateRange))),
+					'5016'		=> (is_numeric(implode('', $calculateRange))),
 				];
 				break;
 		}
 		$arrivalTrans		= $this->transformerDate($arrival);
 		$departureTrans		= $this->transformerDate($departure);
-		$dataPlan			= $this->selectDynamic('','plans',"id='$plan'",array("id_plan_categoria","name","num_pas"));
+		$dataPlan			= $this->selectDynamic('', 'plans', "id='$plan'", array("id_plan_categoria", "name", "num_pas"));
 		$datAgency			= $this->datAgency($api);
 		$idCategoryPlan		= $dataPlan[0]['id_plan_categoria'];
 		$idAgency			= $datAgency[0]['id_broker'];
 		$isoCountry			= $datAgency[0]['id_country'];
-		$daysByPeople 		= $this->betweenDates($departureTrans ,$arrivalTrans);
+		$daysByPeople 		= $this->betweenDates($departureTrans, $arrivalTrans);
 		$countryAgency		= $this->getCountryAgency($api);
-		if($returnRange!=3){
+		if ($returnRange != 3) {
 			$arrayMerge	= [
 				'6022'		=> $plan
 			];
-			$validatePlans	= $this->validatePlans($plan ,$idAgency ,$origin ,$destination ,$daysByPeople);
-			if($validatePlans){
+			$validatePlans	= $this->validatePlans($plan, $idAgency, $origin, $destination, $daysByPeople);
+			if ($validatePlans) {
 				return $validatePlans;
 			}
 		}
-		$dataValida			= $dataValidate+$arrayMerge+$arrayRange;
+		$dataValida			= $dataValidate + $arrayMerge + $arrayRange;
 		$validatEmpty		= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
-		$validateDateOrder	= $this->validateDateOrder($arrivalTrans,$departureTrans,$isoCountry);
-		if(!empty($validateDateOrder)){
+		$validateDateOrder	= $this->validateDateOrder($arrivalTrans, $departureTrans, $isoCountry);
+		if (!empty($validateDateOrder)) {
 			return $validateDateOrder;
 		}
-        if ($typeRange==1) {
-			$agesPassenger	= $this->setAges($calculateRange ,$isoCountry);
+		if ($typeRange == 1) {
+			$agesPassenger	= $this->setAges($calculateRange, $isoCountry);
 			foreach ($calculateRange as $value) {
 				$rangeTrans[] 	= $this->transformerDate($value);
 			}
-			$betweenDates 	= $this->betweenDates('',$rangeTrans,'years');
-			if(!empty($betweenDates)){
+			$betweenDates 	= $this->betweenDates('', $rangeTrans, 'years');
+			if (!empty($betweenDates)) {
 				return $betweenDates;
 			}
-        }else{
-            $plan           = ($returnRange == 3)?'':$plan;
-            $agesPassenger	=  implode(',',$calculateRange);
-        }
-		$dataQuoteGeneral	= $quoteGeneral->quotePlanbenefis($idCategoryPlan ,$daysByPeople ,$countryAgency ,$destination ,$origin ,$agesPassenger ,$departure ,$arrival ,$idAgency,$plan,'','','','',$prefix);
+		} else {
+			$plan           = ($returnRange == 3) ? '' : $plan;
+			$agesPassenger	=  implode(',', $calculateRange);
+		}
+		$dataQuoteGeneral	= $quoteGeneral->quotePlanbenefis($idCategoryPlan, $daysByPeople, $countryAgency, $destination, $origin, $agesPassenger, $departure, $arrival, $idAgency, $plan, '', '', '', '', $prefix);
 		$validatBenefits	= $this->verifyBenefits($dataQuoteGeneral);
-		if($validatBenefits){
+		if ($validatBenefits) {
 			return $validatBenefits;
 		}
 		switch ($returnRange) {
@@ -890,29 +912,30 @@ class post_functions extends general_functions{
 					"idplan"		=> $plan,
 					"fecha_salida"	=> $departure,
 					"fecha_regreso"	=> $arrival,
-                    "dias"			=> $daysByPeople,
+					"dias"			=> $daysByPeople,
 					$nameRange      => $calculateRange,
-					"upgrade"		=> $this->dataUpgrades($plan,'spa' ,$dataQuoteGeneral[0]['total'],$daysByPeople,$numberPassengers,'','',$prefix)
+					"upgrade"		=> $this->dataUpgrades($plan, 'spa', $dataQuoteGeneral[0]['total'], $daysByPeople, $numberPassengers, '', '', $prefix)
 				];
 				break;
 			case 3:
 				$countDataQuoteGeneral	= count($dataQuoteGeneral);
-				for ($i=0; $i <$countDataQuoteGeneral ; $i++) {
-					$response[$dataQuoteGeneral[$i]['idp']]= [
+				for ($i = 0; $i < $countDataQuoteGeneral; $i++) {
+					$response[$dataQuoteGeneral[$i]['idp']] = [
 						"fecha_salida"	=> $departure,
 						"fecha_regreso"	=> $arrival,
 						"dias"			=> $daysByPeople,
 						'name'			=> $dataQuoteGeneral[$i]['name_plan'],
-                        'total_orden'	=> $dataQuoteGeneral[$i]['total'],
-                        $nameRange      => $calculateRange,
+						'total_orden'	=> $dataQuoteGeneral[$i]['total'],
+						$nameRange      => $calculateRange,
 						//"upgrade"		=> $this->dataUpgrades($dataQuoteGeneral[$i]['idp'],'spa' ,$dataQuoteGeneral[$i]['total'],$daysByPeople,$numberPassengers,'','',$prefix)
-                    ];
-                }
+					];
+				}
 				break;
 		}
 		return $response;
 	}
-	public function addUpgrades($data,$source=true){
+	public function addUpgrades($data, $source = true)
+	{
 		$api      			= $this->api;
 		$data				= $this->data;
 		$code				= $data['codigo'];
@@ -927,40 +950,42 @@ class post_functions extends general_functions{
 		$priceBeneficiaries = $data["precio_vta"];
 		$costBeneficiaries 	= $data["precio_cost"];
 		$idOrden			= 0;
-		$upgradeObj			= (is_object($data['upgrades']))?(array)$data['upgrades']:json_decode($data['upgrades'],true);
-		$dataUpgrade 		= (array)$upgradeObj["item"];
+		$upgradeObj			= (is_object($data['upgrades'])) ? (array) $data['upgrades'] : json_decode($data['upgrades'], true);
+		$dataUpgrade 		= (array) $upgradeObj["item"];
 		$countDataUpgrade 	= count($upgradeObj["item"]);
 		$idUpgrade	= [];
 		$arrUpgrade	= [];
-		if($countDataUpgrade==1){
+		if ($countDataUpgrade == 1) {
 			$idUpgrade[] = $dataUpgrade['id'];
-		}else{
-			$idUpgrade 			= array_map(function($value){return $value->id;} ,$dataUpgrade);
+		} else {
+			$idUpgrade 			= array_map(function ($value) {
+				return $value->id;
+			}, $dataUpgrade);
 		}
 		$dataValida				= [
-			'6037'	=> !(empty($code) AND empty($dataUpgrade)),
+			'6037'	=> !(empty($code) and empty($dataUpgrade)),
 			'6020'	=> $api,
-	        '6023'	=> $code,
-	        '6039'	=> $countDataUpgrade
+			'6023'	=> $code,
+			'6039'	=> $countDataUpgrade
 		];
-		if($source){
+		if ($source) {
 			$dataOrder			= $this->getOrderData($code);
 			$plan 				= $dataOrder['producto'];
 			$idOrden			= $dataOrder['id'];
 			$datAgency 			= $this->datAgency($api);
 			$numberPassengers	= $dataOrder['cantidad'];
 			$idUser				= $datAgency[0]['user_id'];
-			$daysByPeople 		= $this->betweenDates($dataOrder['salida'] ,$dataOrder['retorno']);
+			$daysByPeople 		= $this->betweenDates($dataOrder['salida'], $dataOrder['retorno']);
 			$price 				= $dataOrder['total'];
 			$cost 				= $dataOrder['neto_prov'];
 			$isoCountry 		= $dataOrder['id_country'];
 			$dataValidaUpgra	= [
-				'6037'		=> count($this->selectDynamic('','orders',"codigo='$code'",array("id"))),
-				'6047'		=> !($this->selectDynamic(['id_raider' =>$idUpgrade],'orders_raider',"id_orden='$idOrden'",array("id"))), 
+				'6037'		=> count($this->selectDynamic('', 'orders', "codigo='$code'", array("id"))),
+				'6047'		=> !($this->selectDynamic(['id_raider' => $idUpgrade], 'orders_raider', "id_orden='$idOrden'", array("id"))),
 			];
 			$dataValida		= $dataValida + $dataValidaUpgra;
-			$verifyVoucher 	= $this->verifyVoucher($code,$idUser,$isoCountry,'ADD');
-			if($verifyVoucher){
+			$verifyVoucher 	= $this->verifyVoucher($code, $idUser, $isoCountry, 'ADD');
+			if ($verifyVoucher) {
 				return $verifyVoucher;
 			}
 		}
@@ -971,76 +996,78 @@ class post_functions extends general_functions{
 		$arrPricePassengers	= [];
 		$arrUpgNotType2		= [];
 		$idUpgradesOrden	= [];
-		for ($i=0; $i < $countDataUpgrade ; $i++) { 
-			if($countDataUpgrade==1){
+		for ($i = 0; $i < $countDataUpgrade; $i++) {
+			if ($countDataUpgrade == 1) {
 				$id			= $dataUpgrade['id'];
 				$document	= $dataUpgrade['documento'];
-			}else{
+			} else {
 				$id = $dataUpgrade[$i]->id;
 				$document	= $dataUpgrade[$i]->documento;
 			}
-			$typeUpgrade	= $this->valUpgrades($plan ,$id);
-			if(!empty($typeUpgrade)){
-				if($typeUpgrade==2){
-					if(empty($document)){
+			$typeUpgrade	= $this->valUpgrades($plan, $id);
+			if (!empty($typeUpgrade)) {
+				if ($typeUpgrade == 2) {
+					if (empty($document)) {
 						return $this->getError('4006');
-					}else{
-						if(!$source){
-							if($countDataUpgrade==1){
+					} else {
+						if (!$source) {
+							if ($countDataUpgrade == 1) {
 								$id			= $dataUpgrade['id'];
 								$dataUpgradeDocument[]	= $dataUpgrade['documento'];
-							}else{
-								$dataUpgradeDocument = array_map(function($value){return $value->documento;} ,$dataUpgrade);
+							} else {
+								$dataUpgradeDocument = array_map(function ($value) {
+									return $value->documento;
+								}, $dataUpgrade);
 							}
-							$validateBeneficiaries = array_diff($bDayBeneficiaries, $dataUpgradeDocument); 
-							if(count($validateBeneficiaries)>0){
+							$validateBeneficiaries = array_diff($bDayBeneficiaries, $dataUpgradeDocument);
+							if (count($validateBeneficiaries) > 0) {
 								return $this->getError('9028');
 							}
-							$arrPricePassengers [] = [
+							$arrPricePassengers[] = [
 								'id_raider'		=> $id,
 								'precio_vta'	=> $priceBeneficiaries[$i],
 								'precio_cost'	=> $costBeneficiaries[$i],
 								'id'	=> 0
 							];
-						}else{
-							$pricePassengers = $this->dataBeneficiaries($code,'',$document);
-							if(!empty($pricePassengers['Error_Code'])){
+						} else {
+							$pricePassengers = $this->dataBeneficiaries($code, '', $document);
+							if (!empty($pricePassengers['Error_Code'])) {
 								return $pricePassengers;
-							}else{
-								$arrPricePassengers[] = $pricePassengers[0] + ['id_raider'=>$id];
+							} else {
+								$arrPricePassengers[] = $pricePassengers[0] + ['id_raider' => $id];
 							}
 						}
 					}
-				}else{
-					$arrUpgNotType2[]= $id;
+				} else {
+					$arrUpgNotType2[] = $id;
 				}
-			}else{
+			} else {
 				return $this->getError('1095');
 			}
 		}
 		$priceUpgrades	= 0;
 		$costUpgrades 	= 0;
-		if(count($arrPricePassengers)>0){
+		if (count($arrPricePassengers) > 0) {
 			foreach ($arrPricePassengers as  $value) {
-				$getPriceUpgrade	= $this->dataUpgrades($plan,'spa' ,$price,$daysByPeople,$numberPassengers,$value['id_raider'],$value['precio_vta'])[0];
-				$getCostUpgrade		= $this->dataUpgrades($plan,'spa' ,$cost,$daysByPeople,$numberPassengers,$value['id_raider'],$value['precio_cost'])[0];
-				$addOrderUpgrades []= $this->addOrderUpgrades($idOrden, $value['id_raider'], $getPriceUpgrade['price_upgrade'],$getCostUpgrade['price_upgrade'], 0,$value['id']);
+				$getPriceUpgrade	= $this->dataUpgrades($plan, 'spa', $price, $daysByPeople, $numberPassengers, $value['id_raider'], $value['precio_vta'])[0];
+				$getCostUpgrade		= $this->dataUpgrades($plan, 'spa', $cost, $daysByPeople, $numberPassengers, $value['id_raider'], $value['precio_cost'])[0];
+				$addOrderUpgrades[] = $this->addOrderUpgrades($idOrden, $value['id_raider'], $getPriceUpgrade['price_upgrade'], $getCostUpgrade['price_upgrade'], 0, $value['id']);
 				$data =	[
 					'precio_vta'	=> $getPriceUpgrade['price_upgrade'] + $value['precio_vta'],
 					'precio_cost'	=> $getCostUpgrade['price_upgrade'] + $value['precio_cost']
 				];
-				if($source){
-					$this->updateDynamic('beneficiaries','id',$value['id'],$data);
+				if ($source) {
+					$this->updateDynamic('beneficiaries', 'id', $value['id'], $data);
 				}
 				$priceUpgrades 	+= $getPriceUpgrade['price_upgrade'];
 				$costUpgrades 	+= $getCostUpgrade['price_upgrade'];
 			}
 		}
-		if(count($arrUpgNotType2)>0){
-			$getPriceUpgrade	= $this->dataUpgrades($plan,'spa' ,$price,$daysByPeople,$numberPassengers,implode(',',$arrUpgNotType2));
-			$getCostUpgrade		= $this->dataUpgrades($plan,'spa' ,$cost,$daysByPeople,$numberPassengers,implode(',',$arrUpgNotType2));
-			for ($i=0; $i < count($getPriceUpgrade); $i++) { 
-				$addOrderUpgrades []= $this->addOrderUpgrades($idOrden, $getPriceUpgrade[$i]['id_raider'], $getPriceUpgrade[$i]['price_upgrade'],$getCostUpgrade[$i]['price_upgrade'],0,0);
+		if (count($arrUpgNotType2) > 0) {
+			$getPriceUpgrade	= $this->dataUpgrades($plan, 'spa', $price, $daysByPeople, $numberPassengers, implode(',', $arrUpgNotType2));
+			$getCostUpgrade		= $this->dataUpgrades($plan, 'spa', $cost, $daysByPeople, $numberPassengers, implode(',', $arrUpgNotType2));
+			for ($i = 0; $i < count($getPriceUpgrade); $i++) {
+				$addOrderUpgrades[] = $this->addOrderUpgrades($idOrden, $getPriceUpgrade[$i]['id_raider'], $getPriceUpgrade[$i]['price_upgrade'], $getCostUpgrade[$i]['price_upgrade'], 0, 0);
 				$priceUpgrades 	+= $getPriceUpgrade[$i]['price_upgrade'];
 				$costUpgrades 	+= $getCostUpgrade[$i]['price_upgrade'];
 			}
@@ -1048,35 +1075,36 @@ class post_functions extends general_functions{
 		$priceNew 	= $price + $priceUpgrades;
 		$costNew 	= $cost  + $costUpgrades;
 		$addUpgradeOrder = $this->updateUpgradeOrder($code, $priceNew, $costNew);
-			$arrResult = [
-				'voucher' 			=> $code,
-				'valor_adicional' 	=> $priceUpgrades,
-				'upgrades' 			=> $upgrade,
-			];
-			if(!$source){
-				$arrResult	= array_merge($arrResult ,["id"=> $addOrderUpgrades,"price"=>$priceNew, "cost"=>$costNew]);
-			}
-			return $arrResult;
+		$arrResult = [
+			'voucher' 			=> $code,
+			'valor_adicional' 	=> $priceUpgrades,
+			'upgrades' 			=> $upgrade,
+		];
+		if (!$source) {
+			$arrResult	= array_merge($arrResult, ["id" => $addOrderUpgrades, "price" => $priceNew, "cost" => $costNew]);
+		}
+		return $arrResult;
 	}
-	public function cancelUpgrade(){
+	public function cancelUpgrade()
+	{
 		$api			= $this->api;
 		$code			= $this->data['codigo'];
 		$upgrade		= $this->data['upgrades'];
-		$idOrden		= $this->selectDynamic(['status'=>'1'],'orders',"codigo='$code'",array("id"))[0]['id'];
+		$idOrden		= $this->selectDynamic(['status' => '1'], 'orders', "codigo='$code'", array("id"))[0]['id'];
 		$data			= [
 			'value_raider',
 			'cost_raider'
 		];
-		$dataRaider     = $this->selectDynamic(['id_raider' =>$upgrade],'orders_raider',"id_orden='$idOrden'",$data);
+		$dataRaider     = $this->selectDynamic(['id_raider' => $upgrade], 'orders_raider', "id_orden='$idOrden'", $data);
 		$dataValida		= [
-			'6037'	=> !(empty($code) AND empty($upgrade)),
+			'6037'	=> !(empty($code) and empty($upgrade)),
 			'6023'	=> $code,
 			'6039'	=> $upgrade,
 			'1020'	=> $idOrden,
 			'6046'	=> count($dataRaider),
 		];
 		$validatEmpty	= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
 		$dataOrder			= $this->getOrderData($code);
@@ -1089,25 +1117,26 @@ class post_functions extends general_functions{
 		$priceRaider		= $dataRaider[0]['value_raider'];
 		$costRaider			= $dataRaider[0]['cost_raider'];
 		$idCountry 			= $datAgency[0]['id_country'];
-		$verifyVoucher 		= $this->verifyVoucher($code,$idUser,$idCountry,'ADD');
-		if($verifyVoucher){
+		$verifyVoucher 		= $this->verifyVoucher($code, $idUser, $idCountry, 'ADD');
+		if ($verifyVoucher) {
 			return $verifyVoucher;
 		}
 		$data	= [
-            'total'		=> $price-$priceRaider,
-            'neto_prov'	=> $cost-$costRaider
+			'total'		=> $price - $priceRaider,
+			'neto_prov'	=> $cost - $costRaider
 		];
-		$updatePriceOrder 	= $this->updateDynamic('orders','codigo',$code,$data);
+		$updatePriceOrder 	= $this->updateDynamic('orders', 'codigo', $code, $data);
 		$deleteUpgradeOrder	= $this->deleteUpgradeOrder($idOrden, $upgrade);
-		if($updatePriceOrder && $deleteUpgradeOrder){
+		if ($updatePriceOrder && $deleteUpgradeOrder) {
 			return [
 				'voucher' 			=> $code,
 				'valor_descuento' 	=> $priceRaider,
-				'pricer_order' 		=> $price-$priceRaider
+				'pricer_order' 		=> $price - $priceRaider
 			];
 		}
 	}
-	public function changesForOrdersReported(){
+	public function changesForOrdersReported()
+	{
 		$api				= $this->api;
 		$code				= $this->data['codigo'];
 		$status				= $this->data['status'];
@@ -1116,82 +1145,83 @@ class post_functions extends general_functions{
 		$departure			= $this->data['fecha_salida'];
 		$cost				= $this->data['costo'];
 		$dataValida			= [
-			'6037'	=> !(empty($code) AND empty($status) AND empty($origin) AND empty($destination) AND empty($departure) AND  empty($cost)),
+			'6037'	=> !(empty($code) and empty($status) and empty($origin) and empty($destination) and empty($departure) and  empty($cost)),
 			'6023'	=> $code,
 			'9020'	=> !(empty($status) && empty($origin) && empty($destination) && empty($departure) && empty($cost)),
-			'9021'	=> (!empty($status))?!(!is_numeric($status) ||  ($status!=1 && $status!=5)):true,
-			'1090'	=> (!empty($origin))?$this->verifyOrigin($origin):true,
-			'9023'	=> (!empty($cost))?(is_numeric($cost)):true,
-			'2001'	=> (!empty($departure))?$this->checkDates($departure):true,
-			'1080'	=> (!empty($destination))?($destination == "1" OR $destination == "2" OR $destination == "9")?1:0:true
+			'9021'	=> (!empty($status)) ? !(!is_numeric($status) || ($status != 1 && $status != 5)) : true,
+			'1090'	=> (!empty($origin)) ? $this->verifyOrigin($origin) : true,
+			'9023'	=> (!empty($cost)) ? (is_numeric($cost)) : true,
+			'2001'	=> (!empty($departure)) ? $this->checkDates($departure) : true,
+			'1080'	=> (!empty($destination)) ? ($destination == "1" or $destination == "2" or $destination == "9") ? 1 : 0 : true
 		];
 		$validatEmpty	= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
 		$data_broker		= $this->datAgency($api);
 		$idAgency 			= $data_broker[0]['id_broker'];
 		$idUser 			= $data_broker[0]['user_id'];
 		$isoCountry			= $data_broker[0]['id_country'];
-		$verifyVoucher 		= $this->verifyVoucher($code,$idUser,$isoCountry,'REPORT');
-		if($verifyVoucher){
+		$verifyVoucher 		= $this->verifyVoucher($code, $idUser, $isoCountry, 'REPORT');
+		if ($verifyVoucher) {
 			return $verifyVoucher;
 		}
 		$dataVoucher		= $this->getOrderData($code);
 		$plan				= $dataVoucher['producto'];
 		$departureTrans		= $this->transformerDate($departure);
-		if(!empty($destination)){
+		if (!empty($destination)) {
 			$verifyDestination	= $this->verifyRestrictionDestination($destination, $plan);
-			if($verifyDestination){
+			if ($verifyDestination) {
 				return $verifyDestination;
 			}
 		}
-		if(!empty($departure)){
-			$validateDateOrder	= $this->validateDateOrder($dataVoucher['retorno'] ,$departureTrans ,$isoCountry);
-			if($validateDateOrder){
+		if (!empty($departure)) {
+			$validateDateOrder	= $this->validateDateOrder($dataVoucher['retorno'], $departureTrans, $isoCountry);
+			if ($validateDateOrder) {
 				return $validateDateOrder;
 			}
-		} 
+		}
 		$data	=
-		[
-			'status'	=> $status,
-			'origen'	=> $origin,
-			'destino'	=> $destination,
-			'salida'	=> $departureTrans,
-			'total'		=> $cost
-		];
-		$updateOrder=$this->updateDynamic('orders','codigo',$code,$data);
-		 if($updateOrder){
-		 	if($status!=5){
-		 		if(!empty($departure) ||  !empty($cost) || !empty($destination)){
+			[
+				'status'	=> $status,
+				'origen'	=> $origin,
+				'destino'	=> $destination,
+				'salida'	=> $departureTrans,
+				'total'		=> $cost
+			];
+		$updateOrder = $this->updateDynamic('orders', 'codigo', $code, $data);
+		if ($updateOrder) {
+			if ($status != 5) {
+				if (!empty($departure) ||  !empty($cost) || !empty($destination)) {
 					$data	=
-					[
-						'api'		=> $api,
-						'action'	=> 'INTERNO',
-						'codigo'	=> $code,
-						'total'		=> $cost
-					];
+						[
+							'api'		=> $api,
+							'action'	=> 'INTERNO',
+							'codigo'	=> $code,
+							'total'		=> $cost
+						];
 					$crudBeneficiaries	=	$this->crudBeneficiaries($data);
-					if($crudBeneficiaries['status']=='OK'){
+					if ($crudBeneficiaries['status'] == 'OK') {
 						return ['status' 	=> 'OK'];
-					}else{
+					} else {
 						return $crudBeneficiaries;
 					}
-				}else{
-					return [ 'status'	=> 'OK'];
-				}
-		 	}else{
+				} else {
 					return ['status'	=> 'OK'];
-		 	}	
+				}
+			} else {
+				return ['status'	=> 'OK'];
+			}
 		}
 	}
-	public function crudBeneficiaries($data){
+	public function crudBeneficiaries($data)
+	{
 		$quoteGeneral 				= new quote_general_new();
-		$data 						=!empty($data)?$data:$this->data;
+		$data 						= !empty($data) ? $data : $this->data;
 		$api      					= $this->api;
-        $code        				= $data['codigo'];
-        $action		   				= $data['action'];
-		$passengerObj				= (array)$data['databeneficiarie'];
+		$code        				= $data['codigo'];
+		$action		   				= $data['action'];
+		$passengerObj				= (array) $data['databeneficiarie'];
 		$birthDayPassenger			= $passengerObj['nacimiento'];
 		$emailPassenger				= $passengerObj['email'];
 		$namePassenger				= $passengerObj['nombres'];
@@ -1205,7 +1235,7 @@ class post_functions extends general_functions{
 			'9024'		=> $action
 		];
 		$validatEmpty	= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
 		$datAgency	 		= $this->datAgency($api);
@@ -1215,64 +1245,65 @@ class post_functions extends general_functions{
 		$dataOrder			= $this->getOrderData($code);
 		$plan				= $dataOrder['producto'];
 		$idOrden			= $dataOrder['id'];
-		$dataPlan			= $this->selectDynamic('','plans',"id='$plan'",array("id_plan_categoria"));
+		$dataPlan			= $this->selectDynamic('', 'plans', "id='$plan'", array("id_plan_categoria"));
 		$idCategoryPlan 	= $dataPlan[0]['id_plan_categoria'];
 		$departure			= $dataOrder['salida'];
 		$arrival			= $dataOrder['retorno'];
 		$exchangeRate		= $dataOrder['tasa_cambio'];
-		$departureTrans				= $this->transformerDate($departure,2);
-		$arrivalTrans				= $this->transformerDate($arrival,2);
-		$daysByPeople   			= $this->betweenDates($departure ,$arrival);
+		$departureTrans				= $this->transformerDate($departure, 2);
+		$arrivalTrans				= $this->transformerDate($arrival, 2);
+		$daysByPeople   			= $this->betweenDates($departure, $arrival);
 		$birthDayPassengerTrans		= $this->transformerDate($birthDayPassenger);
 		$countryAgency 				= $this->getCountryAgency($api);
-		if($action!='INTERNO'){
-			$verifyVoucher	= $this->verifyVoucher($code ,$idUser,$isoCountry,'REPORT'); 
-			if(!empty($verifyVoucher)){
+		if ($action != 'INTERNO') {
+			$verifyVoucher	= $this->verifyVoucher($code, $idUser, $isoCountry, 'REPORT');
+			if (!empty($verifyVoucher)) {
 				return $verifyVoucher;
 			}
 		}
-		if($action=='PUT' || $action=='DELETE' ){
+		if ($action == 'PUT' || $action == 'DELETE') {
 			$putValid	= [
 				'9026'	=> $idPassenger,
 				'9027'	=> is_numeric($idPassenger)
 			];
 			$validatEmpty	= $this->validatEmpty($putValid);
-			if(!empty($validatEmpty)){
+			if (!empty($validatEmpty)) {
 				return $validatEmpty;
 			}
-			$verifiedBeneficiaries	= $this->verifiedBeneficiariesByVoucher($code ,$idPassenger);
+			$verifiedBeneficiaries	= $this->verifiedBeneficiariesByVoucher($code, $idPassenger);
 			if ($verifiedBeneficiaries) {
 				return $verifiedBeneficiaries;
 			}
-		} 
-		if($action == 'ADD' || $action == 'PUT'){
-			$validateDataPassenger = $this->validateDataPassenger(1 ,(array)$namePassenger ,(array)$lastNamePassenger ,(array)$birthDayPassenger ,(array)$documentPassenger ,(array)$emailPassenger ,(array)$phonePassenger ,(array)$medicalConditionsPassenger);
-			if($validateDataPassenger){
+		}
+		if ($action == 'ADD' || $action == 'PUT') {
+			$validateDataPassenger = $this->validateDataPassenger(1, (array) $namePassenger, (array) $lastNamePassenger, (array) $birthDayPassenger, (array) $documentPassenger, (array) $emailPassenger, (array) $phonePassenger, (array) $medicalConditionsPassenger);
+			if ($validateDataPassenger) {
 				return $validateDataPassenger;
 			}
 		}
 		$dataBeneficiaries		= $this->getBeneficiariesByVoucher($code);
 		$numberPassenger		= count($dataBeneficiaries);
-		$birthDayBeneficiaries	= 
-		array_map(
-			function($value){
-				return $value['nacimiento'];
-			} ,$dataBeneficiaries
-		);
-		array_push($birthDayBeneficiaries,$birthDayPassengerTrans);
-		$agesPassenger			= $this->setAges($birthDayBeneficiaries ,$isoCountry);
-		$dataQuoteGeneral		= $quoteGeneral->quotePlanbenefis($idCategoryPlan ,$daysByPeople ,$countryAgency ,$dataOrder['territory'] ,$dataOrder['origen'] ,$agesPassenger ,$departureTrans ,$arrivalTrans ,$idAgency ,$plan);
+		$birthDayBeneficiaries	=
+			array_map(
+				function ($value) {
+					return $value['nacimiento'];
+				},
+				$dataBeneficiaries
+			);
+		array_push($birthDayBeneficiaries, $birthDayPassengerTrans);
+		$agesPassenger			= $this->setAges($birthDayBeneficiaries, $isoCountry);
+		$dataQuoteGeneral		= $quoteGeneral->quotePlanbenefis($idCategoryPlan, $daysByPeople, $countryAgency, $dataOrder['territory'], $dataOrder['origen'], $agesPassenger, $departureTrans, $arrivalTrans, $idAgency, $plan);
 		$validatBenefits		= $this->verifyBenefits($dataQuoteGeneral);
-		if($validatBenefits){
+		if ($validatBenefits) {
 			return $validatBenefits;
 		}
 		switch ($action) {
 			case 'ADD':
-				$beneficiariesDuplicate = $this->verifiedBeneficiariesDuplicate($idOrden,array($documentPassenger),array($birthDayPassengerTrans),9062);
-				if(!empty($beneficiariesDuplicate)){
+				$beneficiariesDuplicate = $this->verifiedBeneficiariesDuplicate($idOrden, array($documentPassenger), array($birthDayPassengerTrans), 9062);
+				if (!empty($beneficiariesDuplicate)) {
 					return $beneficiariesDuplicate;
 				}
-				$this->addBeneficiares($documentPassenger,$birthDayPassengerTrans,$namePassenger,$lastNamePassenger,$phonePassenger,$emailPassenger,$idOrden,'1','0','0',$medicalConditionsPassenger,'0','0','0','0');
+				$this->addBeneficiares($documentPassenger, $birthDayPassengerTrans, $namePassenger, $lastNamePassenger, $phonePassenger, $emailPassenger, $idOrden, '1', '0', '0', $medicalConditionsPassenger, '0', '0', '0', '0');
 				break;
 			case 'PUT':
 				$data	= [
@@ -1286,8 +1317,8 @@ class post_functions extends general_functions{
 				];
 				break;
 			case 'DELETE':
-				if($dataOrder['cantidad']=='1'){
-					return $this->getError('9031'); 
+				if ($dataOrder['cantidad'] == '1') {
+					return $this->getError('9031');
 				}
 				$data	= [
 					'ben_status'	=> '2',
@@ -1296,42 +1327,45 @@ class post_functions extends general_functions{
 			case 'INTERNO':
 				break;
 			default:
-				return $this->getError('9030'); 
+				return $this->getError('9030');
 				break;
 		}
-		if($action=='PUT' || $action=='DELETE' ){
-			$updateDynamicBeneficiares=$this->updateDynamic('beneficiaries','id' ,$idPassenger ,$data);
+		if ($action == 'PUT' || $action == 'DELETE') {
+			$updateDynamicBeneficiares = $this->updateDynamic('beneficiaries', 'id', $idPassenger, $data);
 		}
 		$cost							= $dataQuoteGeneral[0]['total_costo'];
 		$price							= $dataQuoteGeneral[0]['total'];
 		$familyPlan						= $dataQuoteGeneral[0]['family_plan'];
-		if($dataQuoteGeneral[0]['banda']=="si"){
-			for ($i=0; $i < $dataQuoteGeneral[0]["total_rangos"] ; $i++) {
-				$pricePassenger[] 		= $price/$numberPassenger; 
+		if ($dataQuoteGeneral[0]['banda'] == "si") {
+			for ($i = 0; $i < $dataQuoteGeneral[0]["total_rangos"]; $i++) {
+				$pricePassenger[] 		= $price / $numberPassenger;
 				$costPassenger[]		= $dataQuoteGeneral[0]["costo_banda$i"];
 			}
-		}else{
-			if($dataQuoteGeneral[0]['numero_menores']> 0){
-				for ($i=0; $i < $dataQuoteGeneral[0]['numero_menores'] ; $i++) { 
-					$pricePassenger[] 	= $price/$numberPassenger;
+		} else {
+			if ($dataQuoteGeneral[0]['numero_menores'] > 0) {
+				for ($i = 0; $i < $dataQuoteGeneral[0]['numero_menores']; $i++) {
+					$pricePassenger[] 	= $price / $numberPassenger;
 					$costPassenger[] 	= $dataQuoteGeneral[0]['costoMenor'];
 				}
-			}if($dataQuoteGeneral[0]['numero_mayores']> 0){
-				for ($i=0; $i < $dataQuoteGeneral[0]['numero_mayores'] ; $i++) { 
-					$pricePassenger[] 	= $price/$numberPassenger;
+			}
+			if ($dataQuoteGeneral[0]['numero_mayores'] > 0) {
+				for ($i = 0; $i < $dataQuoteGeneral[0]['numero_mayores']; $i++) {
+					$pricePassenger[] 	= $price / $numberPassenger;
 					$costPassenger[] 	= $dataQuoteGeneral[0]['costoMayor'];
 				}
 			}
 		}
 		$dataBeneficiariesNew		= $this->getBeneficiariesByVoucher($code);
-		$idBeneficiaries	= array_map(function($value){return $value['id'];} ,$dataBeneficiariesNew);
-		for ($i=0; $i <$numberPassenger; $i++) {
+		$idBeneficiaries	= array_map(function ($value) {
+			return $value['id'];
+		}, $dataBeneficiariesNew);
+		for ($i = 0; $i < $numberPassenger; $i++) {
 			$data	= [
 				'precio_vta'		=> $pricePassenger[$i],
 				'precio_cost'		=> $costPassenger[$i],
-				'precio_vta_mlc'	=> $costPassenger[$i]/$exchangeRate
+				'precio_vta_mlc'	=> $costPassenger[$i] / $exchangeRate
 			];
-			$updateBeneficiares	= $this->updateDynamic('beneficiaries','id' ,$idBeneficiaries[$i] ,$data);
+			$updateBeneficiares	= $this->updateDynamic('beneficiaries', 'id', $idBeneficiaries[$i], $data);
 		}
 		$data	= [
 			'total'			=> $price,
@@ -1339,12 +1373,13 @@ class post_functions extends general_functions{
 			'neto_prov'		=> $cost,
 			'family_plan'	=> $familyPlan
 		];
-		$updateOrder	= $this->updateDynamic('orders','codigo' ,$code ,$data);
-		if($updateOrder){
-			return array('status'=>'OK','Result'=>'successful '.$action );
+		$updateOrder	= $this->updateDynamic('orders', 'codigo', $code, $data);
+		if ($updateOrder) {
+			return array('status' => 'OK', 'Result' => 'successful ' . $action);
 		}
 	}
-	public function requestChanges(){	
+	public function requestChanges()
+	{
 		$quoteGeneral 					= new quote_general_new();
 		$data 							= $this->data;
 		$api							= $this->api;
@@ -1366,7 +1401,7 @@ class post_functions extends general_functions{
 		$medicalConditionsPassenger		= $data['medicas'];
 		$phonePassenger					= $data['telefonos'];
 		$dataValida			= [
-			'6037'	=> !(empty($origin) AND empty($numberPassengers) AND  empty($documentPassenger) AND  empty($namePassenger) AND empty($lastNamePassenger) AND empty($phonePassenger) AND empty($emailPassenger) AND empty($medicalConditionsPassenger) AND empty($nameContact) AND empty($phoneContact) AND empty($emailContact) AND empty($language)),
+			'6037'	=> !(empty($origin) and empty($numberPassengers) and  empty($documentPassenger) and  empty($namePassenger) and empty($lastNamePassenger) and empty($phonePassenger) and empty($emailPassenger) and empty($medicalConditionsPassenger) and empty($nameContact) and empty($phoneContact) and empty($emailContact) and empty($language)),
 			'6027'	=> $origin,
 			'6026'	=> $numberPassengers,
 			'6021'	=> $language,
@@ -1374,25 +1409,25 @@ class post_functions extends general_functions{
 			'4009'	=> $phoneContact,
 			'4004'	=> $emailContact,
 			'6035'	=> $issue,
-			'4004'	=> (!$this->verifyMail($emailContact))?0:1,
-			'5010'	=> (!is_numeric($phoneContact))?0:1,
-			'4002'	=> (empty($numberPassengers) || $numberPassengers == 0 || !is_numeric($numberPassengers))?0:1,
-			'9012'	=> ($issue <1 || !is_numeric($issue) || $issue >2 )?0:1,
+			'4004'	=> (!$this->verifyMail($emailContact)) ? 0 : 1,
+			'5010'	=> (!is_numeric($phoneContact)) ? 0 : 1,
+			'4002'	=> (empty($numberPassengers) || $numberPassengers == 0 || !is_numeric($numberPassengers)) ? 0 : 1,
+			'9012'	=> ($issue < 1 || !is_numeric($issue) || $issue > 2) ? 0 : 1,
 			'1030'	=> $this->validLanguage($language),
-			'9049'	=> ($this->countData($namePassenger ,$numberPassengers))?0:1,
-			'9053'	=> ($this->countData($lastNamePassenger ,$numberPassengers))?0:1,
-			'9050'	=> ($this->countData($documentPassenger ,$numberPassengers))?0:1,
-			'9052'	=> ($this->countData($emailPassenger ,$numberPassengers))?0:1,
-			'9054'	=> ($this->countData($phonePassenger ,$numberPassengers))?0:1,
-			'9055'	=> ($this->countData($medicalConditionsPassenger ,$numberPassengers))?0:1,
+			'9049'	=> ($this->countData($namePassenger, $numberPassengers)) ? 0 : 1,
+			'9053'	=> ($this->countData($lastNamePassenger, $numberPassengers)) ? 0 : 1,
+			'9050'	=> ($this->countData($documentPassenger, $numberPassengers)) ? 0 : 1,
+			'9052'	=> ($this->countData($emailPassenger, $numberPassengers)) ? 0 : 1,
+			'9054'	=> ($this->countData($phonePassenger, $numberPassengers)) ? 0 : 1,
+			'9055'	=> ($this->countData($medicalConditionsPassenger, $numberPassengers)) ? 0 : 1,
 			'9059'	=> $this->verifyOrigin($origin),
-			'9060'	=> (!preg_match('(^[a-zA-Z ]*$)',$nameContact))?0:1
+			'9060'	=> (!preg_match('(^[a-zA-Z ]*$)', $nameContact)) ? 0 : 1
 		];
 		$validatEmpty	= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
-		$plan				= $this->selectDynamic('','orders',"codigo='$code'",["producto"])[0]['producto'];
+		$plan				= $this->selectDynamic('', 'orders', "codigo='$code'", ["producto"])[0]['producto'];
 		$datAgency			= $this->datAgency($api);
 		$idAgency			= $datAgency[0]['id_broker'];
 		$isoCountry			= $datAgency[0]['id_country'];
@@ -1400,16 +1435,16 @@ class post_functions extends general_functions{
 		$userAgency			= $datAgency[0]['user_id'];
 		$cantPassengerPlan	= $dataPlan[0]['num_pas'];
 		$prefix				= $datAgency[0]['prefijo'];
-		$verifyVoucher 		= $this->verifyVoucher($code ,$userAgency ,$isoCountry,'ADD');
-		if($verifyVoucher){
+		$verifyVoucher 		= $this->verifyVoucher($code, $userAgency, $isoCountry, 'ADD');
+		if ($verifyVoucher) {
 			return $verifyVoucher;
 		}
-		$validatePlans		= $this->validatePlans($plan ,'' ,$origin ,'' ,'');
-		if($validatePlans){
+		$validatePlans		= $this->validatePlans($plan, '', $origin, '', '');
+		if ($validatePlans) {
 			return $validatePlans;
 		}
-		$validateDataPassenger	= $this->validateDataPassenger($numberPassengers ,$namePassenger ,$lastNamePassenger,'00/00/0000',$documentPassenger ,$emailPassenger ,$phonePassenger ,$medicalConditionsPassenger,false);
-		if($validateDataPassenger){
+		$validateDataPassenger	= $this->validateDataPassenger($numberPassengers, $namePassenger, $lastNamePassenger, '00/00/0000', $documentPassenger, $emailPassenger, $phonePassenger, $medicalConditionsPassenger, false);
+		if ($validateDataPassenger) {
 			return $validateDataPassenger;
 		}
 		$data	= [
@@ -1419,12 +1454,12 @@ class post_functions extends general_functions{
 			'telefono_contacto'	=> $phoneContact,
 			'email_contacto'	=> $emailContact
 		];
-		$updateOrder	= $this->updateDynamic('orders','codigo',$code,$data);
-		if($updateOrder){
+		$updateOrder	= $this->updateDynamic('orders', 'codigo', $code, $data);
+		if ($updateOrder) {
 			$idBeneficiarie	= $this->traer_ids_beneficiarios($code);
-	 		if($idBeneficiarie){
-	 			for ($i=0; $i <$numberPassengers; $i++) {
-	 				$data	= [
+			if ($idBeneficiarie) {
+				for ($i = 0; $i < $numberPassengers; $i++) {
+					$data	= [
 						'email'		=> $emailPassenger[$i],
 						'nombre'	=> $namePassenger[$i],
 						'apellido'	=> $lastNamePassenger[$i],
@@ -1432,18 +1467,19 @@ class post_functions extends general_functions{
 						'condicion_medica'	=> $medicalConditionsPassenger[$i],
 						'telefono'	=> $phonePassenger[$i]
 					];
-					$updateBeneficiares	= $this->updateDynamic('beneficiaries','id' ,$idBeneficiarie[$i]['id'] ,$data);
-					if($updateBeneficiares){
-						return 
-						[
-							'status' => "OK"
-						];
+					$updateBeneficiares	= $this->updateDynamic('beneficiaries', 'id', $idBeneficiarie[$i]['id'], $data);
+					if ($updateBeneficiares) {
+						return
+							[
+								'status' => "OK"
+							];
 					}
 				}
-	 		}
+			}
 		}
 	}
-	public function checkPreorder($data){
+	public function checkPreorder($data)
+	{
 		$quoteGeneral 					= new quote_general_new();
 		$data 							= $this->data;
 		$api							= $this->api;
@@ -1463,24 +1499,24 @@ class post_functions extends general_functions{
 		$generalConsiderations			= $data['consideraciones_generales'];
 		$issue							= $data['emision'];
 		$upgrade						= $data['upgrade'];
-		$namePassengerObj				= (is_object($data['nombres']))?(array)$data['nombres']:json_decode($data['nombres'],true);
-		$lastNamePassengerObj			= (is_object($data['apellidos']))?(array)$data['apellidos']:json_decode($data['apellidos'],true);
-		$birthDayPassengerObj  			= (is_object($data['nacimientos']))?(array)$data['nacimientos']:json_decode($data['nacimientos'],true);
-		$documentPassengerObj  			= (is_object($data['documentos']))?(array)$data['documentos']:json_decode($data['documentos'],true);
-		$emailPassengerObj				= (is_object($data['correos']))?(array)$data['correos']:json_decode($data['correos'],true);
-		$medicalConditionsPassengerObj	= (is_object($data['observaciones_medicas']))?(array)$data['observaciones_medicas']:json_decode($data['observaciones_medicas'],true);
-		$phonePassengerObj				= (is_object($data['telefonos']))?(array)$data['telefonos']:json_decode($data['telefonos'],true);
-		$documentPassenger 				= (array)$documentPassengerObj["item"];
-		$birthDayPassenger				= (array)$birthDayPassengerObj["item"];
-		$lastNamePassenger				= (array)$lastNamePassengerObj['item'];
-		$emailPassenger					= (array)$emailPassengerObj['item'];
-		$namePassenger					= (array)$namePassengerObj['item'];
-		$phonePassenger					= (array)$phonePassengerObj["item"];
-		$medicalConditionsPassenger		= (array)$medicalConditionsPassengerObj["item"];
+		$namePassengerObj				= (is_object($data['nombres'])) ? (array) $data['nombres'] : json_decode($data['nombres'], true);
+		$lastNamePassengerObj			= (is_object($data['apellidos'])) ? (array) $data['apellidos'] : json_decode($data['apellidos'], true);
+		$birthDayPassengerObj  			= (is_object($data['nacimientos'])) ? (array) $data['nacimientos'] : json_decode($data['nacimientos'], true);
+		$documentPassengerObj  			= (is_object($data['documentos'])) ? (array) $data['documentos'] : json_decode($data['documentos'], true);
+		$emailPassengerObj				= (is_object($data['correos'])) ? (array) $data['correos'] : json_decode($data['correos'], true);
+		$medicalConditionsPassengerObj	= (is_object($data['observaciones_medicas'])) ? (array) $data['observaciones_medicas'] : json_decode($data['observaciones_medicas'], true);
+		$phonePassengerObj				= (is_object($data['telefonos'])) ? (array) $data['telefonos'] : json_decode($data['telefonos'], true);
+		$documentPassenger 				= (array) $documentPassengerObj["item"];
+		$birthDayPassenger				= (array) $birthDayPassengerObj["item"];
+		$lastNamePassenger				= (array) $lastNamePassengerObj['item'];
+		$emailPassenger					= (array) $emailPassengerObj['item'];
+		$namePassenger					= (array) $namePassengerObj['item'];
+		$phonePassenger					= (array) $phonePassengerObj["item"];
+		$medicalConditionsPassenger		= (array) $medicalConditionsPassengerObj["item"];
 		$dataValida			= [
-			'6037'	=> !(empty($departure) AND empty($arrival) AND empty($plan) AND empty($destination) AND empty($origin) AND  empty($coin) AND empty($exchangeRate) AND empty($numberPassengers) AND empty($birthDayPassenger) AND  empty($documentPassenger) AND  empty($namePassenger) AND empty($lastNamePassenger) AND empty($phonePassenger) AND empty($emailPassenger) AND empty($medicalConditionsPassenger) AND empty($nameContact) AND empty($phoneContact) AND empty($emailContact) AND empty($lenguaje) AND empty($upgrade)),
-	        '6029'	=> $departure,
-	        '6030'	=> $arrival, 
+			'6037'	=> !(empty($departure) and empty($arrival) and empty($plan) and empty($destination) and empty($origin) and  empty($coin) and empty($exchangeRate) and empty($numberPassengers) and empty($birthDayPassenger) and  empty($documentPassenger) and  empty($namePassenger) and empty($lastNamePassenger) and empty($phonePassenger) and empty($emailPassenger) and empty($medicalConditionsPassenger) and empty($nameContact) and empty($phoneContact) and empty($emailContact) and empty($lenguaje) and empty($upgrade)),
+			'6029'	=> $departure,
+			'6030'	=> $arrival,
 			'6022'	=> $plan,
 			'6028'	=> $destination,
 			'6027'	=> $origin,
@@ -1492,42 +1528,42 @@ class post_functions extends general_functions{
 			'4004'	=> $emailContact,
 			'6035'	=> $issue,
 			'1062'	=> $this->checkDates($birthDayPassenger),
-			'4004'	=> (!$this->verifyMail($emailContact))?0:1,
-			'5010'	=> (!is_numeric($phoneContact))?0:1,
-			'4002'	=> (empty($numberPassengers) or $numberPassengers == 0 or !is_numeric($numberPassengers))?0:1,
-			'1080'	=> ($destination == "1" OR $destination == "2" OR $destination == "9")?1:0,
-			'9011'	=> ($exchangeRate<=0 or is_float($exchangeRate))?0:1,
-			'9012'	=> ($issue<1 || !is_numeric($issue) || $issue>3 )?0:1,
-			'1022'	=> (!$this->selectDynamic('','currency',"value_iso='$coin'",array("desc_small")))?0:1,
+			'4004'	=> (!$this->verifyMail($emailContact)) ? 0 : 1,
+			'5010'	=> (!is_numeric($phoneContact)) ? 0 : 1,
+			'4002'	=> (empty($numberPassengers) or $numberPassengers == 0 or !is_numeric($numberPassengers)) ? 0 : 1,
+			'1080'	=> ($destination == "1" or $destination == "2" or $destination == "9") ? 1 : 0,
+			'9011'	=> ($exchangeRate <= 0 or is_float($exchangeRate)) ? 0 : 1,
+			'9012'	=> ($issue < 1 || !is_numeric($issue) || $issue > 3) ? 0 : 1,
+			'1022'	=> (!$this->selectDynamic('', 'currency', "value_iso='$coin'", array("desc_small"))) ? 0 : 1,
 			'1030'	=> $this->validLanguage($language),
-			'9049'	=> ($this->countData($namePassenger ,$numberPassengers))?0:1,
-			'9053'	=> ($this->countData($lastNamePassenger ,$numberPassengers))?0:1,
-			'9051'	=> ($this->countData($birthDayPassenger ,$numberPassengers))?0:1,
-			'9050'	=> ($this->countData($documentPassenger ,$numberPassengers))?0:1,
-			'9052'	=> ($this->countData($emailPassenger ,$numberPassengers))?0:1,
-			'9054'	=> ($this->countData($phonePassenger ,$numberPassengers))?0:1,
-			'9055'	=> ($this->countData($medicalConditionsPassenger ,$numberPassengers))?0:1,
+			'9049'	=> ($this->countData($namePassenger, $numberPassengers)) ? 0 : 1,
+			'9053'	=> ($this->countData($lastNamePassenger, $numberPassengers)) ? 0 : 1,
+			'9051'	=> ($this->countData($birthDayPassenger, $numberPassengers)) ? 0 : 1,
+			'9050'	=> ($this->countData($documentPassenger, $numberPassengers)) ? 0 : 1,
+			'9052'	=> ($this->countData($emailPassenger, $numberPassengers)) ? 0 : 1,
+			'9054'	=> ($this->countData($phonePassenger, $numberPassengers)) ? 0 : 1,
+			'9055'	=> ($this->countData($medicalConditionsPassenger, $numberPassengers)) ? 0 : 1,
 			'2001'	=> $this->checkDates($departure),
 			'2002'	=> $this->checkDates($arrival),
-			'9060'	=> (!preg_match('(^[a-zA-Z ]*$)',$nameContact))?0:1,
+			'9060'	=> (!preg_match('(^[a-zA-Z ]*$)', $nameContact)) ? 0 : 1,
 			'9059'	=> $this->verifyOrigin($origin),
 		];
 		$validatEmpty	= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
 		foreach ($birthDayPassenger as $value) {
 			$birthDayPassengerTrans[] 	= $this->transformerDate($value);
 		}
-		$betweenDates 	= $this->betweenDates('',$birthDayPassengerTrans,'years');
-		if(!empty($betweenDates)){
+		$betweenDates 	= $this->betweenDates('', $birthDayPassengerTrans, 'years');
+		if (!empty($betweenDates)) {
 			return $betweenDates;
 		}
-		$validateDataPassenger	= $this->validateDataPassenger($numberPassengers ,$namePassenger ,$lastNamePassenger ,$birthDayPassenger ,$documentPassenger ,$emailPassenger ,$phonePassenger ,$medicalConditionsPassenger);
-		if($validateDataPassenger){
+		$validateDataPassenger	= $this->validateDataPassenger($numberPassengers, $namePassenger, $lastNamePassenger, $birthDayPassenger, $documentPassenger, $emailPassenger, $phonePassenger, $medicalConditionsPassenger);
+		if ($validateDataPassenger) {
 			return $validateDataPassenger;
 		}
-		$dataPlan			= $this->selectDynamic('','plans',"id='$plan'",array("id_plan_categoria","name","num_pas"));
+		$dataPlan			= $this->selectDynamic('', 'plans', "id='$plan'", array("id_plan_categoria", "name", "num_pas"));
 		$datAgency			= $this->datAgency($api);
 		$idCategoryPlan 	= $dataPlan[0]['id_plan_categoria'];
 		$namePlan			= $dataPlan[0]['name'];
@@ -1539,27 +1575,27 @@ class post_functions extends general_functions{
 		$prefix				= $datAgency[0]['prefijo'];
 		$arrivalTrans		= $this->transformerDate($arrival);
 		$departureTrans		= $this->transformerDate($departure);
-		$validateDateOrder	= $this->validateDateOrder($arrivalTrans ,$departureTrans ,$isoCountry);
-		if($validateDateOrder){
+		$validateDateOrder	= $this->validateDateOrder($arrivalTrans, $departureTrans, $isoCountry);
+		if ($validateDateOrder) {
 			return $validateDateOrder;
 		}
-		$daysByPeople 		= $this->betweenDates($departureTrans ,$arrivalTrans);
-		$validatePlans		= $this->validatePlans($plan ,$idAgency ,$origin ,$destination ,$daysByPeople);
-		if($validatePlans){
+		$daysByPeople 		= $this->betweenDates($departureTrans, $arrivalTrans);
+		$validatePlans		= $this->validatePlans($plan, $idAgency, $origin, $destination, $daysByPeople);
+		if ($validatePlans) {
 			return $validatePlans;
 		}
-		($cantPassengerPlan > $numberPassengers)?:$this->getError('5003'); 
-		$agesPassenger		= $this->setAges($birthDayPassenger ,$isoCountry);
+		($cantPassengerPlan > $numberPassengers) ?: $this->getError('5003');
+		$agesPassenger		= $this->setAges($birthDayPassenger, $isoCountry);
 		$countryAgency		= $this->getCountryAgency($api);
-		$dataQuoteGeneral	= $quoteGeneral->quotePlanbenefis($idCategoryPlan ,$daysByPeople ,$countryAgency ,$destination ,$origin ,$agesPassenger ,$departure ,$arrival ,$idAgency ,$plan);
+		$dataQuoteGeneral	= $quoteGeneral->quotePlanbenefis($idCategoryPlan, $daysByPeople, $countryAgency, $destination, $origin, $agesPassenger, $departure, $arrival, $idAgency, $plan);
 		$validatBenefits	= $this->verifyBenefits($dataQuoteGeneral);
-		if($validatBenefits){
+		if ($validatBenefits) {
 			return $validatBenefits;
 		}
-		if(!empty($upgrade)){
-			$verifyUpgrade	= $this->valUpgrades($plan ,$upgrade);	
-			if(!$verifyUpgrade){
-				return $this->getError('1095');	
+		if (!empty($upgrade)) {
+			$verifyUpgrade	= $this->valUpgrades($plan, $upgrade);
+			if (!$verifyUpgrade) {
+				return $this->getError('1095');
 			}
 		}
 		return [

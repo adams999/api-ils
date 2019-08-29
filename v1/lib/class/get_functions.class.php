@@ -1,60 +1,61 @@
-<?php 
-class get_functions extends general_functions{
-	public function get_fuctions($function,$apikey)
+<?php
+class get_functions extends general_functions
+{
+	public function get_fuctions($function, $apikey)
 	{
-        $response   = $this->$function($_GET,$apikey);
-        $countResponse  = count($response); 
-        $this->logsave(json_encode($filters),json_encode($response),$function,'4',$apikey);
-        ($countResponse!=0)?$this->response($response,'',$format):$this->getError(9015,'',$format);
-    }
-	public function getPlans($filters,$api)
+		$response   = $this->$function($_GET, $apikey);
+		$countResponse  = count($response);
+		$this->logsave($_GET, json_encode($response), $function, '4', $apikey);
+		($countResponse != 0) ? $this->response($response, '', $format) : $this->getError(9015, '', $format);
+	}
+	public function getPlans($filters, $api)
 	{
 		$language	= $filters['lenguaje'];
-        $plan       = $filters['plan'];
+		$plan       = $filters['plan'];
 		$dataValida	= [
 			'6021'	=> $language,
 			'1030'	=> $this->validLanguage($language)
 		];
 		$validatEmpty	= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
-		$datAgency			= $this->datAgency($api); 
+		$datAgency			= $this->datAgency($api);
 		$idAgency			= $datAgency[0]['id_broker'];
-		return $this->verifyRestrictionPlan($idAgency,$plan,$language,true);
-    }
-	public function getCoverages($data,$api)
+		return $this->verifyRestrictionPlan($idAgency, $plan, $language, true);
+	}
+	public function getCoverages($data, $api)
 	{
 		$plan		= $data['plan'];
 		$prefix		= $data['prefix'];
 		$language	= strtolower($data['lenguaje']);
 		$dataValida	= [
-			'6037'	=> !(empty($plan) AND empty($language)),
+			'6037'	=> !(empty($plan) and empty($language)),
 			'6022'	=> $plan,
 			'6021'	=> $language,
-			'1030'	=> in_array($language,['spa','eng','por','fra','deu'])
+			'1030'	=> in_array($language, ['spa', 'eng', 'por', 'fra', 'deu'])
 		];
 		$validatEmpty	= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
 		//$restrictionPlan	= $this->verifyRestrictionPlan('',$plan,$language,false,$api,true);
 		// if($restrictionPlan){
 		// 	return $restrictionPlan;
 		// }
-		return $this->dataCoverages($language,$plan,$prefix);
+		return $this->dataCoverages($language, $plan, $prefix);
 	}
 	public function getClients()
 	{
-		return $this->selectDynamic('','clients',"data_activa='si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2 ORDER BY client ASC",['client','id_country','img_cliente','web','urlPrueba','prefix','type_platform','id_broker','email','colors_platform'],'','','','','');
+		return $this->selectDynamic('', 'clients', "data_activa='si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2 ORDER BY client ASC", ['client', 'id_country', 'img_cliente', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '');
 	}
 	public function getCountries()
 	{
-		return $this->selectDynamic('','countries',"c_status='Y'",['iso_country','description'],'',['min'=>'0','max'=>'349'],['field'=>'description','order'=>'ASC']);
+		return $this->selectDynamic('', 'countries', "c_status='Y'", ['iso_country', 'description'], '', ['min' => '0', 'max' => '349'], ['field' => 'description', 'order' => 'ASC']);
 	}
 	public function getStates()
 	{
-		return $this->selectDynamic('','','','',"SELECT
+		return $this->selectDynamic('', '', '', '', "SELECT
 										iso_country,
 										iso_state,
 										description,
@@ -62,21 +63,21 @@ class get_functions extends general_functions{
 									FROM
 										`states`
 									ORDER BY
-										iso_country ASC",'','','','');
+										iso_country ASC", '', '', '', '');
 	}
 	public function getCitys()
 	{
-		return $this->selectDynamic('','','','',"SELECT
+		return $this->selectDynamic('', '', '', '', "SELECT
 										iso_city,
 										description
 									FROM
 										`cities`
 									ORDER BY
-										iso_city ASC",'','','','');
+										iso_city ASC", '', '', '', '');
 	}
 	public function checkVersionApp()
 	{
-		return $this->selectDynamic('','versions_app',"status='Y'",['version','fecha_version'],'',['min'=>'0','max'=>'1'],['field'=>'id_version','order'=>'DESC']);
+		return $this->selectDynamic('', 'versions_app', "status='Y'", ['version', 'fecha_version'], '', ['min' => '0', 'max' => '1'], ['field' => 'id_version', 'order' => 'DESC']);
 	}
 	public function checkVersionAppA($filters)
 	{
@@ -87,7 +88,7 @@ class get_functions extends general_functions{
 			"50001"  => $plataforma
 		];
 		$validatEmpty  = $this->validatEmpty($dataValida);
-		return $this->selectDynamic('','versions_app',"status='Y' AND prefijo = '$prefix' AND plataforma= '$plataforma'",['version','fecha_version','descripcion'],'',['min'=>'0','max'=>'1'],['field'=>'id_version','order'=>'DESC'],'','');
+		return $this->selectDynamic('', 'versions_app', "status='Y' AND prefijo = '$prefix' AND plataforma= '$plataforma'", ['version', 'fecha_version', 'descripcion'], '', ['min' => '0', 'max' => '1'], ['field' => 'id_version', 'order' => 'DESC'], '', '');
 	}
 	public function getPlan($filters)
 	{
@@ -98,7 +99,7 @@ class get_functions extends general_functions{
 			"9092"  => $prefix
 		];
 		$validatEmpty  = $this->validatEmpty($dataValida);
-		return $this->selectDynamic('','plans',"id = $idPlan AND prefijo = '$prefix'",['id_plans','id','name','description','activo','id_plan_categoria'],'','',['field'=>'name','order'=>'ASC'],'','') ;
+		return $this->selectDynamic('', 'plans', "id = $idPlan AND prefijo = '$prefix'", ['id_plans', 'id', 'name', 'description', 'activo', 'id_plan_categoria'], '', '', ['field' => 'name', 'order' => 'ASC'], '', '');
 	}
 	public function getVendedor($filters)
 	{
@@ -109,7 +110,7 @@ class get_functions extends general_functions{
 			"9092"  => $prefix
 		];
 		$validatEmpty  = $this->validatEmpty($dataValida);
-		return $this->selectDynamic('','users_extern',"id = $idVendedor AND prefijo = '$prefix'",['firstname','lastname','email'],'','','','','') ;
+		return $this->selectDynamic('', 'users_extern', "id = $idVendedor AND prefijo = '$prefix'", ['firstname', 'lastname', 'email'], '', '', '', '', '');
 	}
 	public function getAgencyParam($filters)
 	{
@@ -118,41 +119,41 @@ class get_functions extends general_functions{
 			"9092"  => $prefix
 		];
 		$validatEmpty  = $this->validatEmpty($dataValida);
-		return $this->selectDynamic('','clients',"prefix = '$prefix' AND data_activa = 'si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2",['client','phone1','cod_phone2','phone2','cod_phone3','phone3','cod_phone4','phone4','address','id_country','img_cliente','id_country','id_city','zip_code','date_up','id_state','web','urlPrueba','prefix','type_platform','id_broker','email','colors_platform'],'','','','','','') ;
+		return $this->selectDynamic('', 'clients', "prefix = '$prefix' AND data_activa = 'si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2", ['client', 'phone1', 'cod_phone2', 'phone2', 'cod_phone3', 'phone3', 'cod_phone4', 'phone4', 'address', 'id_country', 'img_cliente', 'id_country', 'id_city', 'zip_code', 'date_up', 'id_state', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '', '');
 	}
 
 
-	public function getOrders($filters,$apikey)
+	public function getOrders($filters, $apikey)
 	{
 		$document  = $filters['document'];
 		$code	   = $filters['code'];
 		$name      = $filters['name'];
 		$prefix	   = $filters['prefix'];
-		$userType  = ($filters['userType'])?$filters['userType']:1;
+		$userType  = ($filters['userType']) ? $filters['userType'] : 1;
 		$startDate = $filters['startDate'];
 		$endDate   = $filters['endDate'];
 		$source    = $filters['source'];
-		$min	   = ($filters['min']<=0 || empty($filters['min']))?0:$filters['min'];
-		$max	   = ($filters['max']<=0 || empty($filters['max'] || ($filters['max']<=$filters['min'])) )?50:$filters['max'];
-		$status	   = ($filters['status'])?$filters['status']:1;
+		$min	   = ($filters['min'] <= 0 || empty($filters['min'])) ? 0 : $filters['min'];
+		$max	   = ($filters['max'] <= 0 || empty($filters['max'] || ($filters['max'] <= $filters['min']))) ? 50 : $filters['max'];
+		$status	   = ($filters['status']) ? $filters['status'] : 1;
 		$today 	   = date('Y-m-d');
 
 		$dataValida	= [
 			"9092"  => $prefix,
-			"9017"  => !empty($status)?in_array($status,[1,2,3,4,5]):true,
-			'3030'	=> (!empty($endDate)&&!empty($endDate))?!(strtotime($startDate)>strtotime($endDate)):true,
-			'9068'	=> (!empty($endDate)&&!empty($endDate))?!(strtotime($endDate)	> strtotime($today)):true,
-			'9069'	=> (!empty($endDate)&&!empty($endDate))?!(strtotime($startDate)	> strtotime($today)):true,
+			"9017"  => !empty($status) ? in_array($status, [1, 2, 3, 4, 5]) : true,
+			'3030'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate) > strtotime($endDate)) : true,
+			'9068'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($endDate)	> strtotime($today)) : true,
+			'9069'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate)	> strtotime($today)) : true,
 		];
 
 
 		$validatEmpty	= $this->validatEmpty($dataValida);
-		if(!empty($validatEmpty)){
+		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
 		$valueOrders = [
 			'orders.id',
-            'orders.id_orders',
+			'orders.id_orders',
 			'codigo',
 			'origen',
 			'destino',
@@ -168,10 +169,11 @@ class get_functions extends general_functions{
 			'referencia',
 			'territory',
 			'producto'
-		];    
-		
-		if($source !='public'){
-			array_push($valueOrders,
+		];
+
+		if ($source != 'public') {
+			array_push(
+				$valueOrders,
 				'family_plan',
 				'comentario_medicas',
 				'total',
@@ -194,20 +196,20 @@ class get_functions extends general_functions{
 				'codeauto'
 			);
 		}
-		
+
 		$codeWhere = '1';
 		$arrWhere = [];
 		$idBroker	= $this->getBrokersByApiKey($apikey);
-		if(!empty($idBroker) && !in_array($userType,[1,13])){
-			$arrWhere ['agencia']= $idBroker;
+		if (!empty($idBroker) && !in_array($userType, [1, 13])) {
+			$arrWhere['agencia'] = $idBroker;
 		}
-		if(!empty($code)){
-			$codeWhere="codigo LIKE '%$code%'";
+		if (!empty($code)) {
+			$codeWhere = "codigo LIKE '%$code%'";
 		}
 
-		$arrWhere ['orders.prefijo']= $prefix;
-		$arrLimit = ['min'=>$min,'max'=>$max];
-		if(!empty($name)){
+		$arrWhere['orders.prefijo'] = $prefix;
+		$arrLimit = ['min' => $min, 'max' => $max];
+		if (!empty($name)) {
 			$name = trim($name);
 			$nameSearch = explode(' ', $name);
 			$arrJoin = [
@@ -222,31 +224,29 @@ class get_functions extends general_functions{
 			];
 		}
 
-		if(!empty($document)){
-			
+		if (!empty($document)) {
+
 			$arrJoin = [
-				'table'=>'beneficiaries',
-				'field'=>"id_orden AND beneficiaries.prefijo = orders.prefijo AND beneficiaries.documento LIKE '%$document%'",
-				'fieldComp'=>'id'
+				'table' => 'beneficiaries',
+				'field' => "id_orden AND beneficiaries.prefijo = orders.prefijo AND beneficiaries.documento LIKE '%$document%'",
+				'fieldComp' => 'id'
 			];
-			$arrLimit = ['min'=>$min,'max'=>$max];
+			$arrLimit = ['min' => $min, 'max' => $max];
 			array_push($valueOrders, 'beneficiaries.documento');
 		}
 
-		if(!empty($startDate) && !empty($endDate)){
+		if (!empty($startDate) && !empty($endDate)) {
 			$between = [
 				'start' => $startDate,
 				'end'   => $endDate,
 				'field' => 'fecha'
 			];
 		}
-		if(!empty($pagination)){
-			$arrPagination  = implode(',',$pagination);
-			if(is_array($arrPagination)){
-
-			}
+		if (!empty($pagination)) {
+			$arrPagination  = implode(',', $pagination);
+			if (is_array($arrPagination)) { }
 		}
-		
+
 		//$arrWhere['status']=$status;
 		$dataOrders = $this->selectDynamic(
 			$arrWhere,
@@ -255,19 +255,23 @@ class get_functions extends general_functions{
 			$valueOrders,
 			false,
 			$arrLimit,
-			["field"=>"fecha","order"=>"DESC"],
+			["field" => "fecha", "order" => "DESC"],
 			$between,
 			$arrJoin
 		);
- 
+
 		$arrBeneficiaries = [];
 		$cDataOrders = count($dataOrders);
 
-		for ($i=0; $i < $cDataOrders; $i++) { 
+		for ($i = 0; $i < $cDataOrders; $i++) {
 			$idOrder = $dataOrders[$i]['id'];
 
-			$dataOrders[$i]['categoria'] = $this->selectDynamic('','','','', 
-			"SELECT
+			$dataOrders[$i]['categoria'] = $this->selectDynamic(
+				'',
+				'',
+				'',
+				'',
+				"SELECT
 				plan_category.name_plan AS categoria
 			FROM
 				orders
@@ -277,18 +281,19 @@ class get_functions extends general_functions{
 			AND plan_category.prefijo = plans.prefijo
 			WHERE
 				orders.id = '$idOrder'
-			AND orders.prefijo = '$prefix'")[0]['categoria']?:'N/A';
+			AND orders.prefijo = '$prefix'"
+			)[0]['categoria'] ?: 'N/A';
 
 			$dataOrders[$i]['beneficiaries'] = $this->selectDynamic(
-				['beneficiaries.prefijo'=>$prefix],
+				['beneficiaries.prefijo' => $prefix],
 				'beneficiaries',
 				"id_orden='$idOrder'",
-				['id','id_orden','nombre','apellido','documento','email','nacimiento','nacionalidad','tipo_doc','telefono'],
+				['id', 'id_orden', 'nombre', 'apellido', 'documento', 'email', 'nacimiento', 'nacionalidad', 'tipo_doc', 'telefono'],
 				'',
 				'',
 				[
-					'field'=>'nombre',
-					'order'=>'ASC'
+					'field' => 'nombre',
+					'order' => 'ASC'
 				],
 				'',
 				''
@@ -299,14 +304,14 @@ class get_functions extends general_functions{
 
 	public function getCategories($filters)
 	{
-		$quote	    = NEW quoteils();
+		$quote	    = new quoteils();
 		$prefix 	= $filters['prefix'];
 		$dataValida	= [
 			"9092"  => $prefix
 		];
 		$validatEmpty	= $this->validatEmpty($dataValida);
 		$data = [
-			'querys'=>"SELECT
+			'querys' => "SELECT
 				id_plan_categoria,
 				name_plan
 			FROM
@@ -338,28 +343,28 @@ class get_functions extends general_functions{
 			ORDER BY
 				name_plan ASC"
 		];
-		$link 		= $this->selectDynamic(['prefix'=>$prefix],'clients',"data_activa='si'",['web'])[0]['web'];
-		$linkParam 	= $link."/app/api/selectDynamic";
+		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
-		$response = $this->curlGeneral($linkParam,json_encode($data),$headers);
+		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
 		return json_decode($response);
 		//return $this->dataCategories($prefix);
 	}
-	public function getPrices($filters,$apikey)
+	public function getPrices($filters, $apikey)
 	{
-		$quote	   = NEW quoteils();
+		$quote	   = new quoteils();
 		$prefix	   = $filters['prefix'];
 		$origin	   = $filters['origin'];
 		$startDate = $filters['startDate'];
 		$endDate   = $filters['endDate'];
 		$destiny   = $filters['destiny'];
 		$category  = $filters['category'];
-		$ages	   = explode(',',$filters['ages']);
+		$ages	   = explode(',', $filters['ages']);
 		$today 	   = date('Y-m-d');
 		$dataValida	= [
 			"9092"  => $prefix,
 			"6027"  => $origin,
-			"1080"  => !empty($destiny)?in_array($destiny,[1,2,9]):true,
+			"1080"  => !empty($destiny) ? in_array($destiny, [1, 2, 9]) : true,
 			"6029"  => $startDate,
 			"9094"  => $category,
 			"6030"  => $endDate,
@@ -367,7 +372,7 @@ class get_functions extends general_functions{
 			'2002'	=> $this->checkDates($endDate),
 			'9095'	=> is_array($ages)
 		];
-		if(!empty($startDate) && !empty($endDate) ){
+		if (!empty($startDate) && !empty($endDate)) {
 			$startDate  = $this->transformerDate($startDate);
 			$endDate 	= $this->transformerDate($endDate);
 		}
@@ -376,8 +381,8 @@ class get_functions extends general_functions{
 			'9068'	=> (strtotime($endDate)	> strtotime($today)),
 			'9069'	=> (strtotime($startDate)	>= strtotime($today)),
 		];
-		$validatEmpty	= $this->validatEmpty($dataValida+$arrVerifyDate);
-		$interval = $this->betweenDates($startDate,$endDate);
+		$validatEmpty	= $this->validatEmpty($dataValida + $arrVerifyDate);
+		$interval = $this->betweenDates($startDate, $endDate);
 		$dataQuote = $quote->Quote([
 			'category'		=> $category,
 			'days'			=> $interval,
@@ -395,11 +400,12 @@ class get_functions extends general_functions{
 				'Description'	=> $value['description'],
 				'Couple'		=> $value['couple']["active"],
 				'Family'		=> $value['family']["active"]
-			]; 
+			];
 		}
-		return($dataPrices)?$dataPrices:$this->getError(1060);		
+		return ($dataPrices) ? $dataPrices : $this->getError(1060);
 	}
-	function get_cod_phones(){
+	function get_cod_phones()
+	{
 		$query = "SELECT
                     iso_country,
                     description,
@@ -408,24 +414,25 @@ class get_functions extends general_functions{
                     countries
                 WHERE
                     phone IS NOT NULL ";
-        $query.=" AND c_status = 'Y'";
-        if(!empty($code_phone)) $query.=" AND iso_numeric IS NOT NULL";
-		$query.=" ORDER BY description ASC ";
-		$this->selectDynamic('','','','',$query,'','','','');
-        $result = $this->_SQL_tool($this->SELECT, METHOD, $query);
-        return array_reduce($result,function($response,$element){
-            $split = array_map(function($value)use($element){
-                return [
-                    'cod_phone'=>'+'.preg_replace('/[^0-9]+/', '', $value),
-                    'iso_country'=>$element['iso_country'],
-                    'description'=>$element['description'],
-                ];
-            },explode("and",$element['cod_phone']));
-            return array_merge($response,$split);
-        },[]);
-        return $arrCountries;
+		$query .= " AND c_status = 'Y'";
+		if (!empty($code_phone)) $query .= " AND iso_numeric IS NOT NULL";
+		$query .= " ORDER BY description ASC ";
+		$this->selectDynamic('', '', '', '', $query, '', '', '', '');
+		$result = $this->_SQL_tool($this->SELECT, METHOD, $query);
+		return array_reduce($result, function ($response, $element) {
+			$split = array_map(function ($value) use ($element) {
+				return [
+					'cod_phone' => '+' . preg_replace('/[^0-9]+/', '', $value),
+					'iso_country' => $element['iso_country'],
+					'description' => $element['description'],
+				];
+			}, explode("and", $element['cod_phone']));
+			return array_merge($response, $split);
+		}, []);
+		return $arrCountries;
 	}
-	public function getInformIls(){
+	public function getInformIls()
+	{
 		$query = "SELECT
 					parameter_key,
 					parameter_value,
@@ -464,22 +471,23 @@ class get_functions extends general_functions{
 				)
 				ORDER BY
 					parameter_key ASC";
-	 	return $this->selectDynamic('','','','',$query,'','','','');
+		return $this->selectDynamic('', '', '', '', $query, '', '', '', '');
 	}
 	////////////////////////////////////////////// GRAFICOS DE TODAS LAS AGENCIAS ////////////////////
-	public function getGrafGenAgen($filters){
+	public function getGrafGenAgen($filters)
+	{
 		$startDate  = $filters['startDate'];
 		$endDate   	= $filters['endDate'];
 		$today 	   	= date('Y-m-d');
 		$year       = date('Y');
 		$dataValida	= [
-			'3030'	=> (!empty($endDate)&&!empty($endDate))?!(strtotime($startDate)>strtotime($endDate)):true,
-			'9068'	=> (!empty($endDate)&&!empty($endDate))?!(strtotime($endDate)	> strtotime($today)):true,
-			'9069'	=> (!empty($endDate)&&!empty($endDate))?!(strtotime($startDate)	> strtotime($today)):true,
+			'3030'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate) > strtotime($endDate)) : true,
+			'9068'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($endDate)	> strtotime($today)) : true,
+			'9069'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate)	> strtotime($today)) : true,
 		];
 		$validatEmpty  = $this->validatEmpty($dataValida);
 		//GRAFICA DRILLDOWN DE VENTAS DIARIAS DE TODAS LAS AGENCIAS
-		$query1 ="SELECT
+		$query1 = "SELECT
 			prefijo,
 			producto,
 			IFNULL((
@@ -506,26 +514,26 @@ class get_functions extends general_functions{
 			prefijo,
 			producto
 		ORDER BY client";
-		$respGraf1 = $this->selectDynamic('','','','',$query1,'','','','');
+		$respGraf1 = $this->selectDynamic('', '', '', '', $query1, '', '', '', '');
 		foreach ($respGraf1 as $element) {
-            $sumatori[$element['prefijo']]+=(int)$element['cantidad']?:0;
-            $clientsName[$element['prefijo']]=$element['client'];
-            $drilldownRaw[$element['prefijo']][]=[$element['name_plan'],(int)$element['cantidad']];
-        }
-        foreach ($clientsName as $key => $val) {
-            $series[]=[
-                'name'=>$val,
-                'y'=>(int)$sumatori[$key],
-                'drilldown'=>$key,
-            ];
-            $drilldown[]=[
-                'name'=>$val,
-                'id'=>$key,
-                'data'=>$drilldownRaw[$key],
-            ];
+			$sumatori[$element['prefijo']] += (int) $element['cantidad'] ?: 0;
+			$clientsName[$element['prefijo']] = $element['client'];
+			$drilldownRaw[$element['prefijo']][] = [$element['name_plan'], (int) $element['cantidad']];
+		}
+		foreach ($clientsName as $key => $val) {
+			$series[] = [
+				'name' => $val,
+				'y' => (int) $sumatori[$key],
+				'drilldown' => $key,
+			];
+			$drilldown[] = [
+				'name' => $val,
+				'id' => $key,
+				'data' => $drilldownRaw[$key],
+			];
 		}
 		//GRAFICA CANTIDAD DE VOUCHERS VENDIDOS ANUALES DE HOME ILS 
-		$query2="SELECT
+		$query2 = "SELECT
 			orders.prefijo,
 			MONTH (orders.fecha) AS mes,
 			COUNT(orders.cantidad) AS cantidad,
@@ -541,39 +549,39 @@ class get_functions extends general_functions{
 		GROUP BY
 			orders.prefijo,
 			mes";
-		$respGraf2 = $this->selectDynamic('','','','',$query2,'','','','');
-		$mountDesc=[
-			'01'=>'Enero',
-			'02'=>'Febrero',
-			'03'=>'Marzo',
-			'04'=>'Abril',
-			'05'=>'Mayo',
-			'06'=>'Junio',
-			'07'=>'Julio',
-			'08'=>'Agosto',
-			'09'=>'Septiembre',
-			'10'=>'Octubre',
-			'11'=>'Noviembre',
-			'12'=>'Diciembre',
+		$respGraf2 = $this->selectDynamic('', '', '', '', $query2, '', '', '', '');
+		$mountDesc = [
+			'01' => 'Enero',
+			'02' => 'Febrero',
+			'03' => 'Marzo',
+			'04' => 'Abril',
+			'05' => 'Mayo',
+			'06' => 'Junio',
+			'07' => 'Julio',
+			'08' => 'Agosto',
+			'09' => 'Septiembre',
+			'10' => 'Octubre',
+			'11' => 'Noviembre',
+			'12' => 'Diciembre',
 		];
-		foreach ( $respGraf2 as $element) {
-            $clientsAnual[$element['prefijo']][(int)$element['mes']]=(int)$element['cantidad']?:0;
-            $clientsAnual[$element['prefijo']]['description']=$element['description'];
+		foreach ($respGraf2 as $element) {
+			$clientsAnual[$element['prefijo']][(int) $element['mes']] = (int) $element['cantidad'] ?: 0;
+			$clientsAnual[$element['prefijo']]['description'] = $element['description'];
 		}
 		foreach ($clientsAnual as $key1 => $val) {
-            $seriesAnual=[];
-            foreach ($mountDesc as $key2 =>$value) {
+			$seriesAnual = [];
+			foreach ($mountDesc as $key2 => $value) {
 				if ($key2 <= date('m')) {
-					$seriesAnual[] = (int)$val[(int)$key2]?:0;
+					$seriesAnual[] = (int) $val[(int) $key2] ?: 0;
 				}
-            }
-            $clientAnual[] = [
-                'name' => $val['description'],
-                'data' => $seriesAnual,
-            ];
+			}
+			$clientAnual[] = [
+				'name' => $val['description'],
+				'data' => $seriesAnual,
+			];
 		}
 		//VENTAS NETAS TODAS LAS AGENCIAS DEL AÑO ACTUAL
-		$query3="SELECT
+		$query3 = "SELECT
 			orders.prefijo,
 			MONTH (orders.fecha) AS mes,
 			SUM(orders.neto_prov) AS neto,
@@ -590,7 +598,7 @@ class get_functions extends general_functions{
 		GROUP BY
 			orders.prefijo,
 			mes";
-		$respGraf3= $this->selectDynamic('','','','',$query3);
+		$respGraf3 = $this->selectDynamic('', '', '', '', $query3);
 		//AQUI SE CONSULTA LOS MESES TRANSCURRIDOS EN VENTAS PARA MOSTRAR LOS MESES DINAMICAMENTE EN LAS GRAFICAS
 		$meses = "SELECT DISTINCT
 			MONTH (orders.fecha) AS mes,
@@ -605,31 +613,32 @@ class get_functions extends general_functions{
 		AND clients.data_activa = 'SI'
 		ORDER BY
 			MONTH (orders.fecha) ASC";
-		$respMeses = $this->selectDynamic('','','','',$meses);
-		foreach ( $respMeses as $element) {
-            $Months[(int)$element['mes']]=$element['nameMes'];
-        }
-		foreach ( $respGraf3 as $element) {
-            $SalInt[$element['prefijo']]['ventas'][(int)$element['mes']]=(float)$element['neto']?:0;
-            $SalInt[$element['prefijo']]['description']=$element['description'];
-        }
-        foreach ($SalInt as $val) {
-            $setSal=[];
-            foreach ($Months as $key2 => $value ) {
-                $setSal[] = (float)$val['ventas'][(int)$key2]?:0;
-            }
-            $AnSales[] = [
-                'name' => $val['description'],
-                'data' => $setSal,
-            ];
+		$respMeses = $this->selectDynamic('', '', '', '', $meses);
+		foreach ($respMeses as $element) {
+			$Months[(int) $element['mes']] = $element['nameMes'];
 		}
-		return [[$series,$drilldown],[$clientAnual],[$AnSales]];
+		foreach ($respGraf3 as $element) {
+			$SalInt[$element['prefijo']]['ventas'][(int) $element['mes']] = (float) $element['neto'] ?: 0;
+			$SalInt[$element['prefijo']]['description'] = $element['description'];
+		}
+		foreach ($SalInt as $val) {
+			$setSal = [];
+			foreach ($Months as $key2 => $value) {
+				$setSal[] = (float) $val['ventas'][(int) $key2] ?: 0;
+			}
+			$AnSales[] = [
+				'name' => $val['description'],
+				'data' => $setSal,
+			];
+		}
+		return [[$series, $drilldown], [$clientAnual], [$AnSales]];
 	}
-////////////////////////GRAFICOS PARA LA SEGUNDA PESTAÑA DE GENERAL/TOTAL HOME ILS
-	public function getGrafGenAgenGeneral($filters){
+	////////////////////////GRAFICOS PARA LA SEGUNDA PESTAÑA DE GENERAL/TOTAL HOME ILS
+	public function getGrafGenAgenGeneral($filters)
+	{
 		$yearBus  = $filters['yearBus'];
 		$mesBus   = $filters['mesBus'];
-		$yearActual=date('Y');
+		$yearActual = date('Y');
 		$dataValida	= [
 			'50002'	=> $yearBus,
 			'50003'	=> $mesBus,
@@ -649,10 +658,10 @@ class get_functions extends general_functions{
 		AND clients.data_activa = 'SI'
 		ORDER BY
 			MONTH (orders.fecha) ASC";
-		$respMeses = $this->selectDynamic('','','','',$queryMeses,'','','','');
-		foreach ( $respMeses as $element) {
-            $Months[(int)$element['mes']]=$element['nameMes'];
-        }
+		$respMeses = $this->selectDynamic('', '', '', '', $queryMeses, '', '', '', '');
+		foreach ($respMeses as $element) {
+			$Months[(int) $element['mes']] = $element['nameMes'];
+		}
 		////////////////////GRAFICA DE TORTA DRILLDOWN DE AGENCIAS VOUCHERS ACTIVOS GENERAL/TOTAL
 		$query1 = "SELECT
 			orders.prefijo,
@@ -676,39 +685,39 @@ class get_functions extends general_functions{
 			WHERE
 				clients.data_activa = 'SI'
 			AND orders.`status` IN (1, 3)";
-			if ($mesBus == 'ALL') {
-				$query1.="AND YEAR(orders.fecha) = '$yearBus'";
-			}else{
-			$query1.="AND YEAR (orders.fecha) = '$yearBus'
+		if ($mesBus == 'ALL') {
+			$query1 .= "AND YEAR(orders.fecha) = '$yearBus'";
+		} else {
+			$query1 .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus'";
-			}
-			$query1.="AND IFNULL(inactive_platform, 0) <> 2
+		}
+		$query1 .= "AND IFNULL(inactive_platform, 0) <> 2
 			GROUP BY
 				orders.prefijo,
 				category
 			ORDER BY
 				description ASC";
-		$respGraf1 = $this->selectDynamic('','','','',$query1,'','','','');
+		$respGraf1 = $this->selectDynamic('', '', '', '', $query1, '', '', '', '');
 		$VouchCant = [];
-        foreach ($respGraf1 as $element) {
-            $VouchCant[$element['description']]+=(int)$element['cantidad']?:0;
-            $VouchNet[$element['description']]=$element['category'];
-            $drillVouch[$element['description']][]=[$element['category'],(int)$element['cantidad']];
-        }
-        $seriesVouch = [];
-        $drilldownVouch = [];
-        foreach ($VouchNet as $key => $val) {
-            $seriesVouch[]=[
-                'name'=>$key,
-                'y'=>(float)$VouchCant[$key],
-                'drilldown'=>$key,
-            ];
-            $drilldownVouch[]=[
-                'name'=>$key,
-                'id'=>$key,
-                'data'=>$drillVouch[$key],
-            ];
-        }
+		foreach ($respGraf1 as $element) {
+			$VouchCant[$element['description']] += (int) $element['cantidad'] ?: 0;
+			$VouchNet[$element['description']] = $element['category'];
+			$drillVouch[$element['description']][] = [$element['category'], (int) $element['cantidad']];
+		}
+		$seriesVouch = [];
+		$drilldownVouch = [];
+		foreach ($VouchNet as $key => $val) {
+			$seriesVouch[] = [
+				'name' => $key,
+				'y' => (float) $VouchCant[$key],
+				'drilldown' => $key,
+			];
+			$drilldownVouch[] = [
+				'name' => $key,
+				'id' => $key,
+				'data' => $drillVouch[$key],
+			];
+		}
 		///////////grafica de vouchers activos de netos 
 		$query2 = "SELECT
 			orders.prefijo,
@@ -733,41 +742,41 @@ class get_functions extends general_functions{
 			WHERE
 				clients.data_activa = 'SI'
 			AND orders.`status` IN (1, 3)";
-			if ($mesBus == 'ALL') {
-				$query2.="AND YEAR(orders.fecha) = '$yearBus'";
-			}else{
-				$query2.="AND YEAR (orders.fecha) = '$yearBus'
+		if ($mesBus == 'ALL') {
+			$query2 .= "AND YEAR(orders.fecha) = '$yearBus'";
+		} else {
+			$query2 .= "AND YEAR (orders.fecha) = '$yearBus'
 				AND MONTH (orders.fecha) = '$mesBus'";
-			}
-			$query2.="AND IFNULL(inactive_platform, 0) <> 2
+		}
+		$query2 .= "AND IFNULL(inactive_platform, 0) <> 2
 			GROUP BY
 				orders.prefijo,
 				category, mes
 			ORDER BY
 				description ASC";
-		$respGraf2 = $this->selectDynamic('','','','',$query2,'','','','');
+		$respGraf2 = $this->selectDynamic('', '', '', '', $query2, '', '', '', '');
 		$VouchNum = [];
-        foreach ($respGraf2 as $element) {
-            $VouchNum[$element['description']]+=(float)$element['neto']?:0;
-            $VouchNeto[$element['description']]=$element['category'];
-            $drillNet[$element['description']][]=[$element['category'],(float)$element['neto']];
-        }
-        $seriesNeto = [];
-        $drilldownNeto = [];
-        foreach ($VouchNeto as $key => $val) {
-            $seriesNeto[]=[
-                'name'=>$key,
-                'y'=>(float)$VouchNum[$key],
-                'drilldown'=>$key,
-            ];
-            $drilldownNeto[]=[
-                'name'=>$key,
-                'id'=>$key,
-                'data'=>$drillNet[$key],
-            ];
-        }
+		foreach ($respGraf2 as $element) {
+			$VouchNum[$element['description']] += (float) $element['neto'] ?: 0;
+			$VouchNeto[$element['description']] = $element['category'];
+			$drillNet[$element['description']][] = [$element['category'], (float) $element['neto']];
+		}
+		$seriesNeto = [];
+		$drilldownNeto = [];
+		foreach ($VouchNeto as $key => $val) {
+			$seriesNeto[] = [
+				'name' => $key,
+				'y' => (float) $VouchNum[$key],
+				'drilldown' => $key,
+			];
+			$drilldownNeto[] = [
+				'name' => $key,
+				'id' => $key,
+				'data' => $drillNet[$key],
+			];
+		}
 		////////grafico de origenes
-		$query3 ="SELECT
+		$query3 = "SELECT
 			orders.prefijo,
 			clients.client,
 			orders.origen,
@@ -788,39 +797,39 @@ class get_functions extends general_functions{
 			clients.data_activa = 'SI'
 		AND orders.`status` IN (1, 3)";
 		if ($mesBus == 'ALL') {
-			$query3.="AND YEAR(orders.fecha) = '$yearBus'";
-		}else{
-			$query3.="AND YEAR (orders.fecha) = '$yearBus'
+			$query3 .= "AND YEAR(orders.fecha) = '$yearBus'";
+		} else {
+			$query3 .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus'";
 		}
-		$query3.="AND IFNULL(inactive_platform, 0) <> 2
+		$query3 .= "AND IFNULL(inactive_platform, 0) <> 2
 		GROUP BY
 			prefijo,origen
 		ORDER BY
 			country ASC";
-		$respGraf3 = $this->selectDynamic('','','','',$query3,'','','','');
+		$respGraf3 = $this->selectDynamic('', '', '', '', $query3, '', '', '', '');
 		$OrigNum = [];
-        foreach ($respGraf3 as $element) {
-            $OrigNum[$element['client']]+=(int)$element['cantidad']?:0;
-            $OrigClient[$element['client']]=$element['country'];
-            $drillOrig[$element['client']][]=[$element['country'],(int)$element['cantidad']];
-        }
-        $seriesOrig = [];
-        $drilldownOrig = [];
-        foreach ( $OrigClient as $key => $val) {
-            $seriesOrig[]=[
-                'name'=>$key,
-                'y'=>(int)$OrigNum[$key],
-                'drilldown'=>$key,
-            ];
-            $drilldownOrig[]=[
-                'name'=>$key,
-                'id'=>$key,
-                'data'=> $drillOrig[$key],
-            ];
-        }
+		foreach ($respGraf3 as $element) {
+			$OrigNum[$element['client']] += (int) $element['cantidad'] ?: 0;
+			$OrigClient[$element['client']] = $element['country'];
+			$drillOrig[$element['client']][] = [$element['country'], (int) $element['cantidad']];
+		}
+		$seriesOrig = [];
+		$drilldownOrig = [];
+		foreach ($OrigClient as $key => $val) {
+			$seriesOrig[] = [
+				'name' => $key,
+				'y' => (int) $OrigNum[$key],
+				'drilldown' => $key,
+			];
+			$drilldownOrig[] = [
+				'name' => $key,
+				'id' => $key,
+				'data' => $drillOrig[$key],
+			];
+		}
 		//////////grafica de cantidad de ventas por mes grafico de columna
-		$query4 ="SELECT
+		$query4 = "SELECT
 			orders.prefijo,
 			MONTH (orders.fecha) AS mes,
 			COUNT(orders.cantidad) AS cantidad,
@@ -834,52 +843,52 @@ class get_functions extends general_functions{
 		AND IFNULL(inactive_platform, 0) <> 2
 		AND clients.data_activa = 'SI'";
 		if ($mesBus == 'ALL') {
-			$query4.="AND YEAR(orders.fecha) = '$yearBus'";
-		}else{
-			$query4.="AND YEAR (orders.fecha) = '$yearBus'
+			$query4 .= "AND YEAR(orders.fecha) = '$yearBus'";
+		} else {
+			$query4 .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus'";
 		}
-		$query4.="GROUP BY
+		$query4 .= "GROUP BY
 			orders.prefijo,
 			mes
 		ORDER BY
 			mes,
 			client ASC";
-		$respGraf4 = $this->selectDynamic('','','','',$query4,'','','','');
-		$mountDesc=[
-			'01'=>'Enero',
-			'02'=>'Febrero',
-			'03'=>'Marzo',
-			'04'=>'Abril',
-			'05'=>'Mayo',
-			'06'=>'Junio',
-			'07'=>'Julio',
-			'08'=>'Agosto',
-			'09'=>'Septiembre',
-			'10'=>'Octubre',
-			'11'=>'Noviembre',
-			'12'=>'Diciembre',
+		$respGraf4 = $this->selectDynamic('', '', '', '', $query4, '', '', '', '');
+		$mountDesc = [
+			'01' => 'Enero',
+			'02' => 'Febrero',
+			'03' => 'Marzo',
+			'04' => 'Abril',
+			'05' => 'Mayo',
+			'06' => 'Junio',
+			'07' => 'Julio',
+			'08' => 'Agosto',
+			'09' => 'Septiembre',
+			'10' => 'Octubre',
+			'11' => 'Noviembre',
+			'12' => 'Diciembre',
 		];
 		$monts1 = [];
-        foreach ( $respGraf4 as $element) {
-            $timeInt[$element['prefijo']]['ventas'][$element['nameMes']]=(int)$element['cantidad']?:0;
-            $timeInt[$element['prefijo']]['description']=$element['description'];
-            $monts1[$element['mes']]=$element['nameMes'];
-        }
-        foreach ($timeInt as $val) {
-            $setMonth = [];
-             foreach ($val as $key2 => $value ) {
-                foreach ($value as $key3 => $value2 ) {
-                    $setMonth[] = (int)$val['ventas'][$key3]?:0;
-                }
-            }
-            $MonthInt[] = [
-                'name' => $val['description'],
-                'data' => $setMonth,
-            ];
-        }
+		foreach ($respGraf4 as $element) {
+			$timeInt[$element['prefijo']]['ventas'][$element['nameMes']] = (int) $element['cantidad'] ?: 0;
+			$timeInt[$element['prefijo']]['description'] = $element['description'];
+			$monts1[$element['mes']] = $element['nameMes'];
+		}
+		foreach ($timeInt as $val) {
+			$setMonth = [];
+			foreach ($val as $key2 => $value) {
+				foreach ($value as $key3 => $value2) {
+					$setMonth[] = (int) $val['ventas'][$key3] ?: 0;
+				}
+			}
+			$MonthInt[] = [
+				'name' => $val['description'],
+				'data' => $setMonth,
+			];
+		}
 		///////////////////GRAFICO DE COLUMNAS DE NETO DE VENTAS 
-		$query5="SELECT
+		$query5 = "SELECT
 			orders.prefijo,
 			MONTH (orders.fecha) AS mes,
 			SUM(orders.neto_prov) AS neto,
@@ -893,35 +902,35 @@ class get_functions extends general_functions{
 		AND IFNULL(inactive_platform, 0) <> 2
 		AND clients.data_activa = 'SI'";
 		if ($mesBus == 'ALL') {
-			$query5.="AND YEAR(orders.fecha) = '$yearBus'";
-		}else{
-			$query5.="AND YEAR (orders.fecha) = '$yearBus'
+			$query5 .= "AND YEAR(orders.fecha) = '$yearBus'";
+		} else {
+			$query5 .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus'";
 		}
-		$query5.="GROUP BY
+		$query5 .= "GROUP BY
 			orders.prefijo,
 			mes
 		ORDER BY
 			mes,
 			client ASC";
-		$respGraf5 = $this->selectDynamic('','','','',$query5,'','','','');
+		$respGraf5 = $this->selectDynamic('', '', '', '', $query5, '', '', '', '');
 		$monts = [];
-       	foreach ( $respGraf5 as $element) {
-            $SalInt[$element['prefijo']]['ventas'][$element['nameMes']]=(float)$element['neto']?:0;
-			$SalInt[$element['prefijo']]['description']=$element['description'];
-			$monts[$element['mes']]=$element['nameMes'];
+		foreach ($respGraf5 as $element) {
+			$SalInt[$element['prefijo']]['ventas'][$element['nameMes']] = (float) $element['neto'] ?: 0;
+			$SalInt[$element['prefijo']]['description'] = $element['description'];
+			$monts[$element['mes']] = $element['nameMes'];
 		}
-        foreach ($SalInt as $val) {
-            $setSal=[];
-            foreach ($val as $key2 => $value ) {
-                foreach ($value as $key3 => $value2 ) {
-                    $setSal[] = (float)$val['ventas'][$key3]?:0;
-                }
-            }
-            $AnSales[] = [
-                'name' => $val['description'],
-                'data' => $setSal,
-            ];
+		foreach ($SalInt as $val) {
+			$setSal = [];
+			foreach ($val as $key2 => $value) {
+				foreach ($value as $key3 => $value2) {
+					$setSal[] = (float) $val['ventas'][$key3] ?: 0;
+				}
+			}
+			$AnSales[] = [
+				'name' => $val['description'],
+				'data' => $setSal,
+			];
 		}
 		/////////////GRAFICA DRILL DOWN COLUMNAS DE EDADES CON FILTRO DE FECHA
 		$queryClientes = "SELECT
@@ -936,8 +945,8 @@ class get_functions extends general_functions{
 		AND data_activa = 'SI'
 		ORDER BY
 			client ASC";
-		$respClientes = $this->selectDynamic('','','','',$queryClientes,'','','','');
-		$query6="SELECT
+		$respClientes = $this->selectDynamic('', '', '', '', $queryClientes, '', '', '', '');
+		$query6 = "SELECT
 			orders.prefijo,
 			beneficiaries.sexo AS sexo,
 			TIMESTAMPDIFF(
@@ -956,22 +965,22 @@ class get_functions extends general_functions{
 		AND IFNULL(inactive_platform, 0) <> 2
 		AND clients.data_activa = 'SI'";
 		if ($mesBus == 'ALL') {
-			$query6.="AND YEAR(orders.fecha) = '$yearBus'";
-		}else{
-			$query6.="AND YEAR (orders.fecha) = '$yearBus'
+			$query6 .= "AND YEAR(orders.fecha) = '$yearBus'";
+		} else {
+			$query6 .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus'";
 		}
-		$query6.="GROUP BY
+		$query6 .= "GROUP BY
 			prefijo,
 			sexo,
 			edad
 		ORDER BY
 			prefijo,
 			edad ASC";
-		$respGraf6 = $this->selectDynamic('','','','',$query6,'','','','');
+		$respGraf6 = $this->selectDynamic('', '', '', '', $query6, '', '', '', '');
 		foreach ($respGraf6 as &$element) {
-            statistics::EdadResult($BarD[$element['prefijo']],$element['edad'],$element['sexo'],$element['cant']);
-            statistics::EdadResult($BarA,$element['edad'],$element['sexo'],$element['cant']);
+			statistics::EdadResult($BarD[$element['prefijo']], $element['edad'], $element['sexo'], $element['cant']);
+			statistics::EdadResult($BarA, $element['edad'], $element['sexo'], $element['cant']);
 		}
 		$IntEdad = [
 			'0-10',
@@ -990,51 +999,50 @@ class get_functions extends general_functions{
 			"M",
 			"N/A",
 		];
-        $SerEd = [];
-        foreach ($BarA as $sexo => $edad) {
-            $SexEdad = [];
-            $dataEd = [];
-            foreach ( $IntEdad  as  $key2 => $values) {
-                $SexEdad[] = [
-                    'name' => $values,
-                    'y' => (int)$edad[$values]?:0,
-                    'drilldown' => $sexo.'-'.$values,
-                ];
-            }
-            $SerEd[] =[
-                'name' => $sexo,
-                'data' => $SexEdad,
-            ];                    
-        }
+		$SerEd = [];
+		foreach ($BarA as $sexo => $edad) {
+			$SexEdad = [];
+			$dataEd = [];
+			foreach ($IntEdad  as  $key2 => $values) {
+				$SexEdad[] = [
+					'name' => $values,
+					'y' => (int) $edad[$values] ?: 0,
+					'drilldown' => $sexo . '-' . $values,
+				];
+			}
+			$SerEd[] = [
+				'name' => $sexo,
+				'data' => $SexEdad,
+			];
+		}
 		$dataEdad = [];
-        foreach ($BarD as $prefix => $element) {
-            foreach ($element as $sex => $val) {
-                foreach ( $val  as $edad => $values) {
-					foreach ($respClientes as $key3 ) {
+		foreach ($BarD as $prefix => $element) {
+			foreach ($element as $sex => $val) {
+				foreach ($val  as $edad => $values) {
+					foreach ($respClientes as $key3) {
 						if ($prefix == $key3['prefix']) {
-							$dataEdad[$sex.'-'.$edad][] = [
-								$key3['client'],(int)$values?:0
+							$dataEdad[$sex . '-' . $edad][] = [
+								$key3['client'], (int) $values ?: 0
 							];
 						}
 					}
-                }
-            }
-        }
-        $DrillEd = [];
-        foreach($dataEdad as $key => $value)
-        {
-            $DrillEd[] = [
-                'id'=> $key,
-                'data'=> $value,
-            ];
-        }
-		////////////////// grafica de ventas de a;os anteriores columnas
-		$yearInicio = 2017;///array para filtrar solo del 2017 al a;o actual
-		$yearsBus='';
-		for ($i=$yearInicio; $i <= $yearActual; $i++) { 
-			$yearsBus.=$i.',';
+				}
+			}
 		}
-		$yearsBus = substr($yearsBus, 0, -1);///aqui suprimo la ultima coma
+		$DrillEd = [];
+		foreach ($dataEdad as $key => $value) {
+			$DrillEd[] = [
+				'id' => $key,
+				'data' => $value,
+			];
+		}
+		////////////////// grafica de ventas de a;os anteriores columnas
+		$yearInicio = 2017; ///array para filtrar solo del 2017 al a;o actual
+		$yearsBus = '';
+		for ($i = $yearInicio; $i <= $yearActual; $i++) {
+			$yearsBus .= $i . ',';
+		}
+		$yearsBus = substr($yearsBus, 0, -1); ///aqui suprimo la ultima coma
 		$query7 = "SELECT
 			orders.prefijo,
 			YEAR (orders.fecha) AS anio,
@@ -1054,51 +1062,52 @@ class get_functions extends general_functions{
 		ORDER BY
 			orders.prefijo ASC,
 			anio DESC";
-		$respQuery7 = $this->selectDynamic('','','','',$query7,'','','','');
-		foreach ( $respQuery7 as $element) {
-            $temp[$element['anio']][$element['prefijo']]=(int)$element['cantidad']?:0;
+		$respQuery7 = $this->selectDynamic('', '', '', '', $query7, '', '', '', '');
+		foreach ($respQuery7 as $element) {
+			$temp[$element['anio']][$element['prefijo']] = (int) $element['cantidad'] ?: 0;
 		}
-        foreach ( $temp as $anio => $element) {
-			$clAn1=[];
-            foreach ($respClientes as $key) {
-                $clAn1[]=(int)$element[$key['prefix']]?:0;
-                $platName[]=$element['client']?:0;      
-            }
-            $final[] = [
-                'name' => $anio,
-                'data' => $clAn1
-            ]; 
-        }
-        $platName=[];
-        foreach ( $respClientes as $element) {
-            $platName[]=$element['client']?:0;         
-        }
+		foreach ($temp as $anio => $element) {
+			$clAn1 = [];
+			foreach ($respClientes as $key) {
+				$clAn1[] = (int) $element[$key['prefix']] ?: 0;
+				$platName[] = $element['client'] ?: 0;
+			}
+			$final[] = [
+				'name' => $anio,
+				'data' => $clAn1
+			];
+		}
+		$platName = [];
+		foreach ($respClientes as $element) {
+			$platName[] = $element['client'] ?: 0;
+		}
 		return [
-			[$seriesVouch,$drilldownVouch],
-			[$seriesNeto,$drilldownNeto],
-			[$seriesOrig,$drilldownOrig],
-			[$MonthInt,array_values($monts1)],
-			[$AnSales,array_values($monts)],
-			[$SerEd,$DrillEd],
-			[$final,$platName],
+			[$seriesVouch, $drilldownVouch],
+			[$seriesNeto, $drilldownNeto],
+			[$seriesOrig, $drilldownOrig],
+			[$MonthInt, array_values($monts1)],
+			[$AnSales, array_values($monts)],
+			[$SerEd, $DrillEd],
+			[$final, $platName],
 			'YEAR' => $yearBus
 		];
 	}
 	////////////////////////////////////////////// GRAFICOS PARA CADA AGENCIA ////////////////////
-	public function getChartVouchersPie($filters){
+	public function getChartVouchersPie($filters)
+	{
 		$prefix	    = $filters['prefix'];
 		$startDate  = $filters['startDate'];
 		$endDate   	= $filters['endDate'];
 		$today 	   	= date('Y-m-d');
 		$dataValida	= [
 			"9092"  => $prefix,
-			'3030'	=> (!empty($endDate)&&!empty($endDate))?!(strtotime($startDate)>strtotime($endDate)):true,
-			'9068'	=> (!empty($endDate)&&!empty($endDate))?!(strtotime($endDate)	> strtotime($today)):true,
-			'9069'	=> (!empty($endDate)&&!empty($endDate))?!(strtotime($startDate)	> strtotime($today)):true,
+			'3030'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate) > strtotime($endDate)) : true,
+			'9068'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($endDate)	> strtotime($today)) : true,
+			'9069'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate)	> strtotime($today)) : true,
 		];
 		$validatEmpty  = $this->validatEmpty($dataValida);
 		//    GRAFICA VOUCHERS CATEGORIAS 
-		$query1 ="SELECT
+		$query1 = "SELECT
 		COUNT(orders.cantidad) AS cantidad,
 		(
 			SELECT
@@ -1126,17 +1135,20 @@ class get_functions extends general_functions{
 			category
 		ORDER BY
 			category";
-		$respGraf1 = $this->selectDynamic('','','','',$query1,'','','','');
-		$respGraf1 = array_reduce( $respGraf1, 
-			function($response,$value){
+		$respGraf1 = $this->selectDynamic('', '', '', '', $query1, '', '', '', '');
+		$respGraf1 = array_reduce(
+			$respGraf1,
+			function ($response, $value) {
 				$response[] = [
 					'name' => $value['category'],
-					'y' => (int)$value['cantidad'],
+					'y' => (int) $value['cantidad'],
 				];
-			return $response;
-		},[]);
+				return $response;
+			},
+			[]
+		);
 		//GRAFICA 2 NETOS VOUCHERS
-		$query2 ="SELECT
+		$query2 = "SELECT
 		 SUM(orders.neto_prov) AS neto,
 			(
 				SELECT
@@ -1162,17 +1174,20 @@ class get_functions extends general_functions{
 			name_plan
 		ORDER BY
 			name_plan ASC";
-		$respGraf2 = $this->selectDynamic('','','','',$query2,'','','','');
-		$respGraf2 = array_reduce( $respGraf2, 
-			function($response,$value){
+		$respGraf2 = $this->selectDynamic('', '', '', '', $query2, '', '', '', '');
+		$respGraf2 = array_reduce(
+			$respGraf2,
+			function ($response, $value) {
 				$response[] = [
 					'name' => $value['name_plan'],
-					'y' => (float)$value['neto'],
+					'y' => (float) $value['neto'],
 				];
-			return $response;
-		},[]);
+				return $response;
+			},
+			[]
+		);
 		//GRAFICO 3 DE PAISES PARA VOUCHERS
-		$query3="SELECT
+		$query3 = "SELECT
 		orders.origen,
 		COUNT(orders.cantidad) AS cantidad,
 			(
@@ -1198,17 +1213,20 @@ class get_functions extends general_functions{
 			orders.origen
 		ORDER BY
 			country ASC";
-		$respGraf3 = $this->selectDynamic('','','','',$query3,'','','','');
-		$respGraf3 = array_reduce($respGraf3, 
-            function($response,$value){
-                $response[] = [
-                    'name'=> $value['country'],
-                    'y' => (int)$value['cantidad'],
-                ];
-            return $response;
-			},[]);
+		$respGraf3 = $this->selectDynamic('', '', '', '', $query3, '', '', '', '');
+		$respGraf3 = array_reduce(
+			$respGraf3,
+			function ($response, $value) {
+				$response[] = [
+					'name' => $value['country'],
+					'y' => (int) $value['cantidad'],
+				];
+				return $response;
+			},
+			[]
+		);
 		//GRAFICA DE LINEAS EDAD Y SEXO
-		$query4="SELECT
+		$query4 = "SELECT
 		orders.prefijo,
 		beneficiaries.sexo AS sexo,
 			TIMESTAMPDIFF(
@@ -1235,12 +1253,12 @@ class get_functions extends general_functions{
 		ORDER BY
 			prefijo,
 			edad ASC";
-		$respGraf4 = $this->selectDynamic('','','','',$query4,'','','','');
-		$BarA=[];
-		$BarD=[];
+		$respGraf4 = $this->selectDynamic('', '', '', '', $query4, '', '', '', '');
+		$BarA = [];
+		$BarD = [];
 		foreach ($respGraf4 as &$element) {
-			statistics::EdadResult($BarD[$element['prefijo']],$element['edad'],$element['sexo'],$element['cant']);
-			statistics::EdadResult($BarA,$element['edad'],$element['sexo'],$element['cant']);
+			statistics::EdadResult($BarD[$element['prefijo']], $element['edad'], $element['sexo'], $element['cant']);
+			statistics::EdadResult($BarA, $element['edad'], $element['sexo'], $element['cant']);
 		}
 		$SexEdad = [];
 		$data = [];
@@ -1256,11 +1274,11 @@ class get_functions extends general_functions{
 			'76-84',
 			'85+',
 		];
-		foreach ( $BarD  as $key => $val) {
-			foreach ( $val  as $key1 => $value) {
+		foreach ($BarD  as $key => $val) {
+			foreach ($val  as $key1 => $value) {
 				$data = [];
-				foreach ( $IntEdad  as  $key2 => $values) {
-					$data[] = (int)$value[$values]?:0;
+				foreach ($IntEdad  as  $key2 => $values) {
+					$data[] = (int) $value[$values] ?: 0;
 				}
 				$SexEdad[] = [
 					'name' => $key1,
@@ -1270,7 +1288,7 @@ class get_functions extends general_functions{
 		}
 		return [$respGraf1, $respGraf2, $respGraf3, $SexEdad];
 	}
-/*  public function getBrokers($filters,$limit){
+	/*  public function getBrokers($filters,$limit){
         $fields =
         [
             "id_broker",
@@ -1617,5 +1635,5 @@ class get_functions extends general_functions{
 	public function getRegions(){
 		return $this->selectDynamic('','territory',"id_status='1'",['id_territory','desc_small']);
 	}
-*/    
+*/
 }

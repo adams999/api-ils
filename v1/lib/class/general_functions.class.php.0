@@ -229,7 +229,7 @@ class general_functions extends Model {
     public function logsave($request, $response, $operacion, $procedencia, $apikey='', $id_error='', $num_voucher='', $num_referencia=''){    
         $datAgency		= $this->datAgency($apikey);
         $idUser         = $datAgency[0]['user_id'];
-        $prefijo        = $datAgency[0]['prefijo'];
+        $prefijo        = $datAgency[0]['prefijo']?:'ILS';
         $_response      = mysql_real_escape_string($response);
         $_response      = (strlen($_response)>10000)?'':$_response;
         $data   = [
@@ -247,7 +247,15 @@ class general_functions extends Model {
             'num_referencia'    => $num_referencia,
             'id_user'           => !empty($idUser)?$idUser:0
         ];
-        return $this->insertDynamic($data,'trans_all_webservice');
+
+        $oldGeneralLog=$this->genera_log;
+        $this->genera_log=false;
+
+        $return=$this->insertDynamic($data,'trans_all_webservice');
+
+        $this->genera_log=$oldGeneralLog;
+        
+        return $return;
     }
     function getError($error,$code=422,$format){
         http_response_code($code);

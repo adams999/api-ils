@@ -228,8 +228,12 @@ class general_functions extends Model {
     }
     public function logsave($request, $response, $operacion, $procedencia, $apikey='', $id_error='', $num_voucher='', $num_referencia=''){    
         $datAgency		= $this->datAgency($apikey);
-        $idUser         = $datAgency[0]['user_id'];
-        $prefijo        = $datAgency[0]['prefijo'];
+        $id_user        = $_GET['id_user'];
+        $prefijo        = !empty($request['prefix'])?$request['prefix']:'ILS';
+        $prefixApp      = $request['prefixApp'];
+        $platfApp       = $_GET['platfApp'];
+        $versionApp     = $_GET['versionAppApi'];
+        $request        = json_encode($request);
         $_response      = mysql_real_escape_string($response);
         $_response      = (strlen($_response)>10000)?'':$_response;
         $data   = [
@@ -238,14 +242,17 @@ class general_functions extends Model {
             'ip'                => $_SERVER['REMOTE_ADDR'],
             'operacion'         => $operacion,
             'datos'             => $request,
-            'respuesta'         => strlen($_response),
+            'respuesta'         => $response,
             'prefijo'           => $prefijo,
             'procedencia'       => $procedencia,
             'apikey'            => $apikey,
             'id_error'          => $id_error,
-            'num_voucher'       => $num_voucher,
+            'num_voucher'       => '',
             'num_referencia'    => $num_referencia,
-            'id_user'           => !empty($idUser)?$idUser:0
+            'id_user'           => !empty($id_user)?$id_user:0,
+            'prefixApp'         => $prefixApp,
+            'platfApp'          => $platfApp,
+            'versionApp'        => !empty($versionApp)?$versionApp:'DEV'
         ];
 
         $oldGeneralLog=$this->genera_log;
