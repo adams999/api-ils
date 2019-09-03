@@ -548,7 +548,8 @@ class get_functions extends general_functions
 		AND clients.data_activa = 'SI'
 		GROUP BY
 			orders.prefijo,
-			mes";
+			mes
+		ORDER BY description asc";
 		$respGraf2 = $this->selectDynamic('', '', '', '', $query2, '', '', '', '');
 		$mountDesc = [
 			'01' => 'Enero',
@@ -597,7 +598,8 @@ class get_functions extends general_functions
 		AND NOW()
 		GROUP BY
 			orders.prefijo,
-			mes";
+			mes
+		ORDER BY description asc";
 		$respGraf3 = $this->selectDynamic('', '', '', '', $query3);
 		//AQUI SE CONSULTA LOS MESES TRANSCURRIDOS EN VENTAS PARA MOSTRAR LOS MESES DINAMICAMENTE EN LAS GRAFICAS
 		$meses = "SELECT DISTINCT
