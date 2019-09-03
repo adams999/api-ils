@@ -599,7 +599,7 @@ class get_functions extends general_functions
 		GROUP BY
 			orders.prefijo,
 			mes
-		ORDER BY description asc";
+		ORDER BY description ASC";
 		$respGraf3 = $this->selectDynamic('', '', '', '', $query3);
 		//AQUI SE CONSULTA LOS MESES TRANSCURRIDOS EN VENTAS PARA MOSTRAR LOS MESES DINAMICAMENTE EN LAS GRAFICAS
 		$meses = "SELECT DISTINCT
@@ -850,7 +850,7 @@ class get_functions extends general_functions
 			$query4 .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus'";
 		}
-		$query4 .= "GROUP BY
+		$query4 .= " GROUP BY
 			orders.prefijo,
 			mes
 		ORDER BY
@@ -909,7 +909,7 @@ class get_functions extends general_functions
 			$query5 .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus'";
 		}
-		$query5 .= "GROUP BY
+		$query5 .= " GROUP BY
 			orders.prefijo,
 			mes
 		ORDER BY
