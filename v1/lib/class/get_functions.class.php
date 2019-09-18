@@ -81,14 +81,19 @@ class get_functions extends general_functions
 	}
 	public function checkVersionAppA($filters)
 	{
-		$prefix    = $filters['prefix'];
+		$prefix    = $filters['prefixApp'] ?: $filters['prefix'];
 		$plataforma	   = $filters['plataforma'];
+		$versionApp = $filters['versionAppApi'];
 		$dataValida	= [
 			"9092"  => $prefix,
 			"50001"  => $plataforma
 		];
 		$validatEmpty  = $this->validatEmpty($dataValida);
-		return $this->selectDynamic('', 'versions_app', "status='Y' AND prefijo = '$prefix' AND plataforma= '$plataforma'", ['version', 'fecha_version', 'descripcion'], '', ['min' => '0', 'max' => '1'], ['field' => 'id_version', 'order' => 'DESC'], '', '');
+		if (!empty($filters['prefixApp'] && $versionApp != 'DEV')) { //validacion si se envia la version de la app para responder a esto
+			return $this->selectDynamic('', 'versions_app', "status='Y' AND prefijo = '$prefix' AND plataforma= '$plataforma' AND version > '$versionApp' ", ['MAX(version) AS version', 'MAX(fecha_version) AS fecha_version', 'REPLACE (GROUP_CONCAT(CONCAT(descripcion, CHAR(13))),","," ") as descripcion'], '', ['min' => '0', 'max' => '1'], '', '', '');
+		} else {
+			return $this->selectDynamic('', 'versions_app', "status='Y' AND prefijo = '$prefix' AND plataforma= '$plataforma' ", ['version', 'fecha_version', 'descripcion'], '', ['min' => '0', 'max' => '1'], ['field' => 'id_version', 'order' => 'DESC'], '', '');
+		}
 	}
 	public function getPlan($filters)
 	{
