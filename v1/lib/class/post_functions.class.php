@@ -281,7 +281,7 @@ class post_functions extends general_functions
 					return $this->getError(9090);
 				}
 			} else {
-				return $this->getError(9089);
+				return $this->getError(50004);
 			}
 		} else {
 			return $this->getError(9088);
@@ -308,34 +308,130 @@ class post_functions extends general_functions
 			"prefijo",
 			"firstname",
 			"lastname",
-			"id"
+			"id",
+			"email",
+			"code_phone",
+			"phone",
+			"(
+				SELECT
+					user_associate.id_associate
+				FROM
+					user_associate
+				WHERE
+					user_associate.id_user = users_extern.id
+				AND user_associate.prefijo = '$prefix'
+				ORDER BY
+					user_associate.modified DESC
+				LIMIT 1
+			) AS agency",
+			"(
+				SELECT
+					countries.description
+				FROM
+					countries
+				WHERE
+					countries.iso_country = users_extern.id_country
+				LIMIT 1
+			) AS pais",
+			"(
+				SELECT
+					broker_parameters.prefijo_ref
+				FROM
+					broker_parameters
+				WHERE
+					agency = broker_parameters.id_broker
+				AND broker_parameters.prefijo = '$prefix'
+				LIMIT 1
+			) AS prefAgency",
+			"	(
+				SELECT
+					broker.broker
+				FROM
+					broker
+				WHERE
+					broker.id_broker = agency
+				AND broker.prefijo = '$prefix'
+				LIMIT 1
+			) as nombreAgenMaster",
+			"(
+				SELECT
+					clients.client
+				FROM
+					clients
+				WHERE
+					clients.prefix = users_extern.prefijo
+				LIMIT 1
+			) AS nomPlatf",
+			"(
+				SELECT
+					clients.img_cliente
+				FROM
+					clients
+				WHERE
+					clients.prefix = users_extern.prefijo
+				LIMIT 1
+			) AS imgPlatf",
+			"(
+				SELECT
+					clients.colors_platform
+				FROM
+					clients
+				WHERE
+					clients.prefix = users_extern.prefijo
+				LIMIT 1
+			) AS colorsPlatf"
 		];
 		$userExist	= $this->selectDynamic('', 'users_extern', "users='$user'", $data);
 		if ($userExist) {
 			$prefijExist	= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['prefix']);
 			if ($prefijExist) {
-				$userActive	= $this->selectDynamic(['id_status' => '1', 'user_type' => '1'], 'users_extern', "users='$user'", $data);
+				$userActive	= $this->selectDynamic('', '', '', '', "SELECT
+																		user_type,
+																		language_id,
+																		prefijo,
+																		firstname,
+																		lastname,
+																		id
+																	FROM
+																		users_extern
+																	WHERE
+																		users = '$user'
+																	AND id_status = '1'
+																	AND user_type IN ('1', '2', '5', '13')
+																	AND prefijo = '$prefix'", '', '', '', '');
 				if ($userActive) {
 					if ($prefix == 'CT' || $prefix == 'CE') {
 						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$password'", $data);
 					} else {
 						$passwordEncript 	= $this->encriptKey($password);
-						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$passwordEncript'", $data);
+						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$passwordEncript'", $data, '', '', '', '', '');
 					}
 					if ($dataUser) {
 						return [
 							'status'   	=> 'OK',
 							'userType' 	=> $dataUser[0]["user_type"],
 							'prefijo'  	=> $dataUser[0]["prefijo"],
+							'nomPlatf'  => $dataUser[0]['nomPlatf'],
+							'imgPlatf'  => $dataUser[0]['imgPlatf'],
+							'colorsPlatf'  => $dataUser[0]['colorsPlatf'],
 							'id_user'  	=> $dataUser[0]["id"],
 							'firstname' => $dataUser[0]["firstname"],
-							'lastname' 	=> $dataUser[0]["lastname"]
+							'lastname' 	=> $dataUser[0]["lastname"],
+							'email'     => $dataUser[0]["email"],
+							'code_phone' => $dataUser[0]["code_phone"],
+							'phone'     => $dataUser[0]["phone"],
+							'agency'    => $dataUser[0]["agency"] ?: 'N/A',
+							'pais'      => $dataUser[0]["pais"],
+							'prefAgency' => $dataUser[0]["prefAgency"] ?: 'N/A',
+							'nombreAgenMaster' => $dataUser[0]["nombreAgenMaster"] ?: 'N/A',
+							'urlPlatform' => $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'],
+							'paramAgency' => $dataUser[0]["prefAgency"] ? $this->selectDynamic('', '', '', '', "SELECT * FROM broker_parameters WHERE id_broker = '{$dataUser[0]['agency']}' AND prefijo = '$prefix' ORDER BY id_broker_parameters DESC limit 1", '', '', '', '')[0] : 'N/A'
 						];
 					} else {
 						return $this->getError(9090);
 					}
 				} else {
-					return $this->getError(9089);
+					return $this->getError(50004);
 				}
 			} else {
 				return $this->getError(9093);

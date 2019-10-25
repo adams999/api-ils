@@ -1304,4 +1304,42 @@ class general_functions extends Model {
         }
         return $this->selectDynamic('','','','',$query);
     }
+
+    public function agencyBroker($idUser, $userType, $prefix){
+        $sql = ['querys' =>"SELECT
+                                user_associate.id_associate,
+                                broker.broker
+                            FROM
+                                users
+                            INNER JOIN user_associate ON users.id = user_associate.id_user
+                            INNER JOIN broker ON user_associate.id_associate = broker.id_broker
+                            WHERE
+                                users.id = '$idUser' 
+                                AND users.id_status = '1' 
+                            ORDER BY
+                                user_associate.modified DESC
+                            LIMIT 1"];
+
+        $link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+        $linkParam 	= $link . "/app/api/selectDynamic";
+        $headers 	= "content-type: application/x-www-form-urlencoded";
+        $response = $this->curlGeneral($linkParam, json_encode($sql), $headers);
+        return json_decode($response, true) ;
+    }
+
+    public function agencysChildren($idBroker, $prefix){
+        $sql = ['querys' => "SELECT broker_nivel.id, 
+                broker_nivel.id_broker, 
+                broker_nivel.nivel, 
+                broker_nivel.parent, 
+                broker_nivel.master 
+            FROM broker_nivel 
+            WHERE parent = '$idBroker' "];
+
+        $link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkParam 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$response = $this->curlGeneral($linkParam, json_encode($sql), $headers);
+        return json_decode($response, true) ;
+    }   
 }

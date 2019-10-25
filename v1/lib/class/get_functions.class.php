@@ -142,6 +142,7 @@ class get_functions extends general_functions
 		$max	   = ($filters['max'] <= 0 || empty($filters['max'] || ($filters['max'] <= $filters['min']))) ? 50 : $filters['max'];
 		$status	   = ($filters['status']) ? $filters['status'] : 1;
 		$today 	   = date('Y-m-d');
+		$id_user   = $filters['id_user'];
 
 		$dataValida	= [
 			"9092"  => $prefix,
@@ -165,15 +166,20 @@ class get_functions extends general_functions
 			'salida',
 			'retorno',
 			'fecha',
-			'nombre_contacto',
+			"DATE_FORMAT(salida,'%d-%m-%Y') as fsalida",
+			"DATE_FORMAT(retorno,'%d-%m-%Y') as fretorno",
+			"DATE_FORMAT(fecha,'%d-%m-%Y') as ffecha",
+			"REPLACE( orders.nombre_contacto,'''','') AS nombre_contacto",
 			'email_contacto',
 			'telefono_contacto',
+			'agencia',
 			'nombre_agencia',
 			'status',
 			'cantidad',
 			'referencia',
 			'territory',
-			'producto'
+			'producto',
+			'(DATEDIFF(orders.retorno, orders.salida) + 1 ) as diasViaje'
 		];
 
 		if ($source != 'public') {
@@ -205,7 +211,7 @@ class get_functions extends general_functions
 		$codeWhere = '1';
 		$arrWhere = [];
 		$idBroker	= $this->getBrokersByApiKey($apikey);
-		if (!empty($idBroker) && !in_array($userType, [1, 13])) {
+		if (!empty($idBroker) && !in_array($userType, [1, 2, 5, 13])) {
 			$arrWhere['agencia'] = $idBroker;
 		}
 		if (!empty($code)) {
@@ -252,6 +258,25 @@ class get_functions extends general_functions
 			if (is_array($arrPagination)) { }
 		}
 
+		$id_agencia;
+		$arrBrokers = [];
+		$arr;
+		if (!empty($userType) &&  in_array($userType, [5, 2])) { ////// usuario tipo 5 broker access solo vera de su agencia y 2 es broker admin su agencia y las debajo de ella
+			$id_agencia =  $this->agencyBroker($id_user, $userType, $prefix)[0]["id_associate"];
+			$arrWhere['orders.agencia'] = $id_agencia;
+
+			if (in_array($userType, [2])) { ////// usuario tipo 2 broker admin vera vouchers de ella y sus agencias hijas
+				$arrWhere['orders.agencia'] = null;
+				$broker_nivel = $this->agencysChildren($id_agencia, $prefix);
+				$arrBrokers = array_column($broker_nivel, 'id_broker');
+				array_push($arrBrokers, $id_agencia);
+				$arrBrokers = array_values($arrBrokers); //agencias hijas y su agencia master
+				$arr = implode(',', $arrBrokers);
+				$arr = ' AND orders.agencia IN (' . $arr . ') ';
+				$codeWhere .= $arr;
+			}
+		}
+
 		//$arrWhere['status']=$status;
 		$dataOrders = $this->selectDynamic(
 			$arrWhere,
@@ -286,14 +311,17 @@ class get_functions extends general_functions
 			AND plan_category.prefijo = plans.prefijo
 			WHERE
 				orders.id = '$idOrder'
-			AND orders.prefijo = '$prefix'"
+			AND orders.prefijo = '$prefix'",
+				'',
+				'',
+				''
 			)[0]['categoria'] ?: 'N/A';
 
 			$dataOrders[$i]['beneficiaries'] = $this->selectDynamic(
 				['beneficiaries.prefijo' => $prefix],
 				'beneficiaries',
 				"id_orden='$idOrder'",
-				['id', 'id_orden', 'nombre', 'apellido', 'documento', 'email', 'nacimiento', 'nacionalidad', 'tipo_doc', 'telefono'],
+				['id', 'id_orden', "REPLACE(beneficiaries.nombre,'''','') AS nombre ", "REPLACE(beneficiaries.apellido,'''','') AS apellido ", 'documento', 'email', 'nacimiento', 'nacionalidad', 'tipo_doc', 'telefono'],
 				'',
 				'',
 				[
@@ -305,6 +333,107 @@ class get_functions extends general_functions
 			);
 		}
 		return $dataOrders;
+	}
+
+	public function getParamAgencyMaster($filters)
+	{
+		$id_user = $filters['id_user'];
+		$prefix  = $filters['prefix'];
+		$agency  = $filters['agency'];
+
+		$dataValida	= [
+			"50005" => $id_user,
+			"9092"  => $prefix,
+			"50006" => $agency
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$response = $this->selectDynamic('', '', '', '', "SELECT *, ( SELECT broker_nivel.nivel FROM broker_nivel WHERE broker_nivel.parent = broker_parameters.id_broker AND broker_nivel.prefijo = broker_parameters.prefijo ORDER BY id_broker_nivel DESC LIMIT 1 ) as nivel, ( SELECT broker.broker FROM broker WHERE broker.id_broker = broker_parameters.id_broker AND broker.prefijo = broker_parameters.prefijo LIMIT 1 ) AS nombreAgencia FROM broker_parameters WHERE broker_parameters.prefijo = '$prefix' AND broker_parameters.id_broker = '$agency' ORDER BY id_broker_parameters DESC LIMIT 1", '', '', '', '');
+
+
+		switch (strpos($response[0]['whatsapp'], '+')) {
+			case true:
+				$response[0]['whatsapp'] = '+' . $response[0]['whatsapp'];
+				break;
+
+			default:
+				$response[0]['whatsapp'] = $response[0]['whatsapp'];
+				break;
+		}
+
+		return $response;
+	}
+
+	public function getDatosUser($filters)
+	{
+		$prefix  = $filters['prefix'];
+		$id_user = $filters['id_user'];
+
+		$dataValida	= [
+			"50005" => $id_user,
+			"9092"  => $prefix
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$select = [
+			"id",
+			"firstname",
+			"lastname",
+			"s_first",
+			"email",
+			"code_phone",
+			"phone",
+			"user_type",
+			"(
+				SELECT
+					countries.description
+				FROM
+					countries
+				WHERE
+					users_extern.id_country = countries.iso_country
+				LIMIT 1
+			) AS pais",
+			"users_extern.prefijo"
+		];
+
+		$where = [
+			'id'        => $id_user,
+			'prefijo'   => $prefix,
+			'id_status' => 1
+		];
+
+		$order = [
+			"field" => "id_users",
+			"order" => "DESC"
+		];
+
+		$response = $this->selectDynamic($where, 'users_extern', '1', $select, false, '', $order, '', '');
+
+		switch ($response[0]['user_type']) {
+			case '1':
+				$response[0]['user_type'] = 'MASTER';
+				break;
+
+			case '2':
+				$response[0]['user_type'] = 'BROKER ADMIN';
+				break;
+
+			case '5':
+				$response[0]['user_type'] = 'BROKER ACCESS';
+				break;
+
+			case '13':
+				$response[0]['user_type'] = 'ADMIN';
+				break;
+
+			default:
+				$response[0]['user_type'] = $response[0]['user_type'];
+				break;
+		}
+
+		return $response;
 	}
 
 	public function getCategories($filters)
