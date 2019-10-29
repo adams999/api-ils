@@ -258,7 +258,7 @@ class get_functions extends general_functions
 			if (is_array($arrPagination)) { }
 		}
 
-		$id_agencia;
+		$id_agencia = [];
 		$arrBrokers = [];
 		$arr;
 		if (!empty($userType) &&  in_array($userType, [5, 2])) { ////// usuario tipo 5 broker access solo vera de su agencia y 2 es broker admin su agencia y las debajo de ella
@@ -268,10 +268,14 @@ class get_functions extends general_functions
 			if (in_array($userType, [2])) { ////// usuario tipo 2 broker admin vera vouchers de ella y sus agencias hijas
 				$arrWhere['orders.agencia'] = null;
 				$broker_nivel = $this->agencysChildren($id_agencia, $prefix);
-				$arrBrokers = array_column($broker_nivel, 'id_broker');
-				array_push($arrBrokers, $id_agencia);
-				$arrBrokers = array_values($arrBrokers); //agencias hijas y su agencia master
-				$arr = implode(',', $arrBrokers);
+				if ($broker_nivel) {
+					$arrBrokers = array_column($broker_nivel, 'id_broker');
+					array_push($arrBrokers, $id_agencia);
+					$arrBrokers = array_values($arrBrokers); //agencias hijas y su agencia master
+					$arr = implode(',', $arrBrokers);
+				} else {
+					$arr = $id_agencia;
+				}
 				$arr = ' AND orders.agencia IN (' . $arr . ') ';
 				$codeWhere .= $arr;
 			}
@@ -349,8 +353,166 @@ class get_functions extends general_functions
 
 		$this->validatEmpty($dataValida);
 
-		$response = $this->selectDynamic('', '', '', '', "SELECT *, ( SELECT broker_nivel.nivel FROM broker_nivel WHERE broker_nivel.parent = broker_parameters.id_broker AND broker_nivel.prefijo = broker_parameters.prefijo ORDER BY id_broker_nivel DESC LIMIT 1 ) as nivel, ( SELECT broker.broker FROM broker WHERE broker.id_broker = broker_parameters.id_broker AND broker.prefijo = broker_parameters.prefijo LIMIT 1 ) AS nombreAgencia FROM broker_parameters WHERE broker_parameters.prefijo = '$prefix' AND broker_parameters.id_broker = '$agency' ORDER BY id_broker_parameters DESC LIMIT 1", '', '', '', '');
+		$response = $this->selectDynamic(
+			'',
+			'',
+			'',
+			'',
+			"SELECT
+			*, (
+				SELECT
+					broker_nivel.nivel
+				FROM
+					broker_nivel
+				WHERE
+					broker_nivel.id_broker = broker_parameters.id_broker
+				AND broker_nivel.prefijo = broker_parameters.prefijo
+				ORDER BY
+					id_broker_nivel DESC
+				LIMIT 1
+			) AS nivel,
+			(
+				SELECT
+					broker.broker
+				FROM
+					broker
+				WHERE
+					broker.id_broker = broker_parameters.id_broker
+				AND broker.prefijo = broker_parameters.prefijo
+				LIMIT 1
+			) AS nombreAgencia,
+			(
+				SELECT
+					broker.address
+				FROM
+					broker
+				WHERE
+					broker.id_broker = broker_parameters.id_broker
+				AND broker.prefijo = broker_parameters.prefijo
+			) AS direccion,
+			(
+				SELECT
+					countries.description
+				FROM
+					broker
+				INNER JOIN countries ON countries.iso_country = broker.id_country
+				WHERE
+					broker.id_broker = broker_parameters.id_broker
+				AND broker.prefijo = broker_parameters.prefijo
+			) AS pais,
+			(
+				SELECT
+					states.description
+				FROM
+					broker
+				INNER JOIN states ON states.iso_state = broker.id_state
+				WHERE
+					broker.id_broker = broker_parameters.id_broker
+				AND broker.prefijo = broker_parameters.prefijo
+			) AS estado,
+			(
+				SELECT
+					cities.description
+				FROM
+					broker
+				INNER JOIN cities ON cities.iso_city = broker.id_city
+				WHERE
+					broker.id_broker = broker_parameters.id_broker
+				AND broker.prefijo = broker_parameters.prefijo
+			) AS ciudad
+		FROM
+			broker_parameters
+		WHERE
+			broker_parameters.prefijo = '$prefix'
+		AND broker_parameters.id_broker = '$agency'
+		ORDER BY
+			id_broker_parameters DESC
+		LIMIT 1",
+			'',
+			'',
+			'',
+			''
+		);
 
+		if (empty($response)) {
+			$respons = $this->selectDynamic(
+				'',
+				'',
+				'',
+				'',
+				"SELECT
+				*, (
+					SELECT
+						broker_nivel.nivel
+					FROM
+						broker_nivel
+					WHERE
+						broker_nivel.id_broker = broker.id_broker
+					AND broker_nivel.prefijo = broker.prefijo
+					LIMIT 1
+				) AS nivel,
+				(
+					SELECT
+						countries.description
+					FROM
+						countries
+					WHERE
+						countries.iso_country = broker.id_country
+				) AS pais,
+				(
+					SELECT
+						states.description
+					FROM
+						states
+					WHERE
+						states.iso_state = broker.id_state
+				) AS estado,
+				(
+					SELECT
+						cities.description
+					FROM
+						cities
+					WHERE
+						cities.iso_city = broker.id_city
+				) AS ciudad
+			FROM
+				broker
+			WHERE
+				broker.prefijo = 'vy'
+			AND broker.id_broker = '475'
+			ORDER BY
+				id_new_broker DESC
+			LIMIT 1",
+				'',
+				'',
+				''
+			);
+
+			$response = [
+				[
+					"id_broker" 	   => $respons[0]['id_broker'],
+					"dominio"          => $respons[0]['dominio'],
+					"email_from"       => $respons[0]['email'],
+					"email_cotizacion" => $respons[0]['email'],
+					"skype"            => $respons[0]['skype'],
+					"whatsapp" 		   => $respons[0]['code_phone1'] . $respons[0]['phone1'],
+					"prefijo_ref" 	   => $respons[0]['prefijo_ref'],
+					"instagram"        => $respons[0]['instagram'],
+					"facebook" 		   => $respons[0]['facebook'],
+					"pagina_web"       => $respons[0]['pagina_web'],
+					"prefijo"          => $respons[0]['prefijo'],
+					"enlace_app_android" => $respons[0]['enlace_app_android'],
+					"enlace_app_apple" => $respons[0]['enlace_app_apple'],
+					"email_from_name"  => $respons[0]['email_from_name'],
+					"nivel"            => $respons[0]['nivel'],
+					"nombreAgencia"    => $respons[0]['broker'],
+					"direccion"        => $respons[0]['address'],
+					"pais"   		   => $respons[0]['pais'],
+					"estado"		   => $respons[0]['estado'],
+					"ciudad"           => $respons[0]['ciudad']
+				]
+			];
+		}
 
 		switch (strpos($response[0]['whatsapp'], '+')) {
 			case true:
