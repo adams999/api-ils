@@ -478,13 +478,14 @@ class get_functions extends general_functions
 			FROM
 				broker
 			WHERE
-				broker.prefijo = 'vy'
-			AND broker.id_broker = '475'
+				broker.prefijo = '$prefix'
+			AND broker.id_broker = '$agency'
 			ORDER BY
 				id_new_broker DESC
 			LIMIT 1",
 				'',
 				'',
+				'', 
 				''
 			);
 
@@ -514,14 +515,16 @@ class get_functions extends general_functions
 			];
 		}
 
-		switch (strpos($response[0]['whatsapp'], '+')) {
-			case true:
-				$response[0]['whatsapp'] = '+' . $response[0]['whatsapp'];
-				break;
+		if (!empty($response[0]['whatsapp'])) {
+			switch (strpos($response[0]['whatsapp'], '+')) {
+				case true:
+					$response[0]['whatsapp'] = '+' . $response[0]['whatsapp'];
+					break;
 
-			default:
-				$response[0]['whatsapp'] = $response[0]['whatsapp'];
-				break;
+				default:
+					$response[0]['whatsapp'] = $response[0]['whatsapp'];
+					break;
+			}
 		}
 
 		return $response;
