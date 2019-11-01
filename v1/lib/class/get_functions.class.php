@@ -485,7 +485,7 @@ class get_functions extends general_functions
 			LIMIT 1",
 				'',
 				'',
-				'', 
+				'',
 				''
 			);
 
@@ -1449,8 +1449,9 @@ class get_functions extends general_functions
 			[]
 		);
 		//GRAFICA 2 NETOS VOUCHERS
-		$query2 = "SELECT
-		 SUM(orders.neto_prov) AS neto,
+		$query2 = "SELECT 
+		SUM(orders.neto_prov) AS neto,
+		REPLACE (
 			(
 				SELECT
 					plans.`name`
@@ -1460,7 +1461,10 @@ class get_functions extends general_functions
 					orders.producto = plans.id
 				AND orders.prefijo = plans.prefijo
 				LIMIT 1
-			) AS name_plan
+			),
+			'''',
+			''
+		) AS name_plan
 		FROM
 			orders
 		JOIN clients ON clients.prefix = orders.prefijo
@@ -1481,7 +1485,7 @@ class get_functions extends general_functions
 			function ($response, $value) {
 				$response[] = [
 					'name' => $value['name_plan'],
-					'y' => (float) $value['neto'],
+					'y' =>  (float) $value['neto']
 				];
 				return $response;
 			},
@@ -1587,8 +1591,14 @@ class get_functions extends general_functions
 				];
 			}
 		}
-		return [$respGraf1, $respGraf2, $respGraf3, $SexEdad];
+
+		//////GRAFICAS PLATAFORMA de agencias
+		$respCurl = [$this->grafRankingPlatf($prefix, $startDate, $endDate)];
+
+		return [$respGraf1, $respGraf2, $respGraf3, $SexEdad, $respCurl];
 	}
+
+
 	/*  public function getBrokers($filters,$limit){
         $fields =
         [
