@@ -1393,6 +1393,7 @@ class get_functions extends general_functions
 			'YEAR' => $yearBus
 		];
 	}
+
 	////////////////////////////////////////////// GRAFICOS PARA CADA AGENCIA ////////////////////
 	public function getChartVouchersPie($filters)
 	{
@@ -1595,7 +1596,83 @@ class get_functions extends general_functions
 		//////GRAFICAS PLATAFORMA de agencias
 		$respCurl = [$this->grafRankingPlatf($prefix, $startDate, $endDate)];
 
-		return [$respGraf1, $respGraf2, $respGraf3, $SexEdad, $respCurl];
+		/////GRAFICAS PLATAFORMA DE EDADES / VENTAS CANTIDAD
+		$respCurl2 = $this->grafVentEdPlatf($prefix, $startDate, $endDate);
+
+		for ($i = 0; $i < count($respCurl2); $i++) {
+			for ($a = 0; $a < count($respCurl2[$i]); $a++) {
+				$respCurl2[$i]['prefijo'] = $prefix;
+			}
+		}
+
+		$IntEdadPlatf = [
+			'S-E',
+			'0-10',
+			'11-20',
+			'21-30',
+			'31-40',
+			'41-50',
+			'51-60',
+			'61-70',
+			'71-75',
+			'76-84',
+			'85+',
+		];
+
+		$BarAPlatf = [];
+		$BarDPlatf = [];
+		foreach ($respCurl2 as &$element) {
+			statistics::EdadResult($BarDPlatf[$element['prefijo']], $element['edad'], $element['sexo'], $element['cant']);
+			statistics::EdadResult($BarAPlatf, $element['edad'], $element['sexo'], $element['cant']);
+		}
+		$SexEdadPlatf = [];
+		$data2 = [];
+
+		foreach ($BarDPlatf  as $key => $val) {
+			foreach ($val  as $key1 => $value) {
+				$data2 = [];
+				foreach ($IntEdadPlatf  as  $key2 => $values) {
+					$data2[] = (int) $value[$values] ?: 0;
+				}
+				$SexEdadPlatf[] = [
+					'name' => $key1,
+					'data' => $data2,
+				];
+			}
+		}
+
+		/////GRAFICAS PLATAFORMA DE EDADES / VENTAS MONTO
+		$respCurl3 = $this->grafVentEdMonto($prefix, $startDate, $endDate);
+		for ($i = 0; $i < count($respCurl3); $i++) {
+			for ($a = 0; $a < count($respCurl3[$i]); $a++) {
+				$respCurl3[$i]['prefijo'] = $prefix;
+			}
+		}
+
+		$BarAPlatf3 = [];
+		$BarDPlatf3 = [];
+		foreach ($respCurl3 as &$element) {
+			statistics::EdadResult($BarDPlatf3[$element['prefijo']], $element['edad'], $element['sexo'], (float) $element['neto']);
+			statistics::EdadResult($BarAPlatf3, $element['edad'], $element['sexo'], (float) $element['neto']);
+		}
+		$SexEdadPlatf3 = [];
+		$data3 = [];
+
+		foreach ($BarDPlatf3  as $key => $val) {
+			foreach ($val  as $key1 => $value) {
+				$data3 = [];
+				foreach ($IntEdadPlatf  as  $key2 => $values) {
+					$data3[] = (float) $value[$values] ?: 0;
+				}
+				$SexEdadPlatf3[] = [
+					'name' => $key1,
+					'data' => $data3,
+				];
+			}
+		}
+
+
+		return [$respGraf1, $respGraf2, $respGraf3, $SexEdad, $respCurl, $SexEdadPlatf, $SexEdadPlatf3, $this->grafTipoVenta($prefix, $startDate, $endDate, false), $this->grafTipoVenta($prefix, '', '', true)];
 	}
 
 
