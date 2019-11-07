@@ -1448,15 +1448,78 @@ class general_functions extends Model
             $this->addResources($prefix, $location, $filename);
         }
 
-        $linkPlatf = $link . '/app/admin/async_report_ranking.php?type=for_busqueda&nav=lista&starInterval=' . $startDate . '&endInterval=' . $endDate;
+        $linkPlatf = $link . '/app/' . $location . '/' . $filename . '?type=for_busqueda&nav=lista&starInterval=' . $startDate . '&endInterval=' . $endDate;
         $data = [
-            'type' => 'for_busqueda',
-            'nav' => 'lista',
+            'type'         => 'for_busqueda',
+            'nav'          => 'lista',
             'starInterval' => $startDate,
-            'endInterval' => $endDate
+            'endInterval'  => $endDate
         ];
 
-        return json_decode(str_replace('﻿', '', stripslashes($this->curlGeneral($linkPlatf, $data, $headers, 'GET'))))  ?: null;
+        return json_decode(str_replace(['﻿', "'"], '', stripslashes($this->curlGeneral($linkPlatf, $data, $headers, 'GET'))))  ?: null;
+    }
+
+    public function grafVentEdPlatf($prefix, $startDate, $endDate)
+    {
+        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $linkSelectDynamic = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+
+        $query = [
+            'querys' => " SELECT
+            beneficiaries.sexo AS sexo,
+                IFNULL(TIMESTAMPDIFF(
+                    YEAR,
+                    beneficiaries.nacimiento,
+                    orders.fecha
+                ),'S-E') AS edad,
+                COUNT(*) AS cant
+            FROM
+                orders
+            INNER JOIN beneficiaries ON beneficiaries.id_orden = orders.id
+            AND orders. STATUS IN (1,3)
+            AND DATE(orders.fecha) BETWEEN DATE('$startDate')
+            AND DATE('$endDate')
+            GROUP BY
+                beneficiaries.sexo,
+                edad
+            ORDER BY
+                edad ASC "
+        ];
+
+        return json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query), $headers), true);
+    }
+
+    public function grafVentEdMonto($prefix, $startDate, $endDate)
+    {
+        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $linkSelectDynamic = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+
+        $query = [
+            'querys' => " SELECT
+            beneficiaries.sexo AS sexo,
+            SUM(beneficiaries.precio_vta ) AS neto,
+            IFNULL(TIMESTAMPDIFF(
+                YEAR,
+                beneficiaries.nacimiento,
+                orders.fecha
+            ),'S-E') AS edad,
+            COUNT(*) AS cant
+        FROM
+            orders
+        INNER JOIN beneficiaries ON beneficiaries.id_orden = orders.id
+        AND orders. STATUS IN (1,3)
+        AND DATE(orders.fecha) BETWEEN DATE('$startDate')
+        AND DATE('$endDate')
+        GROUP BY
+            beneficiaries.sexo,
+            edad
+        ORDER BY
+            edad ASC "
+        ];
+
+        return json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query), $headers), true);
     }
 
     public function addResources($prefix, $location, $filename)
@@ -1483,5 +1546,314 @@ class general_functions extends Model
         ];
 
         $this->curlGeneral($linkSelectDynamic, $query, $headers);
+    }
+
+    public function grafTipoVenta($prefix, $startDate, $endDate, $anual)
+    {
+        $yearActual = date('Y');
+        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $linkSelectDynamic = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+
+        $queryAux1 = "SELECT
+                MONTH (orders.fecha) AS mes,
+                COUNT(*) AS cantidad
+            FROM
+                orders
+            INNER JOIN plans ON plans.id = orders.producto
+            WHERE
+                orders. STATUS IN (1, 3) ";
+        if (!empty($endDate) && !empty($startDate)) {
+            $queryAux1 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+        } else {
+            $queryAux1 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+        }
+        $queryAux1 .= " AND orders.family_plan = 'si' 
+            AND (
+                orders.id_cotiza = 0
+                OR orders.id_cotiza IS NULL
+            )
+            GROUP BY
+                mes
+            ORDER BY
+                mes 
+            ASC";
+
+        $query1 = [
+            'querys' => $queryAux1
+        ];
+
+        $sql1 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query1), $headers), true);
+
+        $queryAux2 = "SELECT
+                MONTH (orders.fecha) AS mes,
+                COUNT(*) AS cantidad
+            FROM
+                orders
+            INNER JOIN plans ON plans.id = orders.producto
+            WHERE
+                orders. STATUS IN (1, 3) ";
+        if (!empty($endDate) && !empty($startDate)) {
+            $queryAux2 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+        } else {
+            $queryAux2 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+        }
+        $queryAux2 .= " AND orders.es_emision_corp > 0 
+            GROUP BY
+                mes
+            ORDER BY
+                mes 
+            ASC";
+
+        $query2 = [
+            'querys' => $queryAux2
+        ];
+
+        $sql2 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query2), $headers), true);
+
+        $queryAux3 = "SELECT
+                MONTH (orders.fecha) AS mes,
+                COUNT(*) AS cantidad
+            FROM
+                orders
+            INNER JOIN plans ON plans.id = orders.producto
+            WHERE
+                orders. STATUS IN (1, 3) ";
+        if (!empty($endDate) && !empty($startDate)) {
+            $queryAux3 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+        } else {
+            $queryAux3 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+        }
+        $queryAux3 .= " AND orders.id_emision_type = 2 
+            AND (
+                orders.id_cotiza = 0
+                OR orders.id_cotiza IS NULL
+            )
+            GROUP BY
+                mes
+            ORDER BY
+                mes 
+            ASC";
+
+        $query3 = [
+            'querys' => $queryAux3
+        ];
+
+        $sql3 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query3), $headers), true);
+
+        $queryAux4 = "SELECT
+                MONTH (orders.fecha) AS mes,
+                COUNT(*) AS cantidad
+            FROM
+                orders
+            INNER JOIN plans ON plans.id = orders.producto
+            WHERE
+                orders. STATUS IN (1, 3) ";
+        if (!empty($endDate) && !empty($startDate)) {
+            $queryAux4 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+        } else {
+            $queryAux4 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+        }
+        $queryAux4 .= " AND orders.pareja_plan = 'Y'  
+            AND (
+                orders.id_cotiza = 0
+                OR orders.id_cotiza IS NULL
+            )
+            GROUP BY
+                mes
+            ORDER BY
+                mes 
+            ASC";
+
+        $query4 = [
+            'querys' => $queryAux4
+        ];
+
+        $sql4 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query4), $headers), true);
+
+        $queryAux5 = "SELECT
+                MONTH (orders.fecha) AS mes,
+                COUNT(*) AS cantidad
+            FROM
+                orders
+            INNER JOIN plans ON plans.id = orders.producto
+            WHERE
+                orders. STATUS IN (1, 3) ";
+        if (!empty($endDate) && !empty($startDate)) {
+            $queryAux5 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+        } else {
+            $queryAux5 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+        }
+        $queryAux5 .= " AND orders.id_group > 0 
+            AND (
+                orders.id_cotiza = 0
+                OR orders.id_cotiza IS NULL
+            )
+            GROUP BY
+                mes
+            ORDER BY
+                mes 
+            ASC";
+
+        $query5 = [
+            'querys' => $queryAux5
+        ];
+
+        $sql5 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query5), $headers), true);
+
+        $queryAux6 = "SELECT
+                MONTH (orders.fecha) AS mes,
+                COUNT(*) AS cantidad
+            FROM
+                orders
+            INNER JOIN plans ON plans.id = orders.producto
+            WHERE
+                orders. STATUS IN (1, 3) ";
+        if (!empty($endDate) && !empty($startDate)) {
+            $queryAux6 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+        } else {
+            $queryAux6 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+        }
+        $queryAux6 .= " AND (
+                orders.es_emision_corp < '1'
+                OR orders.es_emision_corp IS NULL
+            )
+            AND (
+                orders.family_plan = 'no'
+                OR orders.family_plan IS NULL
+            )
+            AND (
+                orders.id_emision_type <= 1
+                OR orders.id_emision_type IS NULL
+            )
+            AND (
+                orders.pareja_plan = 'n'
+                OR orders.pareja_plan IS NULL
+            ) 
+            AND (
+                orders.id_cotiza = 0 
+                OR orders.id_cotiza IS NULL
+            )
+            GROUP BY
+                mes
+            ORDER BY
+                mes 
+            ASC";
+
+        $query6 = [
+            'querys' => $queryAux6
+        ];
+
+        $sql6 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query6), $headers), true);
+
+        $queryAux7 = "SELECT
+                MONTH (orders.fecha) AS mes,
+                COUNT(*) AS cantidad
+            FROM
+                orders
+            INNER JOIN plans ON plans.id = orders.producto
+            WHERE
+                orders. STATUS IN (1, 3) ";
+        if (!empty($endDate) && !empty($startDate)) {
+            $queryAux7 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+        } else {
+            $queryAux7 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+        }
+        $queryAux7 .= " AND  orders.id_cotiza > 0 
+            GROUP BY
+                mes
+            ORDER BY
+                mes 
+            ASC";
+
+        $query7 = [
+            'querys' => $queryAux7
+        ];
+
+        $sql7 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query7), $headers), true);
+
+        if ($anual == true) {
+            $seriesFamilia = $this->ArrDatMesGraf($sql1, 'Plan Familia', true);
+
+            $seriesCorp = $this->ArrDatMesGraf($sql2, 'Corporativo', true);
+
+            $seriesWS = $this->ArrDatMesGraf($sql3, 'Web Service', true);
+
+            $seriesPareja = $this->ArrDatMesGraf($sql4, 'Plan Pareja', true);
+
+            $seriesGrupo = $this->ArrDatMesGraf($sql5, 'Grupos', true);
+
+            $seriesNormal = $this->ArrDatMesGraf($sql6, 'Normal', true);
+
+            $seriesExterno = $this->ArrDatMesGraf($sql7, 'Agente', true);
+
+            return [$seriesFamilia, $seriesCorp, $seriesWS, $seriesPareja, $seriesGrupo, $seriesNormal, $seriesExterno];
+        } else {
+            $seriesFamilia = $this->ArrDatMesGraf($sql1, 'Plan Familia', false);
+
+            $seriesCorp = $this->ArrDatMesGraf($sql2, 'Corporativo', false);
+
+            $seriesWS = $this->ArrDatMesGraf($sql3, 'Web Service', false);
+
+            $seriesPareja = $this->ArrDatMesGraf($sql4, 'Plan Pareja', false);
+
+            $seriesGrupo = $this->ArrDatMesGraf($sql5, 'Grupos', false);
+
+            $seriesNormal = $this->ArrDatMesGraf($sql6, 'Normal', false);
+
+            $seriesExterno = $this->ArrDatMesGraf($sql7, 'Agente', false);
+
+            return [$seriesFamilia, $seriesCorp, $seriesWS, $seriesPareja, $seriesGrupo, $seriesNormal, $seriesExterno];
+        }
+    }
+
+    public function ArrDatMesGraf($data, $cabecera, $anual)
+    {
+        if ($anual == true) {
+            $mountDesc = [
+                '1' => 'Enero',
+                '2' => 'Febrero',
+                '3' => 'Marzo',
+                '4' => 'Abril',
+                '5' => 'Mayo',
+                '6' => 'Junio',
+                '7' => 'Julio',
+                '8' => 'Agosto',
+                '9' => 'Septiembre',
+                '10' => 'Octubre',
+                '11' => 'Noviembre',
+                '12' => 'Diciembre',
+            ];
+
+            foreach ($data ?: [['' => '']] as $element) {
+                $array[$element['prefijo']][(int) $element['mes']] = (int) $element['cantidad'] ?: 0;
+            }
+
+            foreach ($array as $key1 => $val) {
+                $serie = [];
+                foreach ($mountDesc as $key2 => $value) {
+                    $serie[] = (int) $val[(int) $key2] ?: 0;
+                }
+            }
+
+            $arrSerie = [
+                'name' => $cabecera,
+                'data' => $serie
+            ];
+
+            return $arrSerie;
+        } else {
+            $sumData = 0;
+            foreach ($data as $key => $value) {
+                $sumData += $value['cantidad'];
+            }
+
+            $arrSerie = [
+                'name' => $cabecera,
+                'y' => $sumData
+            ];
+
+            return $arrSerie;
+        }
     }
 }
