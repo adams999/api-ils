@@ -1596,51 +1596,6 @@ class get_functions extends general_functions
 		//////GRAFICAS PLATAFORMA de agencias
 		$respCurl = [$this->grafRankingPlatf($prefix, $startDate, $endDate)];
 
-		/////GRAFICAS PLATAFORMA DE EDADES / VENTAS CANTIDAD
-		$respCurl2 = $this->grafVentEdPlatf($prefix, $startDate, $endDate);
-
-		for ($i = 0; $i < count($respCurl2); $i++) {
-			for ($a = 0; $a < count($respCurl2[$i]); $a++) {
-				$respCurl2[$i]['prefijo'] = $prefix;
-			}
-		}
-
-		$IntEdadPlatf = [
-			'S-E',
-			'0-10',
-			'11-20',
-			'21-30',
-			'31-40',
-			'41-50',
-			'51-60',
-			'61-70',
-			'71-75',
-			'76-84',
-			'85+',
-		];
-
-		$BarAPlatf = [];
-		$BarDPlatf = [];
-		foreach ($respCurl2 as &$element) {
-			statistics::EdadResult($BarDPlatf[$element['prefijo']], $element['edad'], $element['sexo'], $element['cant']);
-			statistics::EdadResult($BarAPlatf, $element['edad'], $element['sexo'], $element['cant']);
-		}
-		$SexEdadPlatf = [];
-		$data2 = [];
-
-		foreach ($BarDPlatf  as $key => $val) {
-			foreach ($val  as $key1 => $value) {
-				$data2 = [];
-				foreach ($IntEdadPlatf  as  $key2 => $values) {
-					$data2[] = (int) $value[$values] ?: 0;
-				}
-				$SexEdadPlatf[] = [
-					'name' => $key1,
-					'data' => $data2,
-				];
-			}
-		}
-
 		/////GRAFICAS PLATAFORMA DE EDADES / VENTAS MONTO
 		$respCurl3 = $this->grafVentEdMonto($prefix, $startDate, $endDate);
 		for ($i = 0; $i < count($respCurl3); $i++) {
