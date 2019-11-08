@@ -1253,7 +1253,7 @@ class get_functions extends general_functions
 			TIMESTAMPDIFF(
 				YEAR,
 				beneficiaries.nacimiento,
-				orders.retorno
+				orders.fecha
 			) AS edad,
 			COUNT(*) AS cant
 		FROM
@@ -1407,7 +1407,20 @@ class get_functions extends general_functions
 			'9068'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($endDate)	> strtotime($today)) : true,
 			'9069'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate)	> strtotime($today)) : true,
 		];
-		$validatEmpty  = $this->validatEmpty($dataValida);
+		$this->validatEmpty($dataValida);
+
+		$IntEdad = [
+			'0-10',
+			'11-20',
+			'21-30',
+			'31-40',
+			'41-50',
+			'51-60',
+			'61-70',
+			'71-75',
+			'76-84',
+			'85+',
+		];
 		//    GRAFICA VOUCHERS CATEGORIAS 
 		$query1 = "SELECT
 		COUNT(orders.cantidad) AS cantidad,
@@ -1538,7 +1551,7 @@ class get_functions extends general_functions
 			TIMESTAMPDIFF(
 				YEAR,
 				beneficiaries.nacimiento,
-				orders.retorno
+				orders.fecha
 			) AS edad,
 			COUNT(*) AS cant
 		FROM
@@ -1559,16 +1572,11 @@ class get_functions extends general_functions
 		ORDER BY
 			prefijo,
 			edad ASC";
+
 		$respGraf4 = $this->selectDynamic('', '', '', '', $query4, '', '', '', '');
-		$BarA = [];
-		$BarD = [];
-		foreach ($respGraf4 as &$element) {
-			statistics::EdadResult($BarD[$element['prefijo']], $element['edad'], $element['sexo'], $element['cant']);
-			statistics::EdadResult($BarA, $element['edad'], $element['sexo'], $element['cant']);
-		}
-		$SexEdad = [];
-		$data = [];
-		$IntEdad = [
+
+		$IntEdad2 = [
+			'S-E',
 			'0-10',
 			'11-20',
 			'21-30',
@@ -1580,6 +1588,16 @@ class get_functions extends general_functions
 			'76-84',
 			'85+',
 		];
+
+		$BarA = [];
+		$BarD = [];
+		foreach ($respGraf4 as &$element) {
+			statistics::EdadResult($BarD[$element['prefijo']], $element['edad'], $element['sexo'], $element['cant']);
+			statistics::EdadResult($BarA, $element['edad'], $element['sexo'], $element['cant']);
+		}
+		$SexEdad = [];
+		$data = [];
+
 		foreach ($BarD  as $key => $val) {
 			foreach ($val  as $key1 => $value) {
 				$data = [];
@@ -1596,19 +1614,39 @@ class get_functions extends general_functions
 		//////GRAFICAS PLATAFORMA de agencias
 		$respCurl = [$this->grafRankingPlatf($prefix, $startDate, $endDate)];
 
-		/////GRAFICAS PLATAFORMA DE EDADES / VENTAS MONTO
-		$respCurl3 = $this->grafVentEdMonto($prefix, $startDate, $endDate);
-		for ($i = 0; $i < count($respCurl3); $i++) {
-			for ($a = 0; $a < count($respCurl3[$i]); $a++) {
-				$respCurl3[$i]['prefijo'] = $prefix;
+		///////GRAFICAS EDADES CANTIDAD
+		$response2 = $this->grafVentEdCantidad($prefix, $startDate, $endDate);
+
+		$BarAPlatf2 = [];
+		$BarDPlatf2 = [];
+		foreach ($response2 as &$element) {
+			statistics::EdadResult($BarDPlatf2[$element['prefijo']], $element['edad'], $element['sexo'],  $element['cant']);
+			statistics::EdadResult($BarAPlatf2, $element['edad'], $element['sexo'],  $element['cant']);
+		}
+		$SexEdad2 = [];
+		$data3 = [];
+
+		foreach ($BarDPlatf2  as $key => $val) {
+			foreach ($val  as $key1 => $value) {
+				$data3 = [];
+				foreach ($IntEdad2  as  $key2 => $values) {
+					$data3[] = (float) $value[$values] ?: 0;
+				}
+				$SexEdad2[] = [
+					'name' => $key1,
+					'data' => $data3,
+				];
 			}
 		}
+
+		/////GRAFICAS PLATAFORMA DE EDADES / VENTAS MONTO
+		$respCurl3 = $this->grafVentEdMonto($prefix, $startDate, $endDate);
 
 		$BarAPlatf3 = [];
 		$BarDPlatf3 = [];
 		foreach ($respCurl3 as &$element) {
-			statistics::EdadResult($BarDPlatf3[$element['prefijo']], $element['edad'], $element['sexo'], (float) $element['neto']);
-			statistics::EdadResult($BarAPlatf3, $element['edad'], $element['sexo'], (float) $element['neto']);
+			statistics::EdadResult($BarDPlatf3[$element['prefijo']], $element['edad'], $element['sexo'],  $element['neto']);
+			statistics::EdadResult($BarAPlatf3, $element['edad'], $element['sexo'],  $element['neto']);
 		}
 		$SexEdadPlatf3 = [];
 		$data3 = [];
@@ -1616,7 +1654,7 @@ class get_functions extends general_functions
 		foreach ($BarDPlatf3  as $key => $val) {
 			foreach ($val  as $key1 => $value) {
 				$data3 = [];
-				foreach ($IntEdadPlatf  as  $key2 => $values) {
+				foreach ($IntEdad2  as  $key2 => $values) {
 					$data3[] = (float) $value[$values] ?: 0;
 				}
 				$SexEdadPlatf3[] = [
@@ -1626,10 +1664,60 @@ class get_functions extends general_functions
 			}
 		}
 
+		$sqlBroker = "SELECT
+			broker.broker AS broker,
+			COUNT(orders.id) AS cant,
+			SUM(orders.total) AS monto,
+			broker.id_broker AS Broker
+		FROM
+			broker
+		INNER JOIN orders ON orders.agencia = broker.id_broker
+		AND broker.prefijo = orders.prefijo
+		WHERE
+			DATE(orders.fecha) BETWEEN DATE('$startDate')
+		AND DATE('$endDate')
+		AND orders. STATUS IN (1, 3)
+		AND orders.prefijo = '$prefix'";
 
-		return [$respGraf1, $respGraf2, $respGraf3, $SexEdad, $respCurl, $SexEdadPlatf, $SexEdadPlatf3, $this->grafTipoVenta($prefix, $startDate, $endDate, false), $this->grafTipoVenta($prefix, '', '', true)];
+		$grafBroker = $this->selectDynamic('', '', '', '', $sqlBroker, '', '', '', '');
+
+		$brokerCantidad = [];
+		foreach ($grafBroker as $element) {
+			$brokerCantidad[$element['broker']] += (float) $element['cant'] ?: 0;
+			$brokerSuma[$element['broker']] = $element['id_broker'];
+			$drillBroker[$element['broker']][] = [$element['id_broker'], (float) $element['cant']];
+		}
+		$seriesBroker = [];
+		$drilldownBroker = [];
+		foreach ($brokerSuma as $key => $val) {
+			$seriesBroker[] = [
+				'name' => $key,
+				'y' => (float) $brokerCantidad[$key],
+				'drilldown' => $key,
+			];
+			$drilldownBroker[] = [
+				'name' => $key,
+				'id' => $key,
+				'data' => $drillBroker[$key],
+			];
+		}
+
+		return [
+			$respGraf1,
+			$respGraf2,
+			$respGraf3,
+			$SexEdad,
+			$respCurl,
+			$SexEdad2,
+			$SexEdadPlatf3,
+			$this->grafTipoVenta($prefix, $startDate, $endDate, false),
+			$this->grafTipoVenta($prefix, '', '', true),
+			[
+				$seriesBroker,
+				$drilldownBroker
+			]
+		];
 	}
-
 
 	/*  public function getBrokers($filters,$limit){
         $fields =
