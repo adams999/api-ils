@@ -1430,45 +1430,6 @@ class general_functions extends Model
         return  $this->selectDynamic('', '', '', '', "SELECT * FROM broker_nivel WHERE prefijo = '$prefix' AND id_broker = '$idAgency' ORDER BY id_broker_nivel DESC LIMIT 1", '', '', '');
     }
 
-    public function grafRankingPlatf($prefix, $startDate, $endDate)
-    {
-        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
-        $linkSelectDynamic = $link . "/app/api/selectDynamic";
-        $headers     = "content-type: application/x-www-form-urlencoded";
-        $location = 'admin';
-        $filename = 'async_report_ranking.php';
-
-        $query = [
-            'querys' => " SELECT * FROM resources WHERE location = '$location' AND file_name = '$filename' AND authentication = '0' "
-        ];
-
-        $resultado = $this->curlGeneral($linkSelectDynamic, $query, $headers);
-
-        if (empty($resultado) || $resultado == null) {
-            $this->addResources($prefix, $location, $filename);
-
-            $linkPlatf = $link . '/app/' . $location . '/' . $filename . '?type=for_busqueda&nav=lista&starInterval=' . $startDate . '&endInterval=' . $endDate;
-            $data = [
-                'type'         => 'for_busqueda',
-                'nav'          => 'lista',
-                'starInterval' => $startDate,
-                'endInterval'  => $endDate
-            ];
-
-            return json_decode(str_replace(['﻿', "'"], '', stripslashes($this->curlGeneral($linkPlatf, $data, $headers, 'GET'))))  ?: null;
-        } else {
-            $linkPlatf = $link . '/app/' . $location . '/' . $filename . '?type=for_busqueda&nav=lista&starInterval=' . $startDate . '&endInterval=' . $endDate;
-            $data = [
-                'type'         => 'for_busqueda',
-                'nav'          => 'lista',
-                'starInterval' => $startDate,
-                'endInterval'  => $endDate
-            ];
-
-            return json_decode(str_replace(['﻿', "'"], '', stripslashes($this->curlGeneral($linkPlatf, $data, $headers, 'GET'))))  ?: null;
-        }
-    }
-
     public function addResources($prefix, $location, $filename)
     {
         $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];

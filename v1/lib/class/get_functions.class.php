@@ -1612,14 +1612,145 @@ class get_functions extends general_functions
 		}
 
 		//////GRAFICAS PLATAFORMA de agencias
-		$respCurl = [$this->grafRankingPlatf($prefix, $startDate, $endDate)];
+		$sqlBroker = "SELECT
+			REPLACE( broker.broker,'''','') AS broker,
+			COUNT(orders.id) AS cant,
+			SUM(orders.total) AS monto,
+			broker.id_broker AS id_broker
+		FROM
+			broker
+		INNER JOIN orders ON orders.agencia = broker.id_broker
+		AND broker.prefijo = orders.prefijo
+		WHERE
+			DATE(orders.fecha) BETWEEN DATE('$startDate')
+		AND DATE('$endDate')
+		AND orders. STATUS IN (1, 3)
+		AND orders.prefijo = '$prefix'
+		GROUP BY
+			orders.prefijo,
+			broker
+		ORDER BY
+			cant DESC";
+
+		$arrCounterData = $this->selectDynamic('', '', '', '', $sqlBroker, '', '', '', '');
+		$cntCounterData = count($arrCounterData);
+
+		$sqlBrokerMonto = "SELECT
+			REPLACE( broker.broker,'''','') AS broker,
+			COUNT(orders.id) AS cant,
+			SUM(orders.total) AS monto,
+			broker.id_broker AS id_broker
+		FROM
+			broker
+		INNER JOIN orders ON orders.agencia = broker.id_broker
+		AND broker.prefijo = orders.prefijo
+		WHERE
+			DATE(orders.fecha) BETWEEN DATE('$startDate')
+		AND DATE('$endDate')
+		AND orders. STATUS IN (1, 3)
+		AND orders.prefijo = '$prefix'
+		GROUP BY
+			orders.prefijo,
+			broker
+		ORDER BY
+			cant DESC";
+
+		$arrAmountData = $this->selectDynamic('', '', '', '', $sqlBrokerMonto, '', '', '', '');
+
+		$cntData = $cntCounterData;
+		$arrAmount  = [];
+		$arrCount   = [];
+		$sortAmount = [];
+		$sortCount  = [];
+		$totalAmount = [0, 0];
+		$totalConter = [0, 0];
+		$arrDataCnt  = [
+			[
+				'id' => 1,
+				'name' => '20 Primeros',
+				'data' => []
+			]
+		];
+		if ($cntData > 20) {
+			$arrDataCnt[1] = [
+				'id' => 2,
+				'name' => 'Otros',
+				'data' => []
+			];
+		}
+		$arrDataAmn = [
+			[
+				'id' => 1,
+				'name' => '20 Primeros',
+				'data' => []
+			]
+		];
+		if ($cntData > 20) {
+			$arrDataAmn[1] = [
+				'id' => 2,
+				'name' => 'Otros',
+				'data' => []
+			];
+		}
+
+		for ($i = 0; $i < $cntData; $i++) {
+			$group = ($i < 20) ? 0 : 1;
+			$totalCount = $arrCounterData[$i]['cant'];
+			$totalPrice = $arrAmountData[$i]['monto'];
+
+			settype($totalCount, 'integer');
+			settype($totalPrice, 'float');
+
+			$totalAmount[$group] += $totalPrice;
+			$totalConter[$group] += $totalCount;
+
+			$sortCount[$group][] = $totalCount;
+			$sortAmount[$group][] = $totalPrice;
+
+			$arrCount[$group][] = [$arrCounterData[$i]['broker'], $totalCount];
+			$arrAmount[$group][] = [$arrAmountData[$i]['broker'], $totalPrice];
+		}
+
+		$arrDataCnt[0]['data'] = $arrCount[0];
+		$arrDataCnt[1]['data'] = $arrCount[1];
+		$arrDataAmn[0]['data'] = $arrAmount[0];
+		$arrDataAmn[1]['data'] = $arrAmount[1];
+
+		$seriesCnt = [
+			[
+				'y' => $totalConter[0],
+				'drilldown' => 1,
+				'name' => '20 Primeros',
+			]
+		];
+		if ($cntData > 10) {
+			$seriesCnt[1] = [
+				'y' => $totalConter[1],
+				'drilldown' => 2,
+				'name' => 'Otros',
+			];
+		}
+		$seriesAmn = [
+			[
+				'y' => $totalAmount[0],
+				'drilldown' => 1,
+				'name' => '20 Primeros',
+			]
+		];
+		if ($cntData > 10) {
+			$seriesAmn[1] = [
+				'y' => $totalAmount[1],
+				'drilldown' => 2,
+				'name' => 'Otros',
+			];
+		}
 
 		///////GRAFICAS EDADES CANTIDAD
-		$response2 = $this->grafVentEdCantidad($prefix, $startDate, $endDate);
+		$grafEdCantidad = $this->grafVentEdCantidad($prefix, $startDate, $endDate);
 
 		$BarAPlatf2 = [];
 		$BarDPlatf2 = [];
-		foreach ($response2 as &$element) {
+		foreach ($grafEdCantidad as &$element) {
 			statistics::EdadResult($BarDPlatf2[$element['prefijo']], $element['edad'], $element['sexo'],  $element['cant']);
 			statistics::EdadResult($BarAPlatf2, $element['edad'], $element['sexo'],  $element['cant']);
 		}
@@ -1640,11 +1771,11 @@ class get_functions extends general_functions
 		}
 
 		/////GRAFICAS PLATAFORMA DE EDADES / VENTAS MONTO
-		$respCurl3 = $this->grafVentEdMonto($prefix, $startDate, $endDate);
+		$grafEdMonto = $this->grafVentEdMonto($prefix, $startDate, $endDate);
 
 		$BarAPlatf3 = [];
 		$BarDPlatf3 = [];
-		foreach ($respCurl3 as &$element) {
+		foreach ($grafEdMonto as &$element) {
 			statistics::EdadResult($BarDPlatf3[$element['prefijo']], $element['edad'], $element['sexo'],  $element['neto']);
 			statistics::EdadResult($BarAPlatf3, $element['edad'], $element['sexo'],  $element['neto']);
 		}
@@ -1664,58 +1795,21 @@ class get_functions extends general_functions
 			}
 		}
 
-		$sqlBroker = "SELECT
-			broker.broker AS broker,
-			COUNT(orders.id) AS cant,
-			SUM(orders.total) AS monto,
-			broker.id_broker AS Broker
-		FROM
-			broker
-		INNER JOIN orders ON orders.agencia = broker.id_broker
-		AND broker.prefijo = orders.prefijo
-		WHERE
-			DATE(orders.fecha) BETWEEN DATE('$startDate')
-		AND DATE('$endDate')
-		AND orders. STATUS IN (1, 3)
-		AND orders.prefijo = '$prefix'";
-
-		$grafBroker = $this->selectDynamic('', '', '', '', $sqlBroker, '', '', '', '');
-
-		$brokerCantidad = [];
-		foreach ($grafBroker as $element) {
-			$brokerCantidad[$element['broker']] += (float) $element['cant'] ?: 0;
-			$brokerSuma[$element['broker']] = $element['id_broker'];
-			$drillBroker[$element['broker']][] = [$element['id_broker'], (float) $element['cant']];
-		}
-		$seriesBroker = [];
-		$drilldownBroker = [];
-		foreach ($brokerSuma as $key => $val) {
-			$seriesBroker[] = [
-				'name' => $key,
-				'y' => (float) $brokerCantidad[$key],
-				'drilldown' => $key,
-			];
-			$drilldownBroker[] = [
-				'name' => $key,
-				'id' => $key,
-				'data' => $drillBroker[$key],
-			];
-		}
-
 		return [
 			$respGraf1,
 			$respGraf2,
 			$respGraf3,
 			$SexEdad,
-			$respCurl,
+			array([
+				'arrDataCnt' => $arrDataCnt,
+				'arrDataAmn' => $arrDataAmn,
+				'seriesCnt' => $seriesCnt,
+				'seriesAmn' => $seriesAmn
+			]),
 			$SexEdad2,
 			$SexEdadPlatf3,
 			$this->grafTipoVenta($prefix, $startDate, $endDate, false),
 			$this->grafTipoVenta($prefix, '', '', true),
-			[
-				$seriesBroker,
-				$drilldownBroker
-			]
 		];
 	}
 
