@@ -1807,4 +1807,177 @@ class general_functions extends Model
             return $arrSerie;
         }
     }
+
+    /*---------------------------------------------------------------------------------------------------------------*/
+    /*-----------------------------------------CALCULO DE INTERVALOS DE EDADES---------------------------------------*/
+    /*-------------------------------------INCLUYENDO OVERAGE Y PLANES POR BANDAS------------------------------------*/
+    /*---------------------------------------------------------------------------------------------------------------*/
+    function plans_intervalos_edades($idCategory = '', $country = '', $idPlan = '', $prefix)
+    {
+        $arrPlan = json_decode($this->get_plan_unidad('', $idCategory, '1', '', '', '', $prefix), true);
+        $cantPlan = count($arrPlan);
+        $intervals = array();
+        $intervalsMin = array();
+        $intervalsMax = array();
+        $addFamilyInterval = false;
+        $minAgeInterval = false;
+        if ($cantPlan < 1) {
+            return false;
+        }
+        for ($i = 0; $i < $cantPlan; $i++) {
+            if ($arrPlan[$i]['unidad'] == 'bandas') {
+                $arrPemium = json_decode($this->get_all_age_banda($arrPlan[$i]['id'], $pais, $prefix), true);
+                if (count($arrPemium) < 1) {
+                    $arrPemium = json_decode($this->get_all_age_banda($arrPlan[$i]['id'], '', $prefix), true);
+                }
+                $cantPremium = count($arrPemium);
+                for ($j = 0; $j < $cantPremium; $j++) {
+                    $intervalsMin[] = $arrPemium[$j]['age_min'];
+                    $intervalsMax[] = $arrPemium[$j]['age_max'];
+                }
+            } else {
+                $minAgeInterval = ($arrPlan[$i]['min_age'] < $minAgeInterval || $minAgeInterval === false) ? $arrPlan[$i]['min_age'] : $minAgeInterval;
+                if ($addFamilyInterval === false && $arrPlan[$i]['family_plan'] == 'Y') {
+                    $intervalsMax[] = 20;
+
+                    $intervalsMin[] = 21;
+                    $addFamilyInterval = true;
+                }
+                if ($arrPlan[$i]['overage_factor'] >= 1 && $arrPlan[$i]['overage_factor_cost'] >= 1 && $arrPlan[$i]['normal_age'] < $arrPlan[$i]['max_age'] && $arrPlan[$i]['normal_age'] >= $arrPlan[$i]['min_age']) {
+                    $intervalsMax[] = $arrPlan[$i]['normal_age'];
+
+                    $intervalsMin[] = $arrPlan[$i]['normal_age'] + 1;
+                    $intervalsMax[] = $arrPlan[$i]['max_age'];
+                } else {
+                    $intervalsMax[] = ($arrPlan[$i]['max_age'] > 0) ? $arrPlan[$i]['max_age'] : $intervalsMin[(count($intervalsMin) - 1)] + 1;
+                }
+            }
+        }
+        if ($minAgeInterval !== false) {
+            $intervalsMin[] = $minAgeInterval;
+        }
+        //~ Se eliminan los repetidos
+        $intervalsMin = array_unique($intervalsMin);
+        $intervalsMax = array_unique($intervalsMax);
+        //~ Ordenamiento de rangos
+        sort($intervalsMin);
+        sort($intervalsMax);
+        $cantMin = count($intervalsMin);
+        $cantMax = count($intervalsMax);
+        $cantidad = ($cantMin < $cantMax) ? $cantMax : $cantMin;
+        $cMin = 0; //~ Contador de array de intervalo de menores
+        $cMax = 0; //~ Contador de array de intervalo de mayores
+        $cnt = 0; //~ Contador de intervalos totales
+        $endIntervals = false;
+        $minVal = 9999;
+        $maxVal = 0;
+        while (($cMin <= $cantMin || $cMax <= $cantMax) && $endIntervals === false) {
+            if (!isset($intervalsMin[$cMin]) && !isset($intervalsMax[$cMax])) {
+                $endIntervals = true;
+            } else {
+                //~ Segmento para buscar los valores menores
+                if (($cnt == 0 || $intervalsMin[$cMin] == ($intervals[$cnt - 1]['max'] + 1)) && isset($intervalsMin[$cMin])) {
+                    $intervals[$cnt]['min'] = $intervalsMin[$cMin];
+                    $cMin++;
+                } else {
+                    $intervals[$cnt]['min'] = $intervals[$cnt - 1]['max'] + 1;
+                }
+                //~ Segmento para buscar los valores mayores
+                if (($intervalsMax[$cMax] < $intervalsMin[$cMin] && isset($intervalsMax[$cMax])) || !isset($intervalsMin[$cMin])) {
+                    $intervals[$cnt]['max'] = $intervalsMax[$cMax];
+                    $cMax++;
+                } else if (isset($intervalsMin[$cMin])) {
+                    $intervals[$cnt]['max'] = $intervalsMin[$cMin] - 1;
+                } else {
+                    $intervals[$cnt]['max'] = $intervalsMin[$cMin - 1];
+                }
+                $minVal = ($intervals[$cnt]['min'] < $minVal) ? $intervals[$cnt]['min'] : $minVal;
+                $maxVal = ($intervals[$cnt]['max'] > $maxVal) ? $intervals[$cnt]['max'] : $maxVal;
+                $cnt++;
+            }
+        }
+        $intervals[0]['minVal'] = $minVal;
+        $intervals[0]['maxVal'] = $maxVal;
+        $intervals[0]['cantidad'] = $cnt;
+        return $intervals;
+    }
+
+    function get_plan_unidad($id = '', $categoria = '', $activo = '', $language_id = '', $planWebservices = false, $prefix)
+    {
+        $query = "SELECT plans.id, plans.unidad, plans.min_age, plans.max_age, plans.name, plans.normal_age, plans.overage_factor,plans.overage_factor_cost, plan_detail.description, plans.family_plan FROM plans
+					LEFT JOIN plan_detail ON plans.id = plan_detail.plan_id
+					where 1 ";
+        if ($id != '') {
+            $query .= " AND plans.id = '$id' ";
+        }
+        if ($activo != '') {
+            $query .= " AND plans.eliminado = '1' AND plans.activo = '1'";
+        }
+        if ($categoria != '') {
+            $query .= " AND plans.id_plan_categoria = '$categoria' ";
+        }
+        if ($language_id != '') {
+            $query .= " AND plan_detail.language_id = '$language_id' ";
+        }
+
+        if ($planWebservices === false) {
+            $query .= "AND (plans.modo_plan != 'W' OR plans.modo_plan IS NULL) ";
+        }
+
+        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $linkSelectDynamic = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+
+        $queryy = [
+            'querys' => $query
+        ];
+
+        return $this->curlGeneral($linkSelectDynamic, json_encode($queryy), $headers);
+        //return $this->_SQL_tool($this->SELECT, __METHOD__, $query);
+    }
+
+    function get_all_age_banda($id_plan = '', $pais = 'all', $prefix)
+    {
+        $query = "SELECT
+				plan_band_age.id,
+				plan_band_age.id_plan,
+				plan_band_age.age_min,
+				plan_band_age.age_max,
+				plan_band_age.precio_base,
+				plan_band_age.valor,
+				plan_band_age.precio_base_cost,
+				plan_band_age.cost,
+				plan_band_age.id_country,
+				plan_band_age.renewal,
+				plan_band_age.unidad,
+				plan_band_age.tiempo,
+				plan_band_age.adicional,
+				countries.description
+			FROM
+				plan_band_age
+			LEFT JOIN countries ON plan_band_age.id_country = countries.iso_country
+			WHERE 1 ";
+
+        if (!empty($id_plan)) {
+            $query .= " AND id_plan = '$id_plan' ";
+        }
+        if (!empty($pais)) {
+            $query .= " AND id_country = '$pais' ";
+        }
+        $query .= " ORDER BY
+			plan_band_age.renewal ASC,
+			countries.description ASC,
+			plan_band_age.age_min ASC ";
+
+        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $linkSelectDynamic = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+
+        $queryy = [
+            'querys' => $query
+        ];
+
+        return $this->curlGeneral($linkSelectDynamic, json_encode($queryy), $headers);
+        //return $this->_SQL_tool($this->SELECT, __METHOD__, $queryy);
+    }
 }

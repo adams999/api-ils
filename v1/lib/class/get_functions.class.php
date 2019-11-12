@@ -49,9 +49,33 @@ class get_functions extends general_functions
 	{
 		return $this->selectDynamic('', 'clients', "data_activa='si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2 ORDER BY client ASC", ['client', 'id_country', 'img_cliente', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '');
 	}
-	public function getCountries()
+	public function getCountries($filters)
 	{
-		return $this->selectDynamic('', 'countries', "c_status='Y'", ['iso_country', 'description'], '', ['min' => '0', 'max' => '349'], ['field' => 'description', 'order' => 'ASC']);
+		$prefix     = $filters['prefix'];
+		$dataValida	= [
+			"9092"  => $prefix,
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$data = [
+			'querys' => "SELECT
+				iso_country,
+				description
+			FROM
+				countries
+			WHERE
+				c_status = 'Y'
+			ORDER BY
+				description "
+		];
+
+		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkParam 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+		return json_decode($response);
+		//return $this->selectDynamic('', 'countries', "c_status='Y'", ['iso_country', 'description'], '', ['min' => '0', 'max' => '349'], ['field' => 'description', 'order' => 'ASC']);
 	}
 	public function getStates()
 	{
@@ -603,45 +627,53 @@ class get_functions extends general_functions
 
 	public function getCategories($filters)
 	{
-		$quote	    = new quoteils();
 		$prefix 	= $filters['prefix'];
+		$agencia    = $filters['agency'];
 		$dataValida	= [
 			"9092"  => $prefix
 		];
-		$validatEmpty	= $this->validatEmpty($dataValida);
+
+		$this->validatEmpty($dataValida);
+
+		$query = "SELECT
+			REPLACE( plan_categoria_detail.name_plan,'''','') as name_plan ,
+			plan_categoria_detail.id_plan_categoria ,
+			REPLACE( plan_categoria_detail.description_plan,'''','') AS description_plan
+		FROM
+			plans
+		INNER JOIN plan_category ON plan_category.id_plan_categoria = plans.id_plan_categoria
+		AND plans.eliminado = 1
+		AND plans.activo = 1
+		INNER JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
+		LEFT JOIN restriction ON plans.id = restriction.id_plans
+		WHERE
+			plan_categoria_detail.language_id = 'spa'
+		AND plan_category.vision_id = 1
+		AND plan_category.id_status = 1";
+		if ($agencia != 'N/A' && !empty($agencia)) {
+			$query .= " AND ((restriction.id_broker in (" . $agencia . ") and restriction.dirigido='6') or (restriction.dirigido='2' and restriction.id_broker in (" . $agencia . "))) ";
+		} else {
+			$query .= " AND (
+				restriction.dirigido = '0'
+				OR restriction.dirigido IS NULL
+				OR restriction.dirigido = '1'
+			) ";
+		}
+		$query .= " AND (
+			modo_plan = 'N'
+			OR modo_plan = 'W'
+			OR modo_plan = 'T'
+			OR modo_plan IS NULL
+		)
+		GROUP BY
+			plan_category.id_plan_categoria
+		ORDER BY
+			plan_categoria_detail.name_plan ASC";
+
 		$data = [
-			'querys' => "SELECT
-				id_plan_categoria,
-				name_plan
-			FROM
-				plan_category
-			WHERE
-				plan_category.id_status = 1
-			AND EXISTS (
-				SELECT
-					id_plan_categoria,
-					activo,
-					eliminado
-				FROM
-					plans
-				WHERE
-					plan_category.id_plan_categoria = plans.id_plan_categoria
-				AND NOT EXISTS (
-					SELECT
-						id_plans
-					FROM
-						restriction
-					WHERE
-						plans.id = restriction.id_plans
-					AND id_broker > 0
-				)
-				AND plans.activo = 1
-				AND plans.eliminado = 1
-			)
-			AND plan_category.vision_id = 1
-			ORDER BY
-				name_plan ASC"
+			'querys' => $query
 		];
+
 		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
 		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
@@ -649,6 +681,32 @@ class get_functions extends general_functions
 		return json_decode($response);
 		//return $this->dataCategories($prefix);
 	}
+
+	public function getIntervaloDeEdades($filters)
+	{
+		$idCategory = $filters['idCategory'];
+		$country    = $filters['country'];
+		$idPlan     = $filters['idPlan'];
+		$prefix     = $filters['prefix'];
+
+		$dataValida	= [
+			"9092"  => $prefix,
+			"9094"  => $idCategory,
+			"6027"  => $country
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$intervalos = $this->plans_intervalos_edades($idCategory, $country, '', $prefix);
+
+		for ($i = 0; $i < $intervalos[0]['cantidad']; $i++) {
+			$interval[$i] = $intervalos[$i]['min'] . " - " . $intervalos[$i]['max'];
+			$indice[$i] = $intervalos[$i]['max'];
+		}
+		//$this->plans_intervalos_edades($idCategory, $country, '', $prefix);
+		return [$intervalos, $interval, $indice];
+	}
+
 	public function getPrices($filters, $apikey)
 	{
 		$quote	   = new quoteils();
