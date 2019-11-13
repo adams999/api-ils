@@ -1826,7 +1826,7 @@ class general_functions extends Model
         }
         for ($i = 0; $i < $cantPlan; $i++) {
             if ($arrPlan[$i]['unidad'] == 'bandas') {
-                $arrPemium = json_decode($this->get_all_age_banda($arrPlan[$i]['id'], $pais, $prefix), true);
+                $arrPemium = json_decode($this->get_all_age_banda($arrPlan[$i]['id'], $country, $prefix), true);
                 if (count($arrPemium) < 1) {
                     $arrPemium = json_decode($this->get_all_age_banda($arrPlan[$i]['id'], '', $prefix), true);
                 }
@@ -1896,15 +1896,45 @@ class general_functions extends Model
                 $cnt++;
             }
         }
-        $intervals[0]['minVal'] = $minVal;
-        $intervals[0]['maxVal'] = $maxVal;
+
+        $rangoEdades = json_decode($this->rangoEdadMinMax($prefix, $idCategory), true);
+
+        $intervals[0]['minVal']   = $minVal;
+        $intervals[0]['maxVal']   = $maxVal;
         $intervals[0]['cantidad'] = $cnt;
+        $intervals[0]['num_pas']  = (int) $arrPlan[0]['num_pas'];
+        $intervals[0]['edadMin']  = (int) $rangoEdades[0]['edad_min'];
+        $intervals[0]['edadMax']  = (int) $rangoEdades[0]['edad_max'];
         return $intervals;
+    }
+
+    function rangoEdadMinMax($prefix, $idCategory)
+    {
+        $query = "SELECT
+            MAX(max_age) AS edad_max,
+            MIN(min_age) AS edad_min
+        FROM
+            plans
+        WHERE
+            id_plan_categoria = '$idCategory'
+        AND eliminado = '1'
+        AND activo = '1'";
+
+
+        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $linkSelectDynamic = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+
+        $queryy = [
+            'querys' => $query
+        ];
+
+        return $this->curlGeneral($linkSelectDynamic, json_encode($queryy), $headers);
     }
 
     function get_plan_unidad($id = '', $categoria = '', $activo = '', $language_id = '', $planWebservices = false, $prefix)
     {
-        $query = "SELECT plans.id, plans.unidad, plans.min_age, plans.max_age, plans.name, plans.normal_age, plans.overage_factor,plans.overage_factor_cost, plan_detail.description, plans.family_plan FROM plans
+        $query = "SELECT plans.id, plans.unidad, plans.min_age, plans.max_age, plans.name, plans.normal_age, plans.overage_factor,plans.overage_factor_cost, plan_detail.description, plans.family_plan, plans.num_pas FROM plans
 					LEFT JOIN plan_detail ON plans.id = plan_detail.plan_id
 					where 1 ";
         if ($id != '') {
