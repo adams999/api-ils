@@ -49,9 +49,61 @@ class get_functions extends general_functions
 	{
 		return $this->selectDynamic('', 'clients', "data_activa='si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2 ORDER BY client ASC", ['client', 'id_country', 'img_cliente', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '');
 	}
-	public function getCountries()
+	public function getCountries($filters)
 	{
-		return $this->selectDynamic('', 'countries', "c_status='Y'", ['iso_country', 'description'], '', ['min' => '0', 'max' => '349'], ['field' => 'description', 'order' => 'ASC']);
+		$prefix     = $filters['prefix'];
+		$dataValida	= [
+			"9092"  => $prefix,
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$data = [
+			'querys' => "SELECT
+				iso_country,
+				description
+			FROM
+				countries
+			WHERE
+				c_status = 'Y'
+			ORDER BY
+				description "
+		];
+
+		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkParam 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+		return json_decode($response);
+		//return $this->selectDynamic('', 'countries', "c_status='Y'", ['iso_country', 'description'], '', ['min' => '0', 'max' => '349'], ['field' => 'description', 'order' => 'ASC']);
+	}
+
+	public function getTerritorios($filters)
+	{
+		$prefix     = $filters['prefix'];
+		$dataValida	= [
+			"9092"  => $prefix,
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$data = [
+			'querys' => "SELECT
+				*
+			FROM
+				territory
+			WHERE
+				id_status = 1 
+			ORDER BY
+				desc_small,
+				id_territory "
+		];
+
+		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkParam 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+		return json_decode($response);
 	}
 	public function getStates()
 	{
@@ -603,45 +655,53 @@ class get_functions extends general_functions
 
 	public function getCategories($filters)
 	{
-		$quote	    = new quoteils();
 		$prefix 	= $filters['prefix'];
+		$agencia    = $filters['agency'];
 		$dataValida	= [
 			"9092"  => $prefix
 		];
-		$validatEmpty	= $this->validatEmpty($dataValida);
+
+		$this->validatEmpty($dataValida);
+
+		$query = "SELECT
+			REPLACE( plan_categoria_detail.name_plan,'''','') as name_plan ,
+			plan_categoria_detail.id_plan_categoria ,
+			REPLACE( plan_categoria_detail.description_plan,'''','') AS description_plan
+		FROM
+			plans
+		INNER JOIN plan_category ON plan_category.id_plan_categoria = plans.id_plan_categoria
+		AND plans.eliminado = 1
+		AND plans.activo = 1
+		INNER JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
+		LEFT JOIN restriction ON plans.id = restriction.id_plans
+		WHERE
+			plan_categoria_detail.language_id = 'spa'
+		AND plan_category.vision_id = 1
+		AND plan_category.id_status = 1";
+		if ($agencia != 'N/A' && !empty($agencia)) {
+			$query .= " AND ((restriction.id_broker in (" . $agencia . ") and restriction.dirigido='6') or (restriction.dirigido='2' and restriction.id_broker in (" . $agencia . "))) ";
+		} else {
+			$query .= " AND (
+				restriction.dirigido = '0'
+				OR restriction.dirigido IS NULL
+				OR restriction.dirigido = '1'
+			) ";
+		}
+		$query .= " AND (
+			modo_plan = 'N'
+			OR modo_plan = 'W'
+			OR modo_plan = 'T'
+			OR modo_plan IS NULL
+		)
+		GROUP BY
+			plan_category.id_plan_categoria
+		ORDER BY
+			plan_categoria_detail.name_plan ASC";
+
 		$data = [
-			'querys' => "SELECT
-				id_plan_categoria,
-				name_plan
-			FROM
-				plan_category
-			WHERE
-				plan_category.id_status = 1
-			AND EXISTS (
-				SELECT
-					id_plan_categoria,
-					activo,
-					eliminado
-				FROM
-					plans
-				WHERE
-					plan_category.id_plan_categoria = plans.id_plan_categoria
-				AND NOT EXISTS (
-					SELECT
-						id_plans
-					FROM
-						restriction
-					WHERE
-						plans.id = restriction.id_plans
-					AND id_broker > 0
-				)
-				AND plans.activo = 1
-				AND plans.eliminado = 1
-			)
-			AND plan_category.vision_id = 1
-			ORDER BY
-				name_plan ASC"
+			'querys' => $query
 		];
+
 		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
 		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
@@ -649,6 +709,74 @@ class get_functions extends general_functions
 		return json_decode($response);
 		//return $this->dataCategories($prefix);
 	}
+
+	public function getIntervaloFechas($filters)
+	{
+		$idCategory = $filters['idCategory'];
+		$paisOrigen = $filters['paisOrigen'];
+		$prefix     = $filters['prefix'];
+
+		$dataValida	= [
+			"9092"  => $prefix,
+			"9094"  => $idCategory,
+			"6027"  => $paisOrigen
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$response = $this->intervaloDias($prefix, $idCategory, $paisOrigen);
+		switch ($response[0]['type_category']) {
+			case 'MULTI_TRIP':
+				$bloquesMultiViaje = $this->bloquesMultiViajes($prefix);
+
+				return $resp = [
+					[
+						'dias_min'          	=> (int) '365',
+						'dias_max'          	=> (int) '365',
+						'id_plan_categoria' 	=> (int) $response[0]['id_plan_categoria'],
+						'type_category'     	=> $response[0]['type_category'],
+						'bloques_multi_viajes' 	=> $bloquesMultiViaje
+					]
+				];
+				break;
+			default:
+				return $resp = [
+					[
+						'dias_min'          	=> (int) $response[0]['dias_min'],
+						'dias_max'          	=> (int) $response[0]['dias_max'],
+						'id_plan_categoria' 	=> (int) $response[0]['id_plan_categoria'],
+						'type_category'     	=> $response[0]['type_category'],
+					]
+				];
+				break;
+		}
+	}
+
+	public function getIntervaloDeEdades($filters)
+	{
+		$idCategory = $filters['idCategory'];
+		$country    = $filters['country'];
+		$idPlan     = $filters['idPlan'];
+		$prefix     = $filters['prefix'];
+
+		$dataValida	= [
+			"9092"  => $prefix,
+			"9094"  => $idCategory,
+			"6027"  => $country
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$intervalos = $this->plans_intervalos_edades($idCategory, $country, '', $prefix);
+
+		for ($i = 0; $i < $intervalos[0]['cantidad']; $i++) {
+			$interval[$i] = $intervalos[$i]['min'] . " - " . $intervalos[$i]['max'];
+			$indice[$i] = $intervalos[$i]['max'];
+		}
+		//$this->plans_intervalos_edades($idCategory, $country, '', $prefix);
+		return [$intervalos, $interval, $indice];
+	}
+
 	public function getPrices($filters, $apikey)
 	{
 		$quote	   = new quoteils();
@@ -1253,7 +1381,7 @@ class get_functions extends general_functions
 			TIMESTAMPDIFF(
 				YEAR,
 				beneficiaries.nacimiento,
-				orders.retorno
+				orders.fecha
 			) AS edad,
 			COUNT(*) AS cant
 		FROM
@@ -1407,7 +1535,20 @@ class get_functions extends general_functions
 			'9068'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($endDate)	> strtotime($today)) : true,
 			'9069'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate)	> strtotime($today)) : true,
 		];
-		$validatEmpty  = $this->validatEmpty($dataValida);
+		$this->validatEmpty($dataValida);
+
+		$IntEdad = [
+			'0-10',
+			'11-20',
+			'21-30',
+			'31-40',
+			'41-50',
+			'51-60',
+			'61-70',
+			'71-75',
+			'76-84',
+			'85+',
+		];
 		//    GRAFICA VOUCHERS CATEGORIAS 
 		$query1 = "SELECT
 		COUNT(orders.cantidad) AS cantidad,
@@ -1538,7 +1679,7 @@ class get_functions extends general_functions
 			TIMESTAMPDIFF(
 				YEAR,
 				beneficiaries.nacimiento,
-				orders.retorno
+				orders.fecha
 			) AS edad,
 			COUNT(*) AS cant
 		FROM
@@ -1559,16 +1700,11 @@ class get_functions extends general_functions
 		ORDER BY
 			prefijo,
 			edad ASC";
+
 		$respGraf4 = $this->selectDynamic('', '', '', '', $query4, '', '', '', '');
-		$BarA = [];
-		$BarD = [];
-		foreach ($respGraf4 as &$element) {
-			statistics::EdadResult($BarD[$element['prefijo']], $element['edad'], $element['sexo'], $element['cant']);
-			statistics::EdadResult($BarA, $element['edad'], $element['sexo'], $element['cant']);
-		}
-		$SexEdad = [];
-		$data = [];
-		$IntEdad = [
+
+		$IntEdad2 = [
+			'S-E',
 			'0-10',
 			'11-20',
 			'21-30',
@@ -1580,6 +1716,16 @@ class get_functions extends general_functions
 			'76-84',
 			'85+',
 		];
+
+		$BarA = [];
+		$BarD = [];
+		foreach ($respGraf4 as &$element) {
+			statistics::EdadResult($BarD[$element['prefijo']], $element['edad'], $element['sexo'], $element['cant']);
+			statistics::EdadResult($BarA, $element['edad'], $element['sexo'], $element['cant']);
+		}
+		$SexEdad = [];
+		$data = [];
+
 		foreach ($BarD  as $key => $val) {
 			foreach ($val  as $key1 => $value) {
 				$data = [];
@@ -1594,66 +1740,172 @@ class get_functions extends general_functions
 		}
 
 		//////GRAFICAS PLATAFORMA de agencias
-		$respCurl = [$this->grafRankingPlatf($prefix, $startDate, $endDate)];
+		$sqlBroker = "SELECT
+			REPLACE( broker.broker,'''','') AS broker,
+			COUNT(orders.id) AS cant,
+			SUM(orders.total) AS monto,
+			broker.id_broker AS id_broker
+		FROM
+			broker
+		INNER JOIN orders ON orders.agencia = broker.id_broker
+		AND broker.prefijo = orders.prefijo
+		WHERE
+			DATE(orders.fecha) BETWEEN DATE('$startDate')
+		AND DATE('$endDate')
+		AND orders. STATUS IN (1, 3)
+		AND orders.prefijo = '$prefix'
+		GROUP BY
+			orders.prefijo,
+			broker
+		ORDER BY
+			cant DESC";
 
-		/////GRAFICAS PLATAFORMA DE EDADES / VENTAS CANTIDAD
-		$respCurl2 = $this->grafVentEdPlatf($prefix, $startDate, $endDate);
+		$arrCounterData = $this->selectDynamic('', '', '', '', $sqlBroker, '', '', '', '');
+		$cntCounterData = count($arrCounterData);
 
-		for ($i = 0; $i < count($respCurl2); $i++) {
-			for ($a = 0; $a < count($respCurl2[$i]); $a++) {
-				$respCurl2[$i]['prefijo'] = $prefix;
-			}
-		}
+		$sqlBrokerMonto = "SELECT
+			REPLACE( broker.broker,'''','') AS broker,
+			COUNT(orders.id) AS cant,
+			SUM(orders.total) AS monto,
+			broker.id_broker AS id_broker
+		FROM
+			broker
+		INNER JOIN orders ON orders.agencia = broker.id_broker
+		AND broker.prefijo = orders.prefijo
+		WHERE
+			DATE(orders.fecha) BETWEEN DATE('$startDate')
+		AND DATE('$endDate')
+		AND orders. STATUS IN (1, 3)
+		AND orders.prefijo = '$prefix'
+		GROUP BY
+			orders.prefijo,
+			broker
+		ORDER BY
+			cant DESC";
 
-		$IntEdadPlatf = [
-			'S-E',
-			'0-10',
-			'11-20',
-			'21-30',
-			'31-40',
-			'41-50',
-			'51-60',
-			'61-70',
-			'71-75',
-			'76-84',
-			'85+',
+		$arrAmountData = $this->selectDynamic('', '', '', '', $sqlBrokerMonto, '', '', '', '');
+
+		$cntData = $cntCounterData;
+		$arrAmount  = [];
+		$arrCount   = [];
+		$sortAmount = [];
+		$sortCount  = [];
+		$totalAmount = [0, 0];
+		$totalConter = [0, 0];
+		$arrDataCnt  = [
+			[
+				'id' => 1,
+				'name' => '20 Primeros',
+				'data' => []
+			]
 		];
-
-		$BarAPlatf = [];
-		$BarDPlatf = [];
-		foreach ($respCurl2 as &$element) {
-			statistics::EdadResult($BarDPlatf[$element['prefijo']], $element['edad'], $element['sexo'], $element['cant']);
-			statistics::EdadResult($BarAPlatf, $element['edad'], $element['sexo'], $element['cant']);
+		if ($cntData > 20) {
+			$arrDataCnt[1] = [
+				'id' => 2,
+				'name' => 'Otros',
+				'data' => []
+			];
 		}
-		$SexEdadPlatf = [];
-		$data2 = [];
+		$arrDataAmn = [
+			[
+				'id' => 1,
+				'name' => '20 Primeros',
+				'data' => []
+			]
+		];
+		if ($cntData > 20) {
+			$arrDataAmn[1] = [
+				'id' => 2,
+				'name' => 'Otros',
+				'data' => []
+			];
+		}
 
-		foreach ($BarDPlatf  as $key => $val) {
+		for ($i = 0; $i < $cntData; $i++) {
+			$group = ($i < 20) ? 0 : 1;
+			$totalCount = $arrCounterData[$i]['cant'];
+			$totalPrice = $arrAmountData[$i]['monto'];
+
+			settype($totalCount, 'integer');
+			settype($totalPrice, 'float');
+
+			$totalAmount[$group] += $totalPrice;
+			$totalConter[$group] += $totalCount;
+
+			$sortCount[$group][] = $totalCount;
+			$sortAmount[$group][] = $totalPrice;
+
+			$arrCount[$group][] = [$arrCounterData[$i]['broker'], $totalCount];
+			$arrAmount[$group][] = [$arrAmountData[$i]['broker'], $totalPrice];
+		}
+
+		$arrDataCnt[0]['data'] = $arrCount[0];
+		$arrDataCnt[1]['data'] = $arrCount[1];
+		$arrDataAmn[0]['data'] = $arrAmount[0];
+		$arrDataAmn[1]['data'] = $arrAmount[1];
+
+		$seriesCnt = [
+			[
+				'y' => $totalConter[0],
+				'drilldown' => 1,
+				'name' => '20 Primeros',
+			]
+		];
+		if ($cntData > 10) {
+			$seriesCnt[1] = [
+				'y' => $totalConter[1],
+				'drilldown' => 2,
+				'name' => 'Otros',
+			];
+		}
+		$seriesAmn = [
+			[
+				'y' => $totalAmount[0],
+				'drilldown' => 1,
+				'name' => '20 Primeros',
+			]
+		];
+		if ($cntData > 10) {
+			$seriesAmn[1] = [
+				'y' => $totalAmount[1],
+				'drilldown' => 2,
+				'name' => 'Otros',
+			];
+		}
+
+		///////GRAFICAS EDADES CANTIDAD
+		$grafEdCantidad = $this->grafVentEdCantidad($prefix, $startDate, $endDate);
+
+		$BarAPlatf2 = [];
+		$BarDPlatf2 = [];
+		foreach ($grafEdCantidad as &$element) {
+			statistics::EdadResult($BarDPlatf2[$element['prefijo']], $element['edad'], $element['sexo'],  $element['cant']);
+			statistics::EdadResult($BarAPlatf2, $element['edad'], $element['sexo'],  $element['cant']);
+		}
+		$SexEdad2 = [];
+		$data3 = [];
+
+		foreach ($BarDPlatf2  as $key => $val) {
 			foreach ($val  as $key1 => $value) {
-				$data2 = [];
-				foreach ($IntEdadPlatf  as  $key2 => $values) {
-					$data2[] = (int) $value[$values] ?: 0;
+				$data3 = [];
+				foreach ($IntEdad2  as  $key2 => $values) {
+					$data3[] = (float) $value[$values] ?: 0;
 				}
-				$SexEdadPlatf[] = [
+				$SexEdad2[] = [
 					'name' => $key1,
-					'data' => $data2,
+					'data' => $data3,
 				];
 			}
 		}
 
 		/////GRAFICAS PLATAFORMA DE EDADES / VENTAS MONTO
-		$respCurl3 = $this->grafVentEdMonto($prefix, $startDate, $endDate);
-		for ($i = 0; $i < count($respCurl3); $i++) {
-			for ($a = 0; $a < count($respCurl3[$i]); $a++) {
-				$respCurl3[$i]['prefijo'] = $prefix;
-			}
-		}
+		$grafEdMonto = $this->grafVentEdMonto($prefix, $startDate, $endDate);
 
 		$BarAPlatf3 = [];
 		$BarDPlatf3 = [];
-		foreach ($respCurl3 as &$element) {
-			statistics::EdadResult($BarDPlatf3[$element['prefijo']], $element['edad'], $element['sexo'], (float) $element['neto']);
-			statistics::EdadResult($BarAPlatf3, $element['edad'], $element['sexo'], (float) $element['neto']);
+		foreach ($grafEdMonto as &$element) {
+			statistics::EdadResult($BarDPlatf3[$element['prefijo']], $element['edad'], $element['sexo'],  $element['neto']);
+			statistics::EdadResult($BarAPlatf3, $element['edad'], $element['sexo'],  $element['neto']);
 		}
 		$SexEdadPlatf3 = [];
 		$data3 = [];
@@ -1661,7 +1913,7 @@ class get_functions extends general_functions
 		foreach ($BarDPlatf3  as $key => $val) {
 			foreach ($val  as $key1 => $value) {
 				$data3 = [];
-				foreach ($IntEdadPlatf  as  $key2 => $values) {
+				foreach ($IntEdad2  as  $key2 => $values) {
 					$data3[] = (float) $value[$values] ?: 0;
 				}
 				$SexEdadPlatf3[] = [
@@ -1671,10 +1923,23 @@ class get_functions extends general_functions
 			}
 		}
 
-
-		return [$respGraf1, $respGraf2, $respGraf3, $SexEdad, $respCurl, $SexEdadPlatf, $SexEdadPlatf3, $this->grafTipoVenta($prefix, $startDate, $endDate, false), $this->grafTipoVenta($prefix, '', '', true)];
+		return [
+			$respGraf1,
+			$respGraf2,
+			$respGraf3,
+			$SexEdad,
+			array([
+				'arrDataCnt' => $arrDataCnt,
+				'arrDataAmn' => $arrDataAmn,
+				'seriesCnt' => $seriesCnt,
+				'seriesAmn' => $seriesAmn
+			]),
+			$SexEdad2,
+			$SexEdadPlatf3,
+			$this->grafTipoVenta($prefix, $startDate, $endDate, false),
+			$this->grafTipoVenta($prefix, '', '', true),
+		];
 	}
-
 
 	/*  public function getBrokers($filters,$limit){
         $fields =

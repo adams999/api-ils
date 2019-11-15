@@ -1430,98 +1430,6 @@ class general_functions extends Model
         return  $this->selectDynamic('', '', '', '', "SELECT * FROM broker_nivel WHERE prefijo = '$prefix' AND id_broker = '$idAgency' ORDER BY id_broker_nivel DESC LIMIT 1", '', '', '');
     }
 
-    public function grafRankingPlatf($prefix, $startDate, $endDate)
-    {
-        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
-        $linkSelectDynamic = $link . "/app/api/selectDynamic";
-        $headers     = "content-type: application/x-www-form-urlencoded";
-        $location = 'admin';
-        $filename = 'async_report_ranking.php';
-
-        $query = [
-            'querys' => " SELECT * FROM resources WHERE location = '$location' AND file_name = '$filename' AND authentication = '0' "
-        ];
-
-        $resultado = $this->curlGeneral($linkSelectDynamic, $query, $headers);
-
-        if (empty($resultado)) {
-            $this->addResources($prefix, $location, $filename);
-        }
-
-        $linkPlatf = $link . '/app/' . $location . '/' . $filename . '?type=for_busqueda&nav=lista&starInterval=' . $startDate . '&endInterval=' . $endDate;
-        $data = [
-            'type'         => 'for_busqueda',
-            'nav'          => 'lista',
-            'starInterval' => $startDate,
-            'endInterval'  => $endDate
-        ];
-
-        return json_decode(str_replace(['﻿', "'"], '', stripslashes($this->curlGeneral($linkPlatf, $data, $headers, 'GET'))))  ?: null;
-    }
-
-    public function grafVentEdPlatf($prefix, $startDate, $endDate)
-    {
-        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
-        $linkSelectDynamic = $link . "/app/api/selectDynamic";
-        $headers     = "content-type: application/x-www-form-urlencoded";
-
-        $query = [
-            'querys' => " SELECT
-            beneficiaries.sexo AS sexo,
-                IFNULL(TIMESTAMPDIFF(
-                    YEAR,
-                    beneficiaries.nacimiento,
-                    orders.fecha
-                ),'S-E') AS edad,
-                COUNT(*) AS cant
-            FROM
-                orders
-            INNER JOIN beneficiaries ON beneficiaries.id_orden = orders.id
-            AND orders. STATUS IN (1,3)
-            AND DATE(orders.fecha) BETWEEN DATE('$startDate')
-            AND DATE('$endDate')
-            GROUP BY
-                beneficiaries.sexo,
-                edad
-            ORDER BY
-                edad ASC "
-        ];
-
-        return json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query), $headers), true);
-    }
-
-    public function grafVentEdMonto($prefix, $startDate, $endDate)
-    {
-        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
-        $linkSelectDynamic = $link . "/app/api/selectDynamic";
-        $headers     = "content-type: application/x-www-form-urlencoded";
-
-        $query = [
-            'querys' => " SELECT
-            beneficiaries.sexo AS sexo,
-            SUM(beneficiaries.precio_vta ) AS neto,
-            IFNULL(TIMESTAMPDIFF(
-                YEAR,
-                beneficiaries.nacimiento,
-                orders.fecha
-            ),'S-E') AS edad,
-            COUNT(*) AS cant
-        FROM
-            orders
-        INNER JOIN beneficiaries ON beneficiaries.id_orden = orders.id
-        AND orders. STATUS IN (1,3)
-        AND DATE(orders.fecha) BETWEEN DATE('$startDate')
-        AND DATE('$endDate')
-        GROUP BY
-            beneficiaries.sexo,
-            edad
-        ORDER BY
-            edad ASC "
-        ];
-
-        return json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query), $headers), true);
-    }
-
     public function addResources($prefix, $location, $filename)
     {
         $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
@@ -1537,184 +1445,234 @@ class general_functions extends Model
                     authentication
                 )
                 VALUES
-                    (
-                        '$random',
-                        '$location',
-                        '$filename',
-                        '0'
-                    )"
+                (
+                    '$random',
+                    '$location',
+                    '$filename',
+                    '0'
+                )"
         ];
 
-        $this->curlGeneral($linkSelectDynamic, $query, $headers);
+        return $this->curlGeneral($linkSelectDynamic, $query, $headers);
+    }
+
+    public function grafVentEdCantidad($prefix, $startDate, $endDate)
+    {
+        $sql = "SELECT
+            orders.prefijo,
+            beneficiaries.sexo AS sexo,
+            SUM(beneficiaries.precio_vta ) AS neto,
+            TIMESTAMPDIFF(
+                YEAR,
+                beneficiaries.nacimiento,
+                orders.fecha
+            ) AS edad,
+            COUNT(*) AS cant
+        FROM
+            orders
+        INNER JOIN beneficiaries ON beneficiaries.id_orden = orders.id
+        AND orders.prefijo = beneficiaries.prefijo
+        WHERE
+            orders.prefijo = '$prefix'
+        AND orders. STATUS IN (1, 3)
+        AND DATE(orders.fecha) BETWEEN DATE('$startDate')
+        AND DATE('$endDate')
+        GROUP BY
+            orders.prefijo,
+            sexo,
+            edad
+        ORDER BY
+            orders.prefijo,
+            edad ASC";
+
+        return $this->selectDynamic('', '', '', '', $sql, '', '', '', '');
+    }
+
+    public function grafVentEdMonto($prefix, $startDate, $endDate)
+    {
+        $sql = "SELECT
+            orders.prefijo,
+            beneficiaries.sexo AS sexo,
+            SUM(beneficiaries.precio_vta ) AS neto,
+            TIMESTAMPDIFF(
+                YEAR,
+                beneficiaries.nacimiento,
+                orders.fecha
+            ) AS edad,
+            COUNT(*) AS cant
+        FROM
+            orders
+        INNER JOIN beneficiaries ON beneficiaries.id_orden = orders.id
+        AND orders.prefijo = beneficiaries.prefijo
+        WHERE
+            orders.prefijo = '$prefix'
+        AND orders. STATUS IN (1, 3)
+        AND DATE(orders.fecha) BETWEEN DATE('$startDate')
+        AND DATE('$endDate')
+        GROUP BY
+            orders.prefijo,
+            sexo,
+            edad
+        ORDER BY
+            orders.prefijo,
+            edad ASC";
+
+        return $this->selectDynamic('', '', '', '', $sql, '', '', '', '');
     }
 
     public function grafTipoVenta($prefix, $startDate, $endDate, $anual)
     {
         $yearActual = date('Y');
-        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
-        $linkSelectDynamic = $link . "/app/api/selectDynamic";
-        $headers     = "content-type: application/x-www-form-urlencoded";
 
-        $queryAux1 = "SELECT
+        $query1 = "SELECT
+                orders.prefijo,
                 MONTH (orders.fecha) AS mes,
                 COUNT(*) AS cantidad
             FROM
                 orders
-            INNER JOIN plans ON plans.id = orders.producto
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $queryAux1 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query1 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
         } else {
-            $queryAux1 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+            $query1 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
-        $queryAux1 .= " AND orders.family_plan = 'si' 
+        $query1 .= " AND orders.family_plan = 'si' 
             AND (
                 orders.id_cotiza = 0
                 OR orders.id_cotiza IS NULL
             )
+            AND orders.prefijo = '$prefix'
             GROUP BY
                 mes
             ORDER BY
                 mes 
             ASC";
 
-        $query1 = [
-            'querys' => $queryAux1
-        ];
+        $sql1 = $this->selectDynamic('', '', '', '', $query1, '', '', '', '');
 
-        $sql1 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query1), $headers), true);
-
-        $queryAux2 = "SELECT
+        $query2 = "SELECT
+                orders.prefijo,
                 MONTH (orders.fecha) AS mes,
                 COUNT(*) AS cantidad
             FROM
                 orders
-            INNER JOIN plans ON plans.id = orders.producto
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $queryAux2 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query2 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
         } else {
-            $queryAux2 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+            $query2 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
-        $queryAux2 .= " AND orders.es_emision_corp > 0 
-            GROUP BY
-                mes
-            ORDER BY
-                mes 
-            ASC";
-
-        $query2 = [
-            'querys' => $queryAux2
-        ];
-
-        $sql2 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query2), $headers), true);
-
-        $queryAux3 = "SELECT
-                MONTH (orders.fecha) AS mes,
-                COUNT(*) AS cantidad
-            FROM
-                orders
-            INNER JOIN plans ON plans.id = orders.producto
-            WHERE
-                orders. STATUS IN (1, 3) ";
-        if (!empty($endDate) && !empty($startDate)) {
-            $queryAux3 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
-        } else {
-            $queryAux3 .= " AND YEAR (orders.fecha) = '$yearActual' ";
-        }
-        $queryAux3 .= " AND orders.id_emision_type = 2 
+        $query2 .= " AND orders.es_emision_corp > 0 
             AND (
                 orders.id_cotiza = 0
                 OR orders.id_cotiza IS NULL
             )
+            AND orders.prefijo = '$prefix'
             GROUP BY
                 mes
             ORDER BY
                 mes 
             ASC";
 
-        $query3 = [
-            'querys' => $queryAux3
-        ];
+        $sql2 = $this->selectDynamic('', '', '', '', $query2, '', '', '', '');
 
-        $sql3 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query3), $headers), true);
-
-        $queryAux4 = "SELECT
+        $query3 = "SELECT
+                orders.prefijo,
                 MONTH (orders.fecha) AS mes,
                 COUNT(*) AS cantidad
             FROM
                 orders
-            INNER JOIN plans ON plans.id = orders.producto
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $queryAux4 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query3 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
         } else {
-            $queryAux4 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+            $query3 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
-        $queryAux4 .= " AND orders.pareja_plan = 'Y'  
+        $query3 .= " AND orders.id_emision_type = 2 
             AND (
                 orders.id_cotiza = 0
                 OR orders.id_cotiza IS NULL
             )
+            AND orders.prefijo = '$prefix'
             GROUP BY
                 mes
             ORDER BY
                 mes 
             ASC";
 
-        $query4 = [
-            'querys' => $queryAux4
-        ];
+        $sql3 = $this->selectDynamic('', '', '', '', $query3, '', '', '', '');
 
-        $sql4 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query4), $headers), true);
-
-        $queryAux5 = "SELECT
+        $query4 = "SELECT
+                orders.prefijo,
                 MONTH (orders.fecha) AS mes,
                 COUNT(*) AS cantidad
             FROM
                 orders
-            INNER JOIN plans ON plans.id = orders.producto
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $queryAux5 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query4 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
         } else {
-            $queryAux5 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+            $query4 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
-        $queryAux5 .= " AND orders.id_group > 0 
+        $query4 .= " AND orders.pareja_plan = 'Y'  
             AND (
                 orders.id_cotiza = 0
                 OR orders.id_cotiza IS NULL
             )
+            AND orders.prefijo = '$prefix'
             GROUP BY
                 mes
             ORDER BY
                 mes 
             ASC";
 
-        $query5 = [
-            'querys' => $queryAux5
-        ];
+        $sql4 = $this->selectDynamic('', '', '', '', $query4, '', '', '', '');
 
-        $sql5 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query5), $headers), true);
-
-        $queryAux6 = "SELECT
+        $query5 = "SELECT
+                orders.prefijo,
                 MONTH (orders.fecha) AS mes,
                 COUNT(*) AS cantidad
             FROM
                 orders
-            INNER JOIN plans ON plans.id = orders.producto
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $queryAux6 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query5 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
         } else {
-            $queryAux6 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+            $query5 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
-        $queryAux6 .= " AND (
+        $query5 .= " AND orders.id_group > 0 
+            AND (
+                orders.id_cotiza = 0
+                OR orders.id_cotiza IS NULL
+            )
+            AND orders.prefijo = '$prefix'
+            GROUP BY
+                mes
+            ORDER BY
+                mes 
+            ASC";
+
+        $sql5 = $this->selectDynamic('', '', '', '', $query5, '', '', '', '');
+
+        $query6 = "SELECT 
+                orders.prefijo,
+                MONTH (orders.fecha) AS mes,
+                COUNT(*) AS cantidad
+            FROM
+                orders
+            WHERE
+                orders. STATUS IN (1, 3) ";
+        if (!empty($endDate) && !empty($startDate)) {
+            $query6 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+        } else {
+            $query6 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+        }
+        $query6 .= " AND (
                 orders.es_emision_corp < '1'
                 OR orders.es_emision_corp IS NULL
             )
@@ -1734,43 +1692,36 @@ class general_functions extends Model
                 orders.id_cotiza = 0 
                 OR orders.id_cotiza IS NULL
             )
+            AND orders.prefijo = '$prefix'
             GROUP BY
                 mes
             ORDER BY
                 mes 
             ASC";
 
-        $query6 = [
-            'querys' => $queryAux6
-        ];
+        $sql6 = $this->selectDynamic('', '', '', '', $query6, '', '', '', '');
 
-        $sql6 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query6), $headers), true);
-
-        $queryAux7 = "SELECT
+        $query7 = "SELECT
                 MONTH (orders.fecha) AS mes,
                 COUNT(*) AS cantidad
             FROM
                 orders
-            INNER JOIN plans ON plans.id = orders.producto
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $queryAux7 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query7 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
         } else {
-            $queryAux7 .= " AND YEAR (orders.fecha) = '$yearActual' ";
+            $query7 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
-        $queryAux7 .= " AND  orders.id_cotiza > 0 
+        $query7 .= " AND  orders.id_cotiza > 0 
+            AND orders.prefijo = '$prefix'
             GROUP BY
                 mes
             ORDER BY
                 mes 
             ASC";
 
-        $query7 = [
-            'querys' => $queryAux7
-        ];
-
-        $sql7 = json_decode($this->curlGeneral($linkSelectDynamic, json_encode($query7), $headers), true);
+        $sql7 = $this->selectDynamic('', '', '', '', $query7, '', '', '', '');
 
         if ($anual == true) {
             $seriesFamilia = $this->ArrDatMesGraf($sql1, 'Plan Familia', true);
@@ -1845,7 +1796,7 @@ class general_functions extends Model
         } else {
             $sumData = 0;
             foreach ($data as $key => $value) {
-                $sumData += $value['cantidad'];
+                $sumData += (int) $value['cantidad'];
             }
 
             $arrSerie = [
@@ -1855,5 +1806,265 @@ class general_functions extends Model
 
             return $arrSerie;
         }
+    }
+
+    /*********************************Intervalo de dias Cotizador **********************************************/
+    public function intervaloDias($prefix, $idCategory, $paisOrigen)
+    {
+        $query = "SELECT
+                MIN(min_tiempo) AS dias_min,
+                MAX(max_tiempo) AS dias_max,
+                plan_category.id_plan_categoria,
+                plan_category.type_category
+            FROM
+                plan_category
+            INNER JOIN plans ON plans.id_plan_categoria = plan_category.id_plan_categoria
+            AND plans.activo = 1
+            AND plans.eliminado = 1
+            WHERE
+                plan_category.id_plan_categoria = '$idCategory'";
+
+        $data = [
+            'querys' => $query
+        ];
+
+        $link         = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+        $linkParam     = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+        $response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+        return json_decode($response, true);
+    }
+
+
+    public function bloquesMultiViajes($prefix)
+    {
+        $query = "SELECT DISTINCT
+            plans.dias_multiviajes
+        FROM
+            plans
+        WHERE
+            dias_multiviajes IS NOT NULL
+        AND dias_multiviajes > 0
+        AND plans.activo = '1'
+        AND eliminado = '1'
+        AND (
+            modo_plan IS NULL
+            OR modo_plan != 'W'
+        )
+        ORDER BY
+            plans.dias_multiviajes ASC";
+
+        $data = [
+            'querys' => $query
+        ];
+
+        $link         = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+        $linkParam     = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+        $response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+        return json_decode($response, true);
+    }
+
+    /*---------------------------------------------------------------------------------------------------------------*/
+    /*-----------------------------------------CALCULO DE INTERVALOS DE EDADES---------------------------------------*/
+    /*-------------------------------------INCLUYENDO OVERAGE Y PLANES POR BANDAS------------------------------------*/
+    /*---------------------------------------------------------------------------------------------------------------*/
+    public function plans_intervalos_edades($idCategory = '', $country = '', $idPlan = '', $prefix)
+    {
+        $arrPlan = json_decode($this->get_plan_unidad('', $idCategory, '1', '', '', '', $prefix), true);
+        $cantPlan = count($arrPlan);
+        $intervals = array();
+        $intervalsMin = array();
+        $intervalsMax = array();
+        $addFamilyInterval = false;
+        $minAgeInterval = false;
+        if ($cantPlan < 1) {
+            return false;
+        }
+        for ($i = 0; $i < $cantPlan; $i++) {
+            if ($arrPlan[$i]['unidad'] == 'bandas') {
+                $arrPemium = json_decode($this->get_all_age_banda($arrPlan[$i]['id'], $country, $prefix), true);
+                if (count($arrPemium) < 1) {
+                    $arrPemium = json_decode($this->get_all_age_banda($arrPlan[$i]['id'], '', $prefix), true);
+                }
+                $cantPremium = count($arrPemium);
+                for ($j = 0; $j < $cantPremium; $j++) {
+                    $intervalsMin[] = $arrPemium[$j]['age_min'];
+                    $intervalsMax[] = $arrPemium[$j]['age_max'];
+                }
+            } else {
+                $minAgeInterval = ($arrPlan[$i]['min_age'] < $minAgeInterval || $minAgeInterval === false) ? $arrPlan[$i]['min_age'] : $minAgeInterval;
+                if ($addFamilyInterval === false && $arrPlan[$i]['family_plan'] == 'Y') {
+                    $intervalsMax[] = 20;
+
+                    $intervalsMin[] = 21;
+                    $addFamilyInterval = true;
+                }
+                if ($arrPlan[$i]['overage_factor'] >= 1 && $arrPlan[$i]['overage_factor_cost'] >= 1 && $arrPlan[$i]['normal_age'] < $arrPlan[$i]['max_age'] && $arrPlan[$i]['normal_age'] >= $arrPlan[$i]['min_age']) {
+                    $intervalsMax[] = $arrPlan[$i]['normal_age'];
+
+                    $intervalsMin[] = $arrPlan[$i]['normal_age'] + 1;
+                    $intervalsMax[] = $arrPlan[$i]['max_age'];
+                } else {
+                    $intervalsMax[] = ($arrPlan[$i]['max_age'] > 0) ? $arrPlan[$i]['max_age'] : $intervalsMin[(count($intervalsMin) - 1)] + 1;
+                }
+            }
+        }
+        if ($minAgeInterval !== false) {
+            $intervalsMin[] = $minAgeInterval;
+        }
+        //~ Se eliminan los repetidos
+        $intervalsMin = array_unique($intervalsMin);
+        $intervalsMax = array_unique($intervalsMax);
+        //~ Ordenamiento de rangos
+        sort($intervalsMin);
+        sort($intervalsMax);
+        $cantMin = count($intervalsMin);
+        $cantMax = count($intervalsMax);
+        $cantidad = ($cantMin < $cantMax) ? $cantMax : $cantMin;
+        $cMin = 0; //~ Contador de array de intervalo de menores
+        $cMax = 0; //~ Contador de array de intervalo de mayores
+        $cnt = 0; //~ Contador de intervalos totales
+        $endIntervals = false;
+        $minVal = 9999;
+        $maxVal = 0;
+        while (($cMin <= $cantMin || $cMax <= $cantMax) && $endIntervals === false) {
+            if (!isset($intervalsMin[$cMin]) && !isset($intervalsMax[$cMax])) {
+                $endIntervals = true;
+            } else {
+                //~ Segmento para buscar los valores menores
+                if (($cnt == 0 || $intervalsMin[$cMin] == ($intervals[$cnt - 1]['max'] + 1)) && isset($intervalsMin[$cMin])) {
+                    $intervals[$cnt]['min'] = $intervalsMin[$cMin];
+                    $cMin++;
+                } else {
+                    $intervals[$cnt]['min'] = $intervals[$cnt - 1]['max'] + 1;
+                }
+                //~ Segmento para buscar los valores mayores
+                if (($intervalsMax[$cMax] < $intervalsMin[$cMin] && isset($intervalsMax[$cMax])) || !isset($intervalsMin[$cMin])) {
+                    $intervals[$cnt]['max'] = $intervalsMax[$cMax];
+                    $cMax++;
+                } else if (isset($intervalsMin[$cMin])) {
+                    $intervals[$cnt]['max'] = $intervalsMin[$cMin] - 1;
+                } else {
+                    $intervals[$cnt]['max'] = $intervalsMin[$cMin - 1];
+                }
+                $minVal = ($intervals[$cnt]['min'] < $minVal) ? $intervals[$cnt]['min'] : $minVal;
+                $maxVal = ($intervals[$cnt]['max'] > $maxVal) ? $intervals[$cnt]['max'] : $maxVal;
+                $cnt++;
+            }
+        }
+
+        $rangoEdades = json_decode($this->rangoEdadMinMax($prefix, $idCategory), true);
+
+        $intervals[0]['minVal']   = $minVal;
+        $intervals[0]['maxVal']   = $maxVal;
+        $intervals[0]['cantidad'] = $cnt;
+        $intervals[0]['num_pas']  = (int) $arrPlan[0]['num_pas'] ?: (int) 9;
+        $intervals[0]['edadMin']  = (int) $rangoEdades[0]['edad_min'] ?: (int) 0;
+        $intervals[0]['edadMax']  = (int) $rangoEdades[0]['edad_max'] ?: (int) 90;
+        return $intervals;
+    }
+
+    public function rangoEdadMinMax($prefix, $idCategory)
+    {
+        $query = "SELECT
+            MAX(max_age) AS edad_max,
+            MIN(min_age) AS edad_min
+        FROM
+            plans
+        WHERE
+            id_plan_categoria = '$idCategory'
+        AND eliminado = '1'
+        AND activo = '1'";
+
+
+        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $linkSelectDynamic = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+
+        $queryy = [
+            'querys' => $query
+        ];
+
+        return $this->curlGeneral($linkSelectDynamic, json_encode($queryy), $headers);
+    }
+
+    public function get_plan_unidad($id = '', $categoria = '', $activo = '', $language_id = '', $planWebservices = false, $prefix)
+    {
+        $query = "SELECT plans.id, plans.unidad, plans.min_age, plans.max_age, plans.name, plans.normal_age, plans.overage_factor,plans.overage_factor_cost, plan_detail.description, plans.family_plan, plans.num_pas FROM plans
+					LEFT JOIN plan_detail ON plans.id = plan_detail.plan_id
+					where 1 ";
+        if ($id != '') {
+            $query .= " AND plans.id = '$id' ";
+        }
+        if ($activo != '') {
+            $query .= " AND plans.eliminado = '1' AND plans.activo = '1'";
+        }
+        if ($categoria != '') {
+            $query .= " AND plans.id_plan_categoria = '$categoria' ";
+        }
+        if ($language_id != '') {
+            $query .= " AND plan_detail.language_id = '$language_id' ";
+        }
+
+        if ($planWebservices === false) {
+            $query .= "AND (plans.modo_plan != 'W' OR plans.modo_plan IS NULL) ";
+        }
+
+        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $linkSelectDynamic = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+
+        $queryy = [
+            'querys' => $query
+        ];
+
+        return $this->curlGeneral($linkSelectDynamic, json_encode($queryy), $headers);
+        //return $this->_SQL_tool($this->SELECT, __METHOD__, $query);
+    }
+
+    public function get_all_age_banda($id_plan = '', $pais = 'all', $prefix)
+    {
+        $query = "SELECT
+				plan_band_age.id,
+				plan_band_age.id_plan,
+				plan_band_age.age_min,
+				plan_band_age.age_max,
+				plan_band_age.precio_base,
+				plan_band_age.valor,
+				plan_band_age.precio_base_cost,
+				plan_band_age.cost,
+				plan_band_age.id_country,
+				plan_band_age.renewal,
+				plan_band_age.unidad,
+				plan_band_age.tiempo,
+				plan_band_age.adicional,
+				countries.description
+			FROM
+				plan_band_age
+			LEFT JOIN countries ON plan_band_age.id_country = countries.iso_country
+			WHERE 1 ";
+
+        if (!empty($id_plan)) {
+            $query .= " AND id_plan = '$id_plan' ";
+        }
+        if (!empty($pais)) {
+            $query .= " AND id_country = '$pais' ";
+        }
+        $query .= " ORDER BY
+			plan_band_age.renewal ASC,
+			countries.description ASC,
+			plan_band_age.age_min ASC ";
+
+        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $linkSelectDynamic = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+
+        $queryy = [
+            'querys' => $query
+        ];
+
+        return $this->curlGeneral($linkSelectDynamic, json_encode($queryy), $headers);
+        //return $this->_SQL_tool($this->SELECT, __METHOD__, $queryy);
     }
 }
