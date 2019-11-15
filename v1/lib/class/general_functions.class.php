@@ -1808,11 +1808,68 @@ class general_functions extends Model
         }
     }
 
+    /*********************************Intervalo de dias Cotizador **********************************************/
+    public function intervaloDias($prefix, $idCategory, $paisOrigen)
+    {
+        $query = "SELECT
+                MIN(min_tiempo) AS dias_min,
+                MAX(max_tiempo) AS dias_max,
+                plan_category.id_plan_categoria,
+                plan_category.type_category
+            FROM
+                plan_category
+            INNER JOIN plans ON plans.id_plan_categoria = plan_category.id_plan_categoria
+            AND plans.activo = 1
+            AND plans.eliminado = 1
+            WHERE
+                plan_category.id_plan_categoria = '$idCategory'";
+
+        $data = [
+            'querys' => $query
+        ];
+
+        $link         = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+        $linkParam     = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+        $response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+        return json_decode($response, true);
+    }
+
+
+    public function bloquesMultiViajes($prefix)
+    {
+        $query = "SELECT DISTINCT
+            plans.dias_multiviajes
+        FROM
+            plans
+        WHERE
+            dias_multiviajes IS NOT NULL
+        AND dias_multiviajes > 0
+        AND plans.activo = '1'
+        AND eliminado = '1'
+        AND (
+            modo_plan IS NULL
+            OR modo_plan != 'W'
+        )
+        ORDER BY
+            plans.dias_multiviajes ASC";
+
+        $data = [
+            'querys' => $query
+        ];
+
+        $link         = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+        $linkParam     = $link . "/app/api/selectDynamic";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+        $response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+        return json_decode($response, true);
+    }
+
     /*---------------------------------------------------------------------------------------------------------------*/
     /*-----------------------------------------CALCULO DE INTERVALOS DE EDADES---------------------------------------*/
     /*-------------------------------------INCLUYENDO OVERAGE Y PLANES POR BANDAS------------------------------------*/
     /*---------------------------------------------------------------------------------------------------------------*/
-    function plans_intervalos_edades($idCategory = '', $country = '', $idPlan = '', $prefix)
+    public function plans_intervalos_edades($idCategory = '', $country = '', $idPlan = '', $prefix)
     {
         $arrPlan = json_decode($this->get_plan_unidad('', $idCategory, '1', '', '', '', $prefix), true);
         $cantPlan = count($arrPlan);
@@ -1902,13 +1959,13 @@ class general_functions extends Model
         $intervals[0]['minVal']   = $minVal;
         $intervals[0]['maxVal']   = $maxVal;
         $intervals[0]['cantidad'] = $cnt;
-        $intervals[0]['num_pas']  = (int) $arrPlan[0]['num_pas'];
-        $intervals[0]['edadMin']  = (int) $rangoEdades[0]['edad_min'];
-        $intervals[0]['edadMax']  = (int) $rangoEdades[0]['edad_max'];
+        $intervals[0]['num_pas']  = (int) $arrPlan[0]['num_pas'] ?: (int) 9;
+        $intervals[0]['edadMin']  = (int) $rangoEdades[0]['edad_min'] ?: (int) 0;
+        $intervals[0]['edadMax']  = (int) $rangoEdades[0]['edad_max'] ?: (int) 90;
         return $intervals;
     }
 
-    function rangoEdadMinMax($prefix, $idCategory)
+    public function rangoEdadMinMax($prefix, $idCategory)
     {
         $query = "SELECT
             MAX(max_age) AS edad_max,
@@ -1932,7 +1989,7 @@ class general_functions extends Model
         return $this->curlGeneral($linkSelectDynamic, json_encode($queryy), $headers);
     }
 
-    function get_plan_unidad($id = '', $categoria = '', $activo = '', $language_id = '', $planWebservices = false, $prefix)
+    public function get_plan_unidad($id = '', $categoria = '', $activo = '', $language_id = '', $planWebservices = false, $prefix)
     {
         $query = "SELECT plans.id, plans.unidad, plans.min_age, plans.max_age, plans.name, plans.normal_age, plans.overage_factor,plans.overage_factor_cost, plan_detail.description, plans.family_plan, plans.num_pas FROM plans
 					LEFT JOIN plan_detail ON plans.id = plan_detail.plan_id
@@ -1966,7 +2023,7 @@ class general_functions extends Model
         //return $this->_SQL_tool($this->SELECT, __METHOD__, $query);
     }
 
-    function get_all_age_banda($id_plan = '', $pais = 'all', $prefix)
+    public function get_all_age_banda($id_plan = '', $pais = 'all', $prefix)
     {
         $query = "SELECT
 				plan_band_age.id,

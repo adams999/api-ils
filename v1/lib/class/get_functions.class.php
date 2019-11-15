@@ -77,6 +77,34 @@ class get_functions extends general_functions
 		return json_decode($response);
 		//return $this->selectDynamic('', 'countries', "c_status='Y'", ['iso_country', 'description'], '', ['min' => '0', 'max' => '349'], ['field' => 'description', 'order' => 'ASC']);
 	}
+
+	public function getTerritorios($filters)
+	{
+		$prefix     = $filters['prefix'];
+		$dataValida	= [
+			"9092"  => $prefix,
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$data = [
+			'querys' => "SELECT
+				*
+			FROM
+				territory
+			WHERE
+				id_status = 1 
+			ORDER BY
+				desc_small,
+				id_territory "
+		];
+
+		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkParam 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+		return json_decode($response);
+	}
 	public function getStates()
 	{
 		return $this->selectDynamic('', '', '', '', "SELECT
@@ -680,6 +708,48 @@ class get_functions extends general_functions
 		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
 		return json_decode($response);
 		//return $this->dataCategories($prefix);
+	}
+
+	public function getIntervaloFechas($filters)
+	{
+		$idCategory = $filters['idCategory'];
+		$paisOrigen = $filters['paisOrigen'];
+		$prefix     = $filters['prefix'];
+
+		$dataValida	= [
+			"9092"  => $prefix,
+			"9094"  => $idCategory,
+			"6027"  => $paisOrigen
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$response = $this->intervaloDias($prefix, $idCategory, $paisOrigen);
+		switch ($response[0]['type_category']) {
+			case 'MULTI_TRIP':
+				$bloquesMultiViaje = $this->bloquesMultiViajes($prefix);
+
+				return $resp = [
+					[
+						'dias_min'          	=> (int) '365',
+						'dias_max'          	=> (int) '365',
+						'id_plan_categoria' 	=> (int) $response[0]['id_plan_categoria'],
+						'type_category'     	=> $response[0]['type_category'],
+						'bloques_multi_viajes' 	=> $bloquesMultiViaje
+					]
+				];
+				break;
+			default:
+				return $resp = [
+					[
+						'dias_min'          	=> (int) $response[0]['dias_min'],
+						'dias_max'          	=> (int) $response[0]['dias_max'],
+						'id_plan_categoria' 	=> (int) $response[0]['id_plan_categoria'],
+						'type_category'     	=> $response[0]['type_category'],
+					]
+				];
+				break;
+		}
 	}
 
 	public function getIntervaloDeEdades($filters)
