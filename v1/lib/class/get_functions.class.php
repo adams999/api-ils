@@ -1,4 +1,5 @@
 <?php
+
 class get_functions extends general_functions
 {
 	public function get_fuctions($function, $apikey)
@@ -656,7 +657,7 @@ class get_functions extends general_functions
 	public function getCategories($filters)
 	{
 		$prefix 	= $filters['prefix'];
-		$agencia    = $filters['agency'];
+		$agencia    = $filters['agencyMaster'];
 		$dataValida	= [
 			"9092"  => $prefix
 		];
@@ -666,7 +667,8 @@ class get_functions extends general_functions
 		$query = "SELECT
 			REPLACE( plan_categoria_detail.name_plan,'''','') as name_plan ,
 			plan_categoria_detail.id_plan_categoria ,
-			REPLACE( plan_categoria_detail.description_plan,'''','') AS description_plan
+			REPLACE( plan_categoria_detail.description_plan,'''','') AS description_plan,
+			plan_category.img AS img
 		FROM
 			plans
 		INNER JOIN plan_category ON plan_category.id_plan_categoria = plans.id_plan_categoria
@@ -706,7 +708,17 @@ class get_functions extends general_functions
 		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
-		return json_decode($response);
+		$respuesta = json_decode($response, true);
+		for ($i = 0; $i < count($respuesta); $i++) {
+			if (!empty($respuesta[$i]['img'])) {
+				$respuesta[$i]['img'] = $link . '/app/images/images/' . $respuesta[$i]['img'];
+				$respuesta[$i]['description_plan'] = strip_tags($respuesta[$i]['description_plan']);
+			} else {
+				$respuesta[$i]['img'] = '';
+				$respuesta[$i]['description_plan'] = strip_tags($respuesta[$i]['description_plan']);
+			}
+		}
+		return $respuesta;
 		//return $this->dataCategories($prefix);
 	}
 
@@ -777,6 +789,90 @@ class get_functions extends general_functions
 		return [$intervalos, $interval, $indice];
 	}
 
+	public function GetPricesApiQuoteGeneral($filters, $apikey)
+	{
+		$quote	   = new cotizadorIls();
+		$prefix	   = $filters['prefix'];
+		$origin	   = $filters['origin'];
+		$startDate = $filters['startDate'];
+		$endDate   = $filters['endDate'];
+		$destiny   = $filters['destiny'];
+		$category  = $filters['category'];
+		$id_broker = ($filters['agency'] != 'N/A' && !empty($filters['agency'])) ? $filters['agency'] : 118;
+		$ages	   = explode(',', $filters['ages']);
+		$bloque    = $filters['bloque'];
+		$today 	   = date('Y-m-d');
+		$dataValida	= [
+			"9092"  => $prefix,
+			"6027"  => $origin,
+			"1080"  => !empty($destiny) ?: true,
+			"6029"  => $startDate,
+			"9094"  => $category,
+			"6030"  => $endDate,
+			'2001'	=> $this->checkDates($startDate),
+			'2002'	=> $this->checkDates($endDate),
+			'9095'	=> is_array($ages)
+		];
+		if (!empty($startDate) && !empty($endDate)) {
+			$startDate  = $this->transformerDate($startDate);
+			$endDate 	= $this->transformerDate($endDate);
+		}
+		$arrVerifyDate = [
+			'3030'	=> (strtotime($startDate) <= strtotime($endDate)),
+			'50009'	=> (strtotime($endDate)	>= strtotime($today)),
+			'50008'	=> (strtotime($startDate) >= strtotime($today)),
+		];
+		$this->validatEmpty($dataValida + $arrVerifyDate);
+		$interval = $this->betweenDates($startDate, $endDate, '');
+		$ages = implode(',', $ages) . ',';
+
+		$dataCurl = [
+			'plan_tipo'         =>  $category,
+			'dias'              =>  $interval,
+			'id_country_broker' =>  '',
+			'destino'           =>  $destiny,
+			'origen'            =>  $origin,
+			'edades'            =>  $ages,
+			'salida'            =>  $startDate,
+			'llegada'           =>  $endDate,
+			'id_broker'         =>  $id_broker,
+			'PlanSel'           =>  '',
+			'min_days'          =>  $bloque
+		];
+
+		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$linkParam 	= $link . "/app/api/quotePlansApp";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$respons    = $this->curlGeneral($linkParam, json_encode($dataCurl), $headers);
+		$response   = json_decode($respons, true);
+
+		foreach ($response as $key => $value) {
+			if (empty($value['total'])) {
+				if ($value['error_age'] == 0) {
+					return $this->getError(50010);
+				} elseif ($value['error_broker'] == 0) {
+					return $this->getError(50011);
+				} elseif ($value['error_country'] == 0) {
+					return $this->getError(50012);
+				} elseif ($value['error_time'] == 0) {
+					return $this->getError(50013);
+				} elseif ($value['error_territory'] == 0) {
+					return $this->getError(50014);
+				} elseif ($value['error_cant_passenger'] == 0) {
+					return $this->getError(50015);
+				} elseif ($value['error_local_plans'] == 0) {
+					return $this->getError(50016);
+				} elseif (count($response) == 0) {
+					return $this->getError(1060);
+				}
+			} else {
+				return $response;
+			}
+		}
+
+		//return ($response) ? $response : $this->getError(1060);
+	}
+
 	public function getPrices($filters, $apikey)
 	{
 		$quote	   = new quoteils();
@@ -791,7 +887,7 @@ class get_functions extends general_functions
 		$dataValida	= [
 			"9092"  => $prefix,
 			"6027"  => $origin,
-			"1080"  => !empty($destiny) ? in_array($destiny, [1, 2, 9]) : true,
+			"1080"  => !empty($destiny) ?: true,
 			"6029"  => $startDate,
 			"9094"  => $category,
 			"6030"  => $endDate,
@@ -804,11 +900,11 @@ class get_functions extends general_functions
 			$endDate 	= $this->transformerDate($endDate);
 		}
 		$arrVerifyDate = [
-			'3030'	=> (strtotime($startDate)  < strtotime($endDate)),
-			'9068'	=> (strtotime($endDate)	> strtotime($today)),
-			'9069'	=> (strtotime($startDate)	>= strtotime($today)),
+			'3030'	=> (strtotime($startDate) <= strtotime($endDate)),
+			'50009'	=> (strtotime($endDate)	>= strtotime($today)),
+			'50008'	=> (strtotime($startDate) >= strtotime($today)),
 		];
-		$validatEmpty	= $this->validatEmpty($dataValida + $arrVerifyDate);
+		$this->validatEmpty($dataValida + $arrVerifyDate);
 		$interval = $this->betweenDates($startDate, $endDate);
 		$dataQuote = $quote->Quote([
 			'category'		=> $category,
