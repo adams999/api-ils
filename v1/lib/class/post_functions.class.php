@@ -25,6 +25,7 @@ class post_functions extends general_functions
 	}
 	public function sendQuote()
 	{
+		$filters = $_GET;
 		$prefix 	 = $this->data['prefix'];
 		$category 	 = $this->data['category'];
 		$plans		 = $this->data['plans'];
@@ -41,7 +42,7 @@ class post_functions extends general_functions
 			"6027"  => $origin,
 			'6036'	=> $nameQuote,
 			'4004'	=> $emailQuote,
-			"1080"  => !empty($destination) ? in_array($destination, [1, 2, 9]) : true,
+			"1080"  => !empty($destination) ?: true,
 			"6029"  => $startDate,
 			"9094"  => $category,
 			"6030"  => $endDate,
@@ -54,20 +55,27 @@ class post_functions extends general_functions
 		$departureTrans     = $this->transformerDate($startDate);
 		$arrivalTrans     	= $this->transformerDate($endDate);
 		$daysByPeople 		= $this->betweenDates($departureTrans, $arrivalTrans);
+		$idBroker           = $filters['agency']  ?: 118;
+		$idUser             = $filters['id_user'] ?: '0';
+		$min_days           = $filters['bloque']  ?: '';
 		$dataQuote = [
-			'plan_tipo'	=> $category,
-			'PlanSel'	=> $plans,
-			'nom'		=> $nameQuote,
-			'edades'	=> $agesQuote,
-			'salida'	=> $departureTrans,
-			'llegada'	=> $arrivalTrans,
-			'dias'		=> $daysByPeople,
-			'nropasajeros' => $passQuote,
-			'origen'	=> $origin,
-			'destino'	=> $destination,
-			'email_cliente'	=> $emailQuote,
-			'idBroker'	=> '118',
-			'type'		=> 'enviar_correo',
+			'plan_tipo'		 => $category,
+			'PlanSel'		 => $plans,
+			'nom'			 => $nameQuote,
+			'edades'		 => $agesQuote,
+			'salida'		 => $departureTrans,
+			'llegada'		 => $arrivalTrans,
+			'dias'			 => $daysByPeople,
+			'nropasajeros'   => $passQuote,
+			'origen'		 => $origin,
+			'destino'		 => $destination,
+			'email_cliente'	 => $emailQuote,
+			'idBroker'		 => $idBroker,
+			'id_agente'      => $idBroker,
+			'min_days'       => $min_days,
+			'usuario_id'     => $idUser,
+			'id_user'        => $idUser,
+			'type'			 => 'enviar_correo',
 			'selectLanguage' => 'es'
 		];
 		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
@@ -76,7 +84,8 @@ class post_functions extends general_functions
 		$resp = $this->curlGeneral($linkQuote, $dataQuote, $headers, 'GET');
 		return [
 			'resp'      => $resp,
-			'status'	=> 'OK'
+			'status'	=> 'OK',
+			'iduser'    => $idUser
 		];
 	}
 	public function postParamPlatform()

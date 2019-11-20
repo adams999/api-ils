@@ -1878,87 +1878,87 @@ class general_functions extends Model
         $intervalsMax = array();
         $addFamilyInterval = false;
         $minAgeInterval = false;
-        if ($cantPlan < 1) {
-            return false;
-        }
-        for ($i = 0; $i < $cantPlan; $i++) {
-            if ($arrPlan[$i]['unidad'] == 'bandas') {
-                $arrPemium = json_decode($this->get_all_age_banda($arrPlan[$i]['id'], $country, $prefix), true);
-                if (count($arrPemium) < 1) {
-                    $arrPemium = json_decode($this->get_all_age_banda($arrPlan[$i]['id'], '', $prefix), true);
-                }
-                $cantPremium = count($arrPemium);
-                for ($j = 0; $j < $cantPremium; $j++) {
-                    $intervalsMin[] = $arrPemium[$j]['age_min'];
-                    $intervalsMax[] = $arrPemium[$j]['age_max'];
-                }
-            } else {
-                $minAgeInterval = ($arrPlan[$i]['min_age'] < $minAgeInterval || $minAgeInterval === false) ? $arrPlan[$i]['min_age'] : $minAgeInterval;
-                if ($addFamilyInterval === false && $arrPlan[$i]['family_plan'] == 'Y') {
-                    $intervalsMax[] = 20;
+        // if ($cantPlan < 1) {
+        //     return false;
+        // }
+        // for ($i = 0; $i < $cantPlan; $i++) {
+        //     if ($arrPlan[$i]['unidad'] == 'bandas') {
+        //         $arrPemium = json_decode($this->get_all_age_banda($arrPlan[$i]['id'], $country, $prefix), true);
+        //         if (count($arrPemium) < 1) {
+        //             $arrPemium = json_decode($this->get_all_age_banda($arrPlan[$i]['id'], '', $prefix), true);
+        //         }
+        //         $cantPremium = count($arrPemium);
+        //         for ($j = 0; $j < $cantPremium; $j++) {
+        //             $intervalsMin[] = $arrPemium[$j]['age_min'];
+        //             $intervalsMax[] = $arrPemium[$j]['age_max'];
+        //         }
+        //     } else {
+        //         $minAgeInterval = ($arrPlan[$i]['min_age'] < $minAgeInterval || $minAgeInterval === false) ? $arrPlan[$i]['min_age'] : $minAgeInterval;
+        //         if ($addFamilyInterval === false && $arrPlan[$i]['family_plan'] == 'Y') {
+        //             $intervalsMax[] = 20;
 
-                    $intervalsMin[] = 21;
-                    $addFamilyInterval = true;
-                }
-                if ($arrPlan[$i]['overage_factor'] >= 1 && $arrPlan[$i]['overage_factor_cost'] >= 1 && $arrPlan[$i]['normal_age'] < $arrPlan[$i]['max_age'] && $arrPlan[$i]['normal_age'] >= $arrPlan[$i]['min_age']) {
-                    $intervalsMax[] = $arrPlan[$i]['normal_age'];
+        //             $intervalsMin[] = 21;
+        //             $addFamilyInterval = true;
+        //         }
+        //         if ($arrPlan[$i]['overage_factor'] >= 1 && $arrPlan[$i]['overage_factor_cost'] >= 1 && $arrPlan[$i]['normal_age'] < $arrPlan[$i]['max_age'] && $arrPlan[$i]['normal_age'] >= $arrPlan[$i]['min_age']) {
+        //             $intervalsMax[] = $arrPlan[$i]['normal_age'];
 
-                    $intervalsMin[] = $arrPlan[$i]['normal_age'] + 1;
-                    $intervalsMax[] = $arrPlan[$i]['max_age'];
-                } else {
-                    $intervalsMax[] = ($arrPlan[$i]['max_age'] > 0) ? $arrPlan[$i]['max_age'] : $intervalsMin[(count($intervalsMin) - 1)] + 1;
-                }
-            }
-        }
-        if ($minAgeInterval !== false) {
-            $intervalsMin[] = $minAgeInterval;
-        }
-        //~ Se eliminan los repetidos
-        $intervalsMin = array_unique($intervalsMin);
-        $intervalsMax = array_unique($intervalsMax);
-        //~ Ordenamiento de rangos
-        sort($intervalsMin);
-        sort($intervalsMax);
-        $cantMin = count($intervalsMin);
-        $cantMax = count($intervalsMax);
-        $cantidad = ($cantMin < $cantMax) ? $cantMax : $cantMin;
-        $cMin = 0; //~ Contador de array de intervalo de menores
-        $cMax = 0; //~ Contador de array de intervalo de mayores
-        $cnt = 0; //~ Contador de intervalos totales
-        $endIntervals = false;
-        $minVal = 9999;
-        $maxVal = 0;
-        while (($cMin <= $cantMin || $cMax <= $cantMax) && $endIntervals === false) {
-            if (!isset($intervalsMin[$cMin]) && !isset($intervalsMax[$cMax])) {
-                $endIntervals = true;
-            } else {
-                //~ Segmento para buscar los valores menores
-                if (($cnt == 0 || $intervalsMin[$cMin] == ($intervals[$cnt - 1]['max'] + 1)) && isset($intervalsMin[$cMin])) {
-                    $intervals[$cnt]['min'] = $intervalsMin[$cMin];
-                    $cMin++;
-                } else {
-                    $intervals[$cnt]['min'] = $intervals[$cnt - 1]['max'] + 1;
-                }
-                //~ Segmento para buscar los valores mayores
-                if (($intervalsMax[$cMax] < $intervalsMin[$cMin] && isset($intervalsMax[$cMax])) || !isset($intervalsMin[$cMin])) {
-                    $intervals[$cnt]['max'] = $intervalsMax[$cMax];
-                    $cMax++;
-                } else if (isset($intervalsMin[$cMin])) {
-                    $intervals[$cnt]['max'] = $intervalsMin[$cMin] - 1;
-                } else {
-                    $intervals[$cnt]['max'] = $intervalsMin[$cMin - 1];
-                }
-                $minVal = ($intervals[$cnt]['min'] < $minVal) ? $intervals[$cnt]['min'] : $minVal;
-                $maxVal = ($intervals[$cnt]['max'] > $maxVal) ? $intervals[$cnt]['max'] : $maxVal;
-                $cnt++;
-            }
-        }
+        //             $intervalsMin[] = $arrPlan[$i]['normal_age'] + 1;
+        //             $intervalsMax[] = $arrPlan[$i]['max_age'];
+        //         } else {
+        //             $intervalsMax[] = ($arrPlan[$i]['max_age'] > 0) ? $arrPlan[$i]['max_age'] : $intervalsMin[(count($intervalsMin) - 1)] + 1;
+        //         }
+        //     }
+        // }
+        // if ($minAgeInterval !== false) {
+        //     $intervalsMin[] = $minAgeInterval;
+        // }
+        // //~ Se eliminan los repetidos
+        // $intervalsMin = array_unique($intervalsMin);
+        // $intervalsMax = array_unique($intervalsMax);
+        // //~ Ordenamiento de rangos
+        // sort($intervalsMin);
+        // sort($intervalsMax);
+        // $cantMin = count($intervalsMin);
+        // $cantMax = count($intervalsMax);
+        // $cantidad = ($cantMin < $cantMax) ? $cantMax : $cantMin;
+        // $cMin = 0; //~ Contador de array de intervalo de menores
+        // $cMax = 0; //~ Contador de array de intervalo de mayores
+        // $cnt = 0; //~ Contador de intervalos totales
+        // $endIntervals = false;
+        // $minVal = 9999;
+        // $maxVal = 0;
+        // while (($cMin <= $cantMin || $cMax <= $cantMax) && $endIntervals === false) {
+        //     if (!isset($intervalsMin[$cMin]) && !isset($intervalsMax[$cMax])) {
+        //         $endIntervals = true;
+        //     } else {
+        //         //~ Segmento para buscar los valores menores
+        //         if (($cnt == 0 || $intervalsMin[$cMin] == ($intervals[$cnt - 1]['max'] + 1)) && isset($intervalsMin[$cMin])) {
+        //             $intervals[$cnt]['min'] = $intervalsMin[$cMin];
+        //             $cMin++;
+        //         } else {
+        //             $intervals[$cnt]['min'] = $intervals[$cnt - 1]['max'] + 1;
+        //         }
+        //         //~ Segmento para buscar los valores mayores
+        //         if (($intervalsMax[$cMax] < $intervalsMin[$cMin] && isset($intervalsMax[$cMax])) || !isset($intervalsMin[$cMin])) {
+        //             $intervals[$cnt]['max'] = $intervalsMax[$cMax];
+        //             $cMax++;
+        //         } else if (isset($intervalsMin[$cMin])) {
+        //             $intervals[$cnt]['max'] = $intervalsMin[$cMin] - 1;
+        //         } else {
+        //             $intervals[$cnt]['max'] = $intervalsMin[$cMin - 1];
+        //         }
+        //         $minVal = ($intervals[$cnt]['min'] < $minVal) ? $intervals[$cnt]['min'] : $minVal;
+        //         $maxVal = ($intervals[$cnt]['max'] > $maxVal) ? $intervals[$cnt]['max'] : $maxVal;
+        //         $cnt++;
+        //     }
+        // }
 
         $rangoEdades = json_decode($this->rangoEdadMinMax($prefix, $idCategory), true);
 
-        $intervals[0]['minVal']   = $minVal;
-        $intervals[0]['maxVal']   = $maxVal;
-        $intervals[0]['cantidad'] = $cnt;
+        $intervals[0]['minVal']   = $minVal ?: 0;
+        $intervals[0]['maxVal']   = $maxVal ?: 99;
+        $intervals[0]['cantidad'] = $cnt ?: 9;
         $intervals[0]['num_pas']  = (int) $arrPlan[0]['num_pas'] ?: (int) 9;
         $intervals[0]['edadMin']  = (int) $rangoEdades[0]['edad_min'] ?: (int) 0;
         $intervals[0]['edadMax']  = (int) $rangoEdades[0]['edad_max'] ?: (int) 90;
