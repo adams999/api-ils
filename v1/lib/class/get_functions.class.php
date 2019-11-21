@@ -818,9 +818,9 @@ class get_functions extends general_functions
 			$endDate 	= $this->transformerDate($endDate);
 		}
 		$arrVerifyDate = [
-			'3030'	=> (strtotime($startDate) <= strtotime($endDate)),
-			'50009'	=> (strtotime($endDate)	>= strtotime($today)),
-			'50008'	=> (strtotime($startDate) >= strtotime($today)),
+			'3030'	=> !(strtotime($startDate) > strtotime($endDate)),
+			'50009'	=> !(strtotime($endDate)   < strtotime($today)),
+			'50008'	=> !(strtotime($startDate) < strtotime($today)),
 		];
 		$this->validatEmpty($dataValida + $arrVerifyDate);
 		$interval = $this->betweenDates($startDate, $endDate, '');
@@ -869,8 +869,6 @@ class get_functions extends general_functions
 				return $response;
 			}
 		}
-
-		//return ($response) ? $response : $this->getError(1060);
 	}
 
 	public function getPrices($filters, $apikey)
@@ -900,9 +898,9 @@ class get_functions extends general_functions
 			$endDate 	= $this->transformerDate($endDate);
 		}
 		$arrVerifyDate = [
-			'3030'	=> (strtotime($startDate) <= strtotime($endDate)),
-			'50009'	=> (strtotime($endDate)	>= strtotime($today)),
-			'50008'	=> (strtotime($startDate) >= strtotime($today)),
+			'3030'	=> !(strtotime($startDate) > strtotime($endDate)),
+			'50009'	=> !(strtotime($endDate)   < strtotime($today)),
+			'50008'	=> !(strtotime($startDate) < strtotime($today)),
 		];
 		$this->validatEmpty($dataValida + $arrVerifyDate);
 		$interval = $this->betweenDates($startDate, $endDate);

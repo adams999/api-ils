@@ -55,14 +55,16 @@ class post_functions extends general_functions
 		$departureTrans     = $this->transformerDate($startDate);
 		$arrivalTrans     	= $this->transformerDate($endDate);
 		$daysByPeople 		= $this->betweenDates($departureTrans, $arrivalTrans);
-		$idBroker           = $filters['agency']  ?: 118;
-		$idUser             = $filters['id_user'] ?: '0';
+		$idBroker           = (!empty($filters['agency']) && $filters['agency'] != 'N/A')  ? $filters['agency'] : '';
+		$idUser             = $filters['id_user'] ?: '';
 		$min_days           = $filters['bloque']  ?: '';
+		$userType           = $filters['userType'];
+
 		$dataQuote = [
 			'plan_tipo'		 => $category,
 			'PlanSel'		 => $plans,
 			'nom'			 => $nameQuote,
-			'edades'		 => $agesQuote,
+			'edades'		 => $agesQuote . ',',
 			'salida'		 => $departureTrans,
 			'llegada'		 => $arrivalTrans,
 			'dias'			 => $daysByPeople,
@@ -70,11 +72,11 @@ class post_functions extends general_functions
 			'origen'		 => $origin,
 			'destino'		 => $destination,
 			'email_cliente'	 => $emailQuote,
-			'idBroker'		 => $idBroker,
-			'id_agente'      => $idBroker,
 			'min_days'       => $min_days,
-			'usuario_id'     => $idUser,
 			'id_user'        => $idUser,
+			'user_type'      => $userType,
+			'broker_sesion'  => $idBroker, //parametro que recibe el core.lib de la plataforma para cargar los parametros de la agencia 
+			'id_broker'      => $idBroker, //parametro que recibe el async_cotizador
 			'type'			 => 'enviar_correo',
 			'selectLanguage' => 'es'
 		];
@@ -83,9 +85,8 @@ class post_functions extends general_functions
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$resp = $this->curlGeneral($linkQuote, $dataQuote, $headers, 'GET');
 		return [
-			'resp'      => $resp,
-			'status'	=> 'OK',
-			'iduser'    => $idUser
+			'resp'      => strip_tags($resp),
+			'status'	=> 'OK'
 		];
 	}
 	public function postParamPlatform()
