@@ -1456,48 +1456,19 @@ class general_functions extends Model
         return $this->curlGeneral($linkSelectDynamic, $query, $headers);
     }
 
-    public function grafVentEdCantidad($prefix, $startDate, $endDate)
+    public function grafVentEd($prefix, $startDate, $endDate)
     {
         $sql = "SELECT
             orders.prefijo,
             beneficiaries.sexo AS sexo,
             SUM(beneficiaries.precio_vta ) AS neto,
-            TIMESTAMPDIFF(
-                YEAR,
-                beneficiaries.nacimiento,
-                orders.fecha
-            ) AS edad,
-            COUNT(*) AS cant
-        FROM
-            orders
-        INNER JOIN beneficiaries ON beneficiaries.id_orden = orders.id
-        AND orders.prefijo = beneficiaries.prefijo
-        WHERE
-            orders.prefijo = '$prefix'
-        AND orders. STATUS IN (1, 3)
-        AND DATE(orders.fecha) BETWEEN DATE('$startDate')
-        AND DATE('$endDate')
-        GROUP BY
-            orders.prefijo,
-            sexo,
-            edad
-        ORDER BY
-            orders.prefijo,
-            edad ASC";
-
-        return $this->selectDynamic('', '', '', '', $sql, '', '', '', '');
-    }
-
-    public function grafVentEdMonto($prefix, $startDate, $endDate)
-    {
-        $sql = "SELECT
-            orders.prefijo,
-            beneficiaries.sexo AS sexo,
-            SUM(beneficiaries.precio_vta ) AS neto,
-            TIMESTAMPDIFF(
-                YEAR,
-                beneficiaries.nacimiento,
-                orders.fecha
+            IFNULL(
+                TIMESTAMPDIFF(
+                    YEAR,
+                    beneficiaries.nacimiento,
+                    orders.fecha
+                ),
+                'S-E'
             ) AS edad,
             COUNT(*) AS cant
         FROM
