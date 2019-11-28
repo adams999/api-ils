@@ -657,9 +657,7 @@ class get_functions extends general_functions
 	public function getCategories($filters)
 	{
 		$prefix 	= $filters['prefix'];
-		if (in_array($prefix, ['TH']) != true) { ///////condicion para agregar las plataformas en las cuales las categorias son las mismas para las plataforma y agencias el resto son con candicion por agencia
-			$agencia    = $filters['agencyMaster'];
-		}
+		$agencia    = $filters['agencyMaster'];
 		$dataValida	= [
 			"9092"  => $prefix
 		];
