@@ -800,7 +800,7 @@ class get_functions extends general_functions
 		$category  = $filters['category'];
 		$id_broker = ($filters['agency'] != 'N/A' && !empty($filters['agency'])) ? $filters['agency'] : 118;
 		$ages	   = explode(',', $filters['ages']);
-		$bloque    = $filters['bloque'];
+		$bloque    = $filters['bloque'] ?: '';
 		$today 	   = date('Y-m-d');
 		$dataValida	= [
 			"9092"  => $prefix,
@@ -818,9 +818,9 @@ class get_functions extends general_functions
 			$endDate 	= $this->transformerDate($endDate);
 		}
 		$arrVerifyDate = [
-			'3030'	=> (strtotime($startDate) <= strtotime($endDate)),
-			'50009'	=> (strtotime($endDate)	>= strtotime($today)),
-			'50008'	=> (strtotime($startDate) >= strtotime($today)),
+			'3030'	=> !(strtotime($startDate) > strtotime($endDate)),
+			'50009'	=> !(strtotime($endDate)   < strtotime($today)),
+			'50008'	=> !(strtotime($startDate) < strtotime($today)),
 		];
 		$this->validatEmpty($dataValida + $arrVerifyDate);
 		$interval = $this->betweenDates($startDate, $endDate, '');
@@ -869,8 +869,6 @@ class get_functions extends general_functions
 				return $response;
 			}
 		}
-
-		//return ($response) ? $response : $this->getError(1060);
 	}
 
 	public function getPrices($filters, $apikey)
@@ -900,9 +898,9 @@ class get_functions extends general_functions
 			$endDate 	= $this->transformerDate($endDate);
 		}
 		$arrVerifyDate = [
-			'3030'	=> (strtotime($startDate) <= strtotime($endDate)),
-			'50009'	=> (strtotime($endDate)	>= strtotime($today)),
-			'50008'	=> (strtotime($startDate) >= strtotime($today)),
+			'3030'	=> !(strtotime($startDate) > strtotime($endDate)),
+			'50009'	=> !(strtotime($endDate)   < strtotime($today)),
+			'50008'	=> !(strtotime($startDate) < strtotime($today)),
 		];
 		$this->validatEmpty($dataValida + $arrVerifyDate);
 		$interval = $this->betweenDates($startDate, $endDate);
@@ -1969,12 +1967,13 @@ class get_functions extends general_functions
 			];
 		}
 
-		///////GRAFICAS EDADES CANTIDAD
-		$grafEdCantidad = $this->grafVentEdCantidad($prefix, $startDate, $endDate);
+		//////CONSULTA GENERAL PARA LA DATA DE LAS GRAFICAS DE EDADES PARA LA APP CANTIDAD Y MONTO
+		$dataGrafEdVentasCantidadMonto = $this->grafVentEd($prefix, $startDate, $endDate);
 
+		///////GRAFICAS EDADES CANTIDAD
 		$BarAPlatf2 = [];
 		$BarDPlatf2 = [];
-		foreach ($grafEdCantidad as &$element) {
+		foreach ($dataGrafEdVentasCantidadMonto as &$element) {
 			statistics::EdadResult($BarDPlatf2[$element['prefijo']], $element['edad'], $element['sexo'],  $element['cant']);
 			statistics::EdadResult($BarAPlatf2, $element['edad'], $element['sexo'],  $element['cant']);
 		}
@@ -1995,11 +1994,9 @@ class get_functions extends general_functions
 		}
 
 		/////GRAFICAS PLATAFORMA DE EDADES / VENTAS MONTO
-		$grafEdMonto = $this->grafVentEdMonto($prefix, $startDate, $endDate);
-
 		$BarAPlatf3 = [];
 		$BarDPlatf3 = [];
-		foreach ($grafEdMonto as &$element) {
+		foreach ($dataGrafEdVentasCantidadMonto as &$element) {
 			statistics::EdadResult($BarDPlatf3[$element['prefijo']], $element['edad'], $element['sexo'],  $element['neto']);
 			statistics::EdadResult($BarAPlatf3, $element['edad'], $element['sexo'],  $element['neto']);
 		}
@@ -2033,7 +2030,7 @@ class get_functions extends general_functions
 			$SexEdad2,
 			$SexEdadPlatf3,
 			$this->grafTipoVenta($prefix, $startDate, $endDate, false),
-			$this->grafTipoVenta($prefix, '', '', true),
+			$this->grafTipoVenta($prefix, '', '', true)
 		];
 	}
 
