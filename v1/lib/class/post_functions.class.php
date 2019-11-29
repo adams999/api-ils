@@ -202,6 +202,16 @@ class post_functions extends general_functions
 		$linkVoucher = $this->data['linkVoucher'];
 		$salida = $this->data['salida'];
 		$nomClient = $this->data['nomClient'];
+		$id_user = (!empty($_GET['id_user'])) ? $_GET['id_user'] : '';
+		(!empty($_GET['agency']) && $_GET['agency'] != 'N/A') ? $id_broker = $_GET['agency'] : '';
+
+		$dataSMS = [
+			'code'      => $code,
+			'star_date' => $salida,
+			'idBroker'  => $id_broker,
+			'id_user'   => $id_user
+		];
+
 		$dataValida			= [
 			"40095" => $codPhone,
 			'6025'	=> $numPhone,
@@ -223,7 +233,10 @@ class post_functions extends general_functions
 			"codPhone" 		=> $codPhone,
 			"phone"			=> $numPhone,
 			"message" 		=> $message,
-			"salida"        => $salida
+			"salida"        => $salida,
+			"id_user"       => $id_user,
+			"dataSMS"       => $dataSMS,
+			"subject"       => "SMS_APP"
 		];
 		$dataSmsResponse = [
 			"type"			=> "Response_sms",

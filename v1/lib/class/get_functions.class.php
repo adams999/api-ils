@@ -994,6 +994,16 @@ class get_functions extends general_functions
 					parameter_key ASC";
 		return $this->selectDynamic('', '', '', '', $query, '', '', '', '');
 	}
+	public function getInformUserIls($filters)
+	{
+		$idUser = $filters['id_user'];
+		$dataValida	= [
+			'6040' => $idUser
+		];
+		$this->validatEmpty($dataValida);
+		$query = "SELECT * from users WHERE id = '$idUser' ";
+		return $this->selectDynamic('', '', '', '', $query, '', '', '', '');
+	}
 	////////////////////////////////////////////// GRAFICOS DE TODAS LAS AGENCIAS ////////////////////
 	public function getGrafGenAgen($filters)
 	{
@@ -1506,6 +1516,7 @@ class get_functions extends general_functions
 			statistics::EdadResult($BarA, $element['edad'], $element['sexo'], $element['cant']);
 		}
 		$IntEdad = [
+			'S-E',
 			'0-10',
 			'11-20',
 			'21-30',
@@ -1518,6 +1529,7 @@ class get_functions extends general_functions
 			'85+',
 		];
 		$sex  = [
+			"I",
 			"F",
 			"M",
 			"N/A",
