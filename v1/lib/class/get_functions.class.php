@@ -48,7 +48,7 @@ class get_functions extends general_functions
 	}
 	public function getClients()
 	{
-		return $this->selectDynamic('', 'clients', "data_activa='si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2 ORDER BY client ASC", ['client', 'id_country', 'img_cliente', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '');
+		return $this->selectDynamic('', 'clients', "data_activa='si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2 AND notificacion_error_ws = 1 ORDER BY client ASC", ['client', 'id_country', 'img_cliente', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '');
 	}
 	public function getCountries($filters)
 	{
@@ -683,11 +683,13 @@ class get_functions extends general_functions
 		if ($agencia != 'N/A' && !empty($agencia)) {
 			$query .= " AND ((restriction.id_broker in (" . $agencia . ") and restriction.dirigido='6') or (restriction.dirigido='2' and restriction.id_broker in (" . $agencia . "))) ";
 		} else {
-			$query .= " AND (
+			if (in_array($prefix, ['AF', 'TH', 'VY'])) { ///Plataformas que si poseen esta restriccion
+				$query .= " AND (
 				restriction.dirigido = '0'
 				OR restriction.dirigido IS NULL
 				OR restriction.dirigido = '1'
 			) ";
+			}
 		}
 		$query .= " AND (
 			modo_plan = 'N'
@@ -747,15 +749,15 @@ class get_functions extends general_functions
 						'dias_max'          	=> (int) '365',
 						'id_plan_categoria' 	=> (int) $response[0]['id_plan_categoria'],
 						'type_category'     	=> $response[0]['type_category'],
-						'bloques_multi_viajes' 	=> $bloquesMultiViaje
+						'bloques_multi_viajes' 	=> $bloquesMultiViaje ?: $bloquesMultiViaje = [['dias_multiviajes' => 365]]
 					]
 				];
 				break;
 			default:
 				return $resp = [
 					[
-						'dias_min'          	=> (int) $response[0]['dias_min'],
-						'dias_max'          	=> (int) $response[0]['dias_max'],
+						'dias_min'          	=> (int) $response[0]['dias_min'] ?: 1,
+						'dias_max'          	=> (int) $response[0]['dias_max'] ?: 120,
 						'id_plan_categoria' 	=> (int) $response[0]['id_plan_categoria'],
 						'type_category'     	=> $response[0]['type_category'],
 					]
@@ -1001,8 +1003,32 @@ class get_functions extends general_functions
 			'6040' => $idUser
 		];
 		$this->validatEmpty($dataValida);
-		$query = "SELECT * from users WHERE id = '$idUser' ";
-		return $this->selectDynamic('', '', '', '', $query, '', '', '', '');
+		$query = "SELECT id, firstname, lastname, email, phone, cod_pais, user_type, id_country from users WHERE id = '$idUser' ";
+		$response = $this->selectDynamic('', '', '', '', $query, '', '', '', '');
+
+		switch ($response[0]['user_type']) {
+			case '1':
+				$response[0]['user_type'] = 'MASTER';
+				break;
+
+			case '2':
+				$response[0]['user_type'] = 'BROKER ADMIN';
+				break;
+
+			case '5':
+				$response[0]['user_type'] = 'BROKER ACCESS';
+				break;
+
+			case '13':
+				$response[0]['user_type'] = 'ADMIN';
+				break;
+
+			default:
+				$response[0]['user_type'] = $response[0]['user_type'];
+				break;
+		}
+
+		return $response;
 	}
 	////////////////////////////////////////////// GRAFICOS DE TODAS LAS AGENCIAS ////////////////////
 	public function getGrafGenAgen($filters)
