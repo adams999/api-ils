@@ -80,7 +80,7 @@ class post_functions extends general_functions
 			'type'			 => 'enviar_correo',
 			'selectLanguage' => 'es'
 		];
-		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkQuote 	= $link . "/app/pages/async_cotizador.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$resp = $this->curlGeneral($linkQuote, $dataQuote, $headers, 'GET');
@@ -107,7 +107,7 @@ class post_functions extends general_functions
 		ORDER BY
 			parameter_key ASC"
 		];
-		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
@@ -186,7 +186,7 @@ class post_functions extends general_functions
 					ORDER BY
 						parameter_key ASC"
 		];
-		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
@@ -241,7 +241,7 @@ class post_functions extends general_functions
 		$dataSmsResponse = [
 			"type"			=> "Response_sms",
 		];
-		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkSms 	= $link . "/app/admin/sms.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkSms, http_build_query($dataSms), $headers);
@@ -263,7 +263,7 @@ class post_functions extends general_functions
 			"id_orden" => $id_orden,
 			"email"    => $email
 		];
-		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkEmail 	= $link . "/app/reports/email_compra.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkEmail, http_build_query($dataEmail), $headers);
@@ -451,7 +451,7 @@ class post_functions extends general_functions
 							'pais'      	=> $dataUser[0]["pais"],
 							'prefAgency'    => $dataUser[0]["prefAgency"] ?: 'N/A',
 							'nombreAgenMaster' => $dataUser[0]["nombreAgenMaster"] ?: 'N/A',
-							'urlPlatform' 	=> $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'],
+							'urlPlatform' 	=> $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']),
 							'paramAgency' 	=> $dataUser[0]["prefAgency"] ? $this->selectDynamic('', '', '', '', "SELECT * FROM broker_parameters WHERE id_broker = '{$dataUser[0]['agency']}' AND prefijo = '$prefix' ORDER BY id_broker_parameters DESC limit 1", '', '', '', '')[0] : 'N/A'
 						];
 
