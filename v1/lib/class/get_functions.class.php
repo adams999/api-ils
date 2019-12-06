@@ -48,7 +48,11 @@ class get_functions extends general_functions
 	}
 	public function getClients()
 	{
-		return $this->selectDynamic('', 'clients', "data_activa='si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2 AND notificacion_error_ws = 1 ORDER BY client ASC", ['client', 'id_country', 'img_cliente', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '');
+		$response = $this->selectDynamic('', 'clients', "data_activa='si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2 AND notificacion_error_ws = 1 ORDER BY client ASC", ['client', 'id_country', 'img_cliente', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '');
+		for ($i = 0; $i < count($response); $i++) {
+			$response[$i]['web'] = $this->baseURL($response[$i]['web']);
+		}
+		return $response;
 	}
 	public function getCountries($filters)
 	{
@@ -67,11 +71,15 @@ class get_functions extends general_functions
 				countries
 			WHERE
 				c_status = 'Y'
+			AND (
+				iso_country IS NOT NULL
+				AND iso_country <> ''
+			)
 			ORDER BY
 				description "
 		];
 
-		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
@@ -95,12 +103,16 @@ class get_functions extends general_functions
 				territory
 			WHERE
 				id_status = 1 
+			AND (
+				id_territory IS NOT NULL
+				AND id_territory <> ''
+			)
 			ORDER BY
 				desc_small,
 				id_territory "
 		];
 
-		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
@@ -683,7 +695,7 @@ class get_functions extends general_functions
 		if ($agencia != 'N/A' && !empty($agencia)) {
 			$query .= " AND ((restriction.id_broker in (" . $agencia . ") and restriction.dirigido='6') or (restriction.dirigido='2' and restriction.id_broker in (" . $agencia . "))) ";
 		} else {
-			if (in_array($prefix, ['AF', 'TH', 'VY'])) { ///Plataformas que si poseen esta restriccion
+			if (in_array($prefix, ['AF', 'TH', 'TK', 'VY'])) { ///Plataformas que si poseen esta restriccion
 				$query .= " AND (
 				restriction.dirigido = '0'
 				OR restriction.dirigido IS NULL
@@ -706,7 +718,7 @@ class get_functions extends general_functions
 			'querys' => $query
 		];
 
-		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
@@ -783,17 +795,11 @@ class get_functions extends general_functions
 
 		$intervalos = $this->plans_intervalos_edades($idCategory, $country, '', $prefix);
 
-		for ($i = 0; $i < $intervalos[0]['cantidad']; $i++) {
-			$interval[$i] = $intervalos[$i]['min'] . " - " . $intervalos[$i]['max'];
-			$indice[$i] = $intervalos[$i]['max'];
-		}
-		//$this->plans_intervalos_edades($idCategory, $country, '', $prefix);
-		return [$intervalos, $interval, $indice];
+		return [$intervalos];
 	}
 
 	public function GetPricesApiQuoteGeneral($filters, $apikey)
 	{
-		$quote	   = new cotizadorIls();
 		$prefix	   = $filters['prefix'];
 		$origin	   = $filters['origin'];
 		$startDate = $filters['startDate'];
@@ -804,6 +810,7 @@ class get_functions extends general_functions
 		$ages	   = explode(',', $filters['ages']);
 		$bloque    = $filters['bloque'] ?: '';
 		$today 	   = date('Y-m-d');
+
 		$dataValida	= [
 			"9092"  => $prefix,
 			"6027"  => $origin,
@@ -815,6 +822,11 @@ class get_functions extends general_functions
 			'2002'	=> $this->checkDates($endDate),
 			'9095'	=> is_array($ages)
 		];
+		for ($i = 0; $i < count($ages); $i++) { //verifica si envia una edad como 05 o 075 para poder informar al cliente la edad 0 es valida 
+			if ((substr((string) $ages[$i], 0, 1) == '0') && ((string) strlen($ages[$i]) > 1)) {
+				$dataValida['50017'] = false;
+			}
+		}
 		if (!empty($startDate) && !empty($endDate)) {
 			$startDate  = $this->transformerDate($startDate);
 			$endDate 	= $this->transformerDate($endDate);
@@ -842,11 +854,33 @@ class get_functions extends general_functions
 			'min_days'          =>  $bloque
 		];
 
-		$link 		= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkParam 	= $link . "/app/api/quotePlansApp";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$respons    = $this->curlGeneral($linkParam, json_encode($dataCurl), $headers);
 		$response   = json_decode($respons, true);
+
+		if ($prefix == 'BT') { //Aplica para BTA
+			for ($i = 0; $i < count($response); $i++) {
+				if (empty($response[$i]['valorMenor'])) {
+					$response[$i]['valorMenor'] = $response[$i]['arrPrices'][0]['pvp'];
+				}
+				if (empty($response[$i]['subTotalMenores'])) {
+					$response[$i]['subTotalMenores'] = $response[$i]['USDTotal'];
+				}
+			}
+		}
+
+		if ($prefix == 'ME') { //Aplica para BTA y Meridional
+			for ($i = 0; $i < count($response); $i++) {
+				if (empty($response[$i]['valorMenor'])) {
+					$response[$i]['valorMenor'] = $response[$i]['arrPrices'][0]['pvp'];
+				}
+				if (empty($response[$i]['subTotalMenores'])) {
+					$response[$i]['subTotalMenores'] = $response[$i]['arrPrices'][2]['pvp'];
+				}
+			}
+		}
 
 		foreach ($response as $key => $value) {
 			if (empty($value['total'])) {
@@ -905,7 +939,7 @@ class get_functions extends general_functions
 			'50008'	=> !(strtotime($startDate) < strtotime($today)),
 		];
 		$this->validatEmpty($dataValida + $arrVerifyDate);
-		$interval = $this->betweenDates($startDate, $endDate);
+		$interval = $this->betweenDates($startDate, $endDate, '');
 		$dataQuote = $quote->Quote([
 			'category'		=> $category,
 			'days'			=> $interval,
