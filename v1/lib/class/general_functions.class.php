@@ -1407,7 +1407,7 @@ class general_functions extends Model
                                 user_associate.modified DESC
                             LIMIT 1"];
 
-        $link         = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+        $link          = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);;
         $linkParam     = $link . "/app/api/selectDynamic";
         $headers     = "content-type: application/x-www-form-urlencoded";
         $response = $this->curlGeneral($linkParam, json_encode($sql), $headers);
@@ -1424,7 +1424,7 @@ class general_functions extends Model
             FROM broker_nivel 
             WHERE parent = '$idBroker' "];
 
-        $link         = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+        $link          = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);;
         $linkParam     = $link . "/app/api/selectDynamic";
         $headers     = "content-type: application/x-www-form-urlencoded";
         $response = $this->curlGeneral($linkParam, json_encode($sql), $headers);
@@ -1438,7 +1438,7 @@ class general_functions extends Model
 
     public function addResources($prefix, $location, $filename)
     {
-        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $link = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);;
         $linkSelectDynamic = $link . "/app/api/selectDynamic";
         $headers     = "content-type: application/x-www-form-urlencoded";
         $random = rand(1, 99999);
@@ -1805,7 +1805,7 @@ class general_functions extends Model
             'querys' => $query
         ];
 
-        $link         = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+        $link          = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
         $linkParam     = $link . "/app/api/selectDynamic";
         $headers     = "content-type: application/x-www-form-urlencoded";
         $response = $this->curlGeneral($linkParam, json_encode($data), $headers);
@@ -1835,7 +1835,7 @@ class general_functions extends Model
             'querys' => $query
         ];
 
-        $link         = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web'];
+        $link          = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);;
         $linkParam     = $link . "/app/api/selectDynamic";
         $headers     = "content-type: application/x-www-form-urlencoded";
         $response = $this->curlGeneral($linkParam, json_encode($data), $headers);
@@ -1871,7 +1871,7 @@ class general_functions extends Model
         AND (plans.modo_plan != 'W' OR plans.modo_plan IS NULL)";
 
 
-        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $link = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);;
         $linkSelectDynamic = $link . "/app/api/selectDynamic";
         $headers     = "content-type: application/x-www-form-urlencoded";
 
@@ -1904,7 +1904,7 @@ class general_functions extends Model
             $query .= "AND (plans.modo_plan != 'W' OR plans.modo_plan IS NULL) ";
         }
 
-        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $link = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);;
         $linkSelectDynamic = $link . "/app/api/selectDynamic";
         $headers     = "content-type: application/x-www-form-urlencoded";
 
@@ -1949,7 +1949,7 @@ class general_functions extends Model
 			countries.description ASC,
 			plan_band_age.age_min ASC ";
 
-        $link = $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'], '', '', '', '')[0]['web'];
+        $link = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);;
         $linkSelectDynamic = $link . "/app/api/selectDynamic";
         $headers     = "content-type: application/x-www-form-urlencoded";
 
