@@ -809,7 +809,7 @@ class get_functions extends general_functions
 		$id_broker = ($filters['agency'] != 'N/A' && !empty($filters['agency'])) ? $filters['agency'] : 118;
 		$ages	   = explode(',', $filters['ages']);
 		$bloque    = $filters['bloque'] ?: '';
-		$today 	   = date('Y-m-d');
+		$today 	   = $this->datePlatform($prefix)[0]['date']; //Obtengo la fecha del servidor que cotizo mas no la de ils
 
 		$dataValida	= [
 			"9092"  => $prefix,
@@ -871,7 +871,7 @@ class get_functions extends general_functions
 			}
 		}
 
-		if ($prefix == 'ME') { //Aplica para BTA y Meridional
+		if ($prefix == 'ME') { //Aplica para Meridional
 			for ($i = 0; $i < count($response); $i++) {
 				if (empty($response[$i]['valorMenor'])) {
 					$response[$i]['valorMenor'] = $response[$i]['arrPrices'][0]['pvp'];
