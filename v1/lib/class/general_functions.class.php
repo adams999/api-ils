@@ -906,6 +906,19 @@ class general_functions extends Model
             return (checkdate($date[1], $date[0], $date[2]));
         }
     }
+    public function datePlatform($prefix)
+    {
+        $sql = [
+            "querys" => "SELECT
+            DATE_FORMAT(NOW(), '%Y-%m-%d') AS date"
+        ];
+
+        $link      = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);;
+        $linkParam = $link . "/app/api/selectDynamic";
+        $headers   = "content-type: application/x-www-form-urlencoded";
+        $response  = $this->curlGeneral($linkParam, json_encode($sql), $headers);
+        return json_decode($response, true);
+    }
     public function betweenDates($start, $end, $type)
     {
         $startdate ? date('Y-m-d') : $startdate;
