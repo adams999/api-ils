@@ -766,6 +766,9 @@ class get_functions extends general_functions
 				];
 				break;
 			default:
+				if (!empty($response[0]['dias_min']) && !empty($response[0]['dias_max']) && (int) $response[0]['dias_min'] == (int) $response[0]['dias_max'] && (int) $response[0]['dias_max'] < 365) {
+					(int) $response[0]['dias_max'] = (int) $response[0]['dias_min'] + 1;
+				}
 				return $resp = [
 					[
 						'dias_min'          	=> (int) $response[0]['dias_min'] ?: 1,
