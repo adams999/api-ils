@@ -320,7 +320,8 @@ class get_functions extends general_functions
 		}
 		if (!empty($pagination)) {
 			$arrPagination  = implode(',', $pagination);
-			if (is_array($arrPagination)) { }
+			if (is_array($arrPagination)) {
+			}
 		}
 
 		$id_agencia = [];
@@ -712,7 +713,7 @@ class get_functions extends general_functions
 		GROUP BY
 			plan_category.id_plan_categoria
 		ORDER BY
-			plan_categoria_detail.name_plan ASC";
+			plan_category.orden ASC";
 
 		$data = [
 			'querys' => $query
