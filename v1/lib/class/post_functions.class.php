@@ -406,7 +406,7 @@ class post_functions extends general_functions
 				LIMIT 1
 			) AS colorsPlatf"
 		];
-		$userExist	= $this->selectDynamic('', 'users_extern', "users='$user'", $data);
+		$userExist	= $this->selectDynamic('', 'users_extern', " users='$user' AND prefijo = '$prefix' ", $data);
 		if ($userExist) {
 			$prefijExist	= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['prefix']);
 			if ($prefijExist) {
