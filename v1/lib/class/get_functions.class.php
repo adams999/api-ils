@@ -1650,8 +1650,8 @@ class get_functions extends general_functions
 				'data' => $value,
 			];
 		}
-		////////////////// grafica de ventas de a;os anteriores columnas
-		$yearInicio = 2017; ///array para filtrar solo del 2017 al a;o actual
+		////////////////// grafica de ventas de años anteriores columnas
+		$yearInicio = (Date('Y') - 2); ///array para filtrar solo del año actual menos 2 años 
 		$yearsBus = '';
 		for ($i = $yearInicio; $i <= $yearActual; $i++) {
 			$yearsBus .= $i . ',';
