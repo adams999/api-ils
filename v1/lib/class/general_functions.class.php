@@ -188,6 +188,15 @@ class general_functions extends Model
         $response   = $this->selectDynamic('', '', '', '', $query);
         return count($response);
     }
+    public function ordenarArray(&$arrIni, $col, $order = SORT_ASC)
+    {
+        $arrAux = array();
+        foreach ($arrIni as $key => $row) {
+            $arrAux[$key] = is_object($row) ? $arrAux[$key] = $row->$col : $row[$col];
+            $arrAux[$key] = strtolower($arrAux[$key]);
+        }
+        array_multisort($arrAux, $order, $arrIni);
+    }
     public function dataCoverages($language, $idPlan, $prefijo)
     {
         $lenguaje = in_array($language, ['spa', 'eng']) ? $language : 'spa';
@@ -1878,7 +1887,7 @@ class general_functions extends Model
         FROM
             plans
         WHERE
-            id_plan_categoria = '23'
+            id_plan_categoria = '$idCategory'
         AND eliminado = '1'
         AND activo = '1'
         AND (plans.modo_plan != 'W' OR plans.modo_plan IS NULL)";

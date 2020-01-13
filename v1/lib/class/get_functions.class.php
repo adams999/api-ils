@@ -717,10 +717,10 @@ class get_functions extends general_functions
 		} else {
 			if (in_array($prefix, ['AF', 'TH', 'TK', 'VY'])) { ///Plataformas que si poseen esta restriccion
 				$query .= " AND (
-				restriction.dirigido = '0'
-				OR restriction.dirigido IS NULL
-				OR restriction.dirigido = '1'
-			) ";
+					restriction.dirigido = '0'
+					OR restriction.dirigido IS NULL
+					OR restriction.dirigido = '1'
+				) ";
 			}
 		}
 		$query .= " AND (
@@ -754,6 +754,11 @@ class get_functions extends general_functions
 		}
 		return $respuesta;
 		//return $this->dataCategories($prefix);
+	}
+
+	public function logoutApp()
+	{
+		return ['Session Cerrada'];
 	}
 
 	public function getIntervaloFechas($filters)
@@ -861,7 +866,12 @@ class get_functions extends general_functions
 		];
 		$this->validatEmpty($dataValida + $arrVerifyDate);
 		$interval = $this->betweenDates($startDate, $endDate, '');
-		$ages = implode(',', $ages) . ',';
+
+		if (in_array($prefix, ['TC'])) {
+			$ages = implode(',', $ages);
+		} else {
+			$ages = implode(',', $ages) . ',';
+		}
 
 		$dataCurl = [
 			'plan_tipo'         =>  $category,
@@ -925,6 +935,7 @@ class get_functions extends general_functions
 					return $this->getError(1060);
 				}
 			} else {
+				//$this->ordenarArray($response, 'name_plan'); //ordenar por nombre
 				return $response;
 			}
 		}
