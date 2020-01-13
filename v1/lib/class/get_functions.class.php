@@ -935,7 +935,7 @@ class get_functions extends general_functions
 					return $this->getError(1060);
 				}
 			} else {
-				$this->ordenarArray($response, 'name_plan');
+				//$this->ordenarArray($response, 'name_plan'); //ordenar por nombre
 				return $response;
 			}
 		}
