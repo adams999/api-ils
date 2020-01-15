@@ -211,6 +211,218 @@ class get_functions extends general_functions
 		return $this->selectDynamic('', 'clients', "prefix = '$prefix' AND data_activa = 'si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2", ['client', 'phone1', 'cod_phone2', 'phone2', 'cod_phone3', 'phone3', 'cod_phone4', 'phone4', 'address', 'id_country', 'img_cliente', 'id_country', 'id_city', 'zip_code', 'date_up', 'id_state', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '', '');
 	}
 
+
+	public function getOrders($filters, $apikey)
+	{
+		$document  = $filters['document'];
+		$code	   = $filters['code'];
+		$name      = $filters['name'];
+		$prefix	   = $filters['prefix'];
+		$userType  = ($filters['userType']) ? $filters['userType'] : 1;
+		$startDate = $filters['startDate'];
+		$endDate   = $filters['endDate'];
+		$source    = $filters['source'];
+		$min	   = ($filters['min'] <= 0 || empty($filters['min'])) ? 0 : $filters['min'];
+		$max	   = ($filters['max'] <= 0 || empty($filters['max'] || ($filters['max'] <= $filters['min']))) ? 50 : $filters['max'];
+		$status	   = ($filters['status']) ? $filters['status'] : 1;
+		$today 	   = date('Y-m-d');
+		$id_user   = $filters['id_user'];
+
+		$dataValida	= [
+			"9092"  => $prefix,
+			"9017"  => !empty($status) ? in_array($status, [1, 2, 3, 4, 5]) : true,
+			'3030'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate) > strtotime($endDate)) : true,
+			'9068'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($endDate)	> strtotime($today)) : true,
+			'9069'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate)	> strtotime($today)) : true,
+		];
+
+
+		$validatEmpty	= $this->validatEmpty($dataValida);
+		if (!empty($validatEmpty)) {
+			return $validatEmpty;
+		}
+		$valueOrders = [
+			'orders.id',
+			'orders.id_orders',
+			'codigo',
+			'origen',
+			'destino',
+			'salida',
+			'retorno',
+			'fecha',
+			"DATE_FORMAT(salida,'%d-%m-%Y') as fsalida",
+			"DATE_FORMAT(retorno,'%d-%m-%Y') as fretorno",
+			"DATE_FORMAT(fecha,'%d-%m-%Y') as ffecha",
+			"REPLACE( orders.nombre_contacto,'''','') AS nombre_contacto",
+			'email_contacto',
+			'telefono_contacto',
+			'agencia',
+			'nombre_agencia',
+			'status',
+			'cantidad',
+			'referencia',
+			'territory',
+			'producto',
+			'(DATEDIFF(orders.retorno, orders.salida) + 1 ) as diasViaje'
+		];
+
+		if ($source != 'public') {
+			array_push(
+				$valueOrders,
+				'family_plan',
+				'comentario_medicas',
+				'total',
+				'vendedor',
+				'cupon',
+				'codeauto',
+				'procesado',
+				'response',
+				'v_authorizado',
+				'neto_prov',
+				'tasa_cambio',
+				'forma_pago',
+				'neto_prov_mlc',
+				'total_mlc',
+				'compra_minima',
+				'pareja_plan',
+				'Voucher_Individual',
+				'v_authorizado',
+				'credito_numero',
+				'codeauto'
+			);
+		}
+
+		$codeWhere = '1';
+		$arrWhere = [];
+		$idBroker	= $this->getBrokersByApiKey($apikey);
+		if (!empty($idBroker) && !in_array($userType, [1, 2, 5, 13])) {
+			$arrWhere['agencia'] = $idBroker;
+		}
+		if (!empty($code)) {
+			$codeWhere = "codigo LIKE '%$code%'";
+		}
+
+		$arrWhere['orders.prefijo'] = $prefix;
+		$arrLimit = ['min' => $min, 'max' => $max];
+		if (!empty($name)) {
+			$name = trim($name);
+			$nameSearch = explode(' ', $name);
+			$arrJoin = [
+				'table'		=> 'beneficiaries',
+				'field'		=> "id_orden AND beneficiaries.prefijo = orders.prefijo AND (concat_ws(' ', TRIM(BOTH ' ' FROM beneficiaries.nombre),
+					TRIM(BOTH ' ' FROM beneficiaries.apellido)) LIKE '%$name%'
+					OR (TRIM(BOTH ' ' FROM beneficiaries.nombre) LIKE '%$nameSearch[0]%'
+					AND TRIM(BOTH ' ' FROM beneficiaries.apellido) LIKE '%$nameSearch[1]%')
+					OR (TRIM(BOTH ' ' FROM beneficiaries.nombre) LIKE '%$nameSearch[1]%'
+					AND TRIM(BOTH ' ' FROM beneficiaries.apellido) LIKE '%$nameSearch[0]%'))",
+				'fieldComp'	=> 'id'
+			];
+		}
+
+		if (!empty($document)) {
+
+			$arrJoin = [
+				'table' => 'beneficiaries',
+				'field' => "id_orden AND beneficiaries.prefijo = orders.prefijo AND beneficiaries.documento LIKE '%$document%'",
+				'fieldComp' => 'id'
+			];
+			$arrLimit = ['min' => $min, 'max' => $max];
+			array_push($valueOrders, 'beneficiaries.documento');
+		}
+
+		if (!empty($startDate) && !empty($endDate)) {
+			$between = [
+				'start' => $startDate,
+				'end'   => $endDate,
+				'field' => 'fecha'
+			];
+		}
+		if (!empty($pagination)) {
+			$arrPagination  = implode(',', $pagination);
+			if (is_array($arrPagination)) {
+			}
+		}
+
+		$id_agencia = [];
+		$arrBrokers = [];
+		$arr;
+		if (!empty($userType) &&  in_array($userType, [5, 2])) { ////// usuario tipo 5 broker access solo vera de su agencia y 2 es broker admin su agencia y las debajo de ella
+			$id_agencia =  $this->agencyBroker($id_user, $userType, $prefix)[0]["id_associate"];
+			$arrWhere['orders.agencia'] = $id_agencia;
+
+			if (in_array($userType, [2])) { ////// usuario tipo 2 broker admin vera vouchers de ella y sus agencias hijas
+				$arrWhere['orders.agencia'] = null;
+				$broker_nivel = $this->agencysChildren($id_agencia, $prefix);
+				if ($broker_nivel) {
+					$arrBrokers = array_column($broker_nivel, 'id_broker');
+					array_push($arrBrokers, $id_agencia);
+					$arrBrokers = array_values($arrBrokers); //agencias hijas y su agencia master
+					$arr = implode(',', $arrBrokers);
+				} else {
+					$arr = $id_agencia;
+				}
+				$arr = ' AND orders.agencia IN (' . $arr . ') ';
+				$codeWhere .= $arr;
+			}
+		}
+
+		//$arrWhere['status']=$status;
+		$dataOrders = $this->selectDynamic(
+			$arrWhere,
+			'orders',
+			"$codeWhere",
+			$valueOrders,
+			false,
+			$arrLimit,
+			["field" => "fecha", "order" => "DESC"],
+			$between,
+			$arrJoin
+		);
+
+		$arrBeneficiaries = [];
+		$cDataOrders = count($dataOrders);
+
+		for ($i = 0; $i < $cDataOrders; $i++) {
+			$idOrder = $dataOrders[$i]['id'];
+
+			$dataOrders[$i]['categoria'] = $this->selectDynamic(
+				'',
+				'',
+				'',
+				'',
+				"SELECT
+				plan_category.name_plan AS categoria
+			FROM
+				orders
+			JOIN plans ON orders.producto = plans.id
+			AND orders.prefijo = plans.prefijo
+			JOIN plan_category ON plan_category.id_plan_categoria = plans.id_plan_categoria
+			AND plan_category.prefijo = plans.prefijo
+			WHERE
+				orders.id = '$idOrder'
+			AND orders.prefijo = '$prefix'",
+				'',
+				'',
+				''
+			)[0]['categoria'] ?: 'N/A';
+
+			$dataOrders[$i]['beneficiaries'] = $this->selectDynamic(
+				['beneficiaries.prefijo' => $prefix],
+				'beneficiaries',
+				"id_orden='$idOrder'",
+				['id', 'id_orden', "REPLACE(beneficiaries.nombre,'''','') AS nombre ", "REPLACE(beneficiaries.apellido,'''','') AS apellido ", 'documento', 'email', 'nacimiento', 'nacionalidad', 'tipo_doc', 'telefono'],
+				'',
+				'',
+				[
+					'field' => 'nombre',
+					'order' => 'ASC'
+				],
+				'',
+				''
+			);
+		}
+		return $dataOrders;
+	}
 	public function getOrders($filters, $apikey)
 	{
 		$document  = $filters['document'];
@@ -382,7 +594,9 @@ class get_functions extends general_functions
 			$arrJoin
 		);
 
+		$arrBeneficiaries = [];
 		foreach ($dataOrders as $key => &$value) {
+			//$idOrder = $dataOrders[$key]['id'];
 
 			$dataOrders[$key]['beneficiaries'] = $this->selectDynamic(
 				['beneficiaries.prefijo' => $prefix],
@@ -399,6 +613,24 @@ class get_functions extends general_functions
 				''
 			);
 		}
+		// $cDataOrders = count($dataOrders);
+
+		// for ($i = 0; $i < $cDataOrders; $i++) {
+		// 	$dataOrders[$i]['beneficiaries'] = $this->selectDynamic(
+		// 		['beneficiaries.prefijo' => $prefix],
+		// 		'beneficiaries',
+		// 		"id_orden='{$dataOrders[$i]['id']}'",
+		// 		['id', 'id_orden', "REPLACE(beneficiaries.nombre,'''','') AS nombre ", "REPLACE(beneficiaries.apellido,'''','') AS apellido ", 'documento', 'email', 'nacimiento', 'nacionalidad', 'tipo_doc', 'telefono'],
+		// 		'',
+		// 		'',
+		// 		[
+		// 			'field' => 'nombre',
+		// 			'order' => 'ASC'
+		// 		],
+		// 		'',
+		// 		''
+		// 	);
+		//}
 		return $dataOrders;
 	}
 
