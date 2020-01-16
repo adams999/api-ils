@@ -1125,12 +1125,12 @@ class get_functions extends general_functions
 			producto
 		ORDER BY client";
 		$respGraf1 = $this->selectDynamic('', '', '', '', $query1, '', '', '', '');
-		foreach ($respGraf1 as $element) {
+		foreach ($respGraf1 as &$element) {
 			$sumatori[$element['prefijo']] += (int) $element['cantidad'] ?: 0;
 			$clientsName[$element['prefijo']] = $element['client'];
 			$drilldownRaw[$element['prefijo']][] = [$element['name_plan'], (int) $element['cantidad']];
 		}
-		foreach ($clientsName as $key => $val) {
+		foreach ($clientsName as $key => &$val) {
 			$series[] = [
 				'name' => $val,
 				'y' => (int) $sumatori[$key],
@@ -1159,7 +1159,9 @@ class get_functions extends general_functions
 		GROUP BY
 			orders.prefijo,
 			mes
-		ORDER BY description asc";
+		ORDER BY 
+			description 
+		ASC";
 		$respGraf2 = $this->selectDynamic('', '', '', '', $query2, '', '', '', '');
 		$mountDesc = [
 			'01' => 'Enero',
@@ -1175,13 +1177,13 @@ class get_functions extends general_functions
 			'11' => 'Noviembre',
 			'12' => 'Diciembre',
 		];
-		foreach ($respGraf2 as $element) {
+		foreach ($respGraf2 as &$element) {
 			$clientsAnual[$element['prefijo']][(int) $element['mes']] = (int) $element['cantidad'] ?: 0;
 			$clientsAnual[$element['prefijo']]['description'] = $element['description'];
 		}
-		foreach ($clientsAnual as $key1 => $val) {
+		foreach ($clientsAnual as $key1 => &$val) {
 			$seriesAnual = [];
-			foreach ($mountDesc as $key2 => $value) {
+			foreach ($mountDesc as $key2 => &$value) {
 				if ($key2 <= date('m')) {
 					$seriesAnual[] = (int) $val[(int) $key2] ?: 0;
 				}
@@ -1204,8 +1206,7 @@ class get_functions extends general_functions
 			orders. STATUS IN (1, 3)
 		AND IFNULL(inactive_platform, 0) <> 2
 		AND clients.data_activa = 'SI'
-		AND orders.fecha BETWEEN '$year-01-01'
-		AND NOW()
+		AND YEAR (orders.fecha) = '$year'
 		GROUP BY
 			orders.prefijo,
 			mes
@@ -1226,16 +1227,16 @@ class get_functions extends general_functions
 		ORDER BY
 			MONTH (orders.fecha) ASC";
 		$respMeses = $this->selectDynamic('', '', '', '', $meses);
-		foreach ($respMeses as $element) {
+		foreach ($respMeses as &$element) {
 			$Months[(int) $element['mes']] = $element['nameMes'];
 		}
-		foreach ($respGraf3 as $element) {
+		foreach ($respGraf3 as &$element) {
 			$SalInt[$element['prefijo']]['ventas'][(int) $element['mes']] = (float) $element['neto'] ?: 0;
 			$SalInt[$element['prefijo']]['description'] = $element['description'];
 		}
-		foreach ($SalInt as $val) {
+		foreach ($SalInt as &$val) {
 			$setSal = [];
-			foreach ($Months as $key2 => $value) {
+			foreach ($Months as $key2 => &$value) {
 				$setSal[] = (float) $val['ventas'][(int) $key2] ?: 0;
 			}
 			$AnSales[] = [
@@ -1266,12 +1267,12 @@ class get_functions extends general_functions
 		WHERE
 			orders. STATUS IN (1, 3)
 		AND IFNULL(inactive_platform, 0) <> 2
-		AND YEAR (orders.fecha) = '2019'
+		AND YEAR (orders.fecha) = '$yearBus'
 		AND clients.data_activa = 'SI'
 		ORDER BY
 			MONTH (orders.fecha) ASC";
 		$respMeses = $this->selectDynamic('', '', '', '', $queryMeses, '', '', '', '');
-		foreach ($respMeses as $element) {
+		foreach ($respMeses as &$element) {
 			$Months[(int) $element['mes']] = $element['nameMes'];
 		}
 		////////////////////GRAFICA DE TORTA DRILLDOWN DE AGENCIAS VOUCHERS ACTIVOS GENERAL/TOTAL
@@ -1296,11 +1297,11 @@ class get_functions extends general_functions
 			JOIN clients ON clients.prefix = orders.prefijo
 			WHERE
 				clients.data_activa = 'SI'
-			AND orders.`status` IN (1, 3)";
+			AND orders.`status` IN (1, 3) ";
 		if ($mesBus == 'ALL') {
-			$query1 .= "AND YEAR(orders.fecha) = '$yearBus'";
+			$query1 .= "AND YEAR(orders.fecha) = '$yearBus' ";
 		} else {
-			$query1 .= "AND YEAR (orders.fecha) = '$yearBus'
+			$query1 .= "AND YEAR (orders.fecha) = '$yearBus '
 			AND MONTH (orders.fecha) = '$mesBus'";
 		}
 		$query1 .= "AND IFNULL(inactive_platform, 0) <> 2
@@ -1311,14 +1312,14 @@ class get_functions extends general_functions
 				description ASC";
 		$respGraf1 = $this->selectDynamic('', '', '', '', $query1, '', '', '', '');
 		$VouchCant = [];
-		foreach ($respGraf1 as $element) {
+		foreach ($respGraf1 as &$element) {
 			$VouchCant[$element['description']] += (int) $element['cantidad'] ?: 0;
 			$VouchNet[$element['description']] = $element['category'];
 			$drillVouch[$element['description']][] = [$element['category'], (int) $element['cantidad']];
 		}
 		$seriesVouch = [];
 		$drilldownVouch = [];
-		foreach ($VouchNet as $key => $val) {
+		foreach ($VouchNet as $key => &$val) {
 			$seriesVouch[] = [
 				'name' => $key,
 				'y' => (float) $VouchCant[$key],
@@ -1368,14 +1369,14 @@ class get_functions extends general_functions
 				description ASC";
 		$respGraf2 = $this->selectDynamic('', '', '', '', $query2, '', '', '', '');
 		$VouchNum = [];
-		foreach ($respGraf2 as $element) {
+		foreach ($respGraf2 as &$element) {
 			$VouchNum[$element['description']] += (float) $element['neto'] ?: 0;
 			$VouchNeto[$element['description']] = $element['category'];
 			$drillNet[$element['description']][] = [$element['category'], (float) $element['neto']];
 		}
 		$seriesNeto = [];
 		$drilldownNeto = [];
-		foreach ($VouchNeto as $key => $val) {
+		foreach ($VouchNeto as $key => &$val) {
 			$seriesNeto[] = [
 				'name' => $key,
 				'y' => (float) $VouchNum[$key],
@@ -1421,14 +1422,14 @@ class get_functions extends general_functions
 			country ASC";
 		$respGraf3 = $this->selectDynamic('', '', '', '', $query3, '', '', '', '');
 		$OrigNum = [];
-		foreach ($respGraf3 as $element) {
+		foreach ($respGraf3 as &$element) {
 			$OrigNum[$element['client']] += (int) $element['cantidad'] ?: 0;
 			$OrigClient[$element['client']] = $element['country'];
 			$drillOrig[$element['client']][] = [$element['country'], (int) $element['cantidad']];
 		}
 		$seriesOrig = [];
 		$drilldownOrig = [];
-		foreach ($OrigClient as $key => $val) {
+		foreach ($OrigClient as $key => &$val) {
 			$seriesOrig[] = [
 				'name' => $key,
 				'y' => (int) $OrigNum[$key],
@@ -1482,15 +1483,15 @@ class get_functions extends general_functions
 			'12' => 'Diciembre',
 		];
 		$monts1 = [];
-		foreach ($respGraf4 as $element) {
+		foreach ($respGraf4 as &$element) {
 			$timeInt[$element['prefijo']]['ventas'][$element['nameMes']] = (int) $element['cantidad'] ?: 0;
 			$timeInt[$element['prefijo']]['description'] = $element['description'];
 			$monts1[$element['mes']] = $element['nameMes'];
 		}
-		foreach ($timeInt as $val) {
+		foreach ($timeInt as &$val) {
 			$setMonth = [];
-			foreach ($val as $key2 => $value) {
-				foreach ($value as $key3 => $value2) {
+			foreach ($val as $key2 => &$value) {
+				foreach ($value as $key3 => &$value2) {
 					$setMonth[] = (int) $val['ventas'][$key3] ?: 0;
 				}
 			}
@@ -1527,15 +1528,15 @@ class get_functions extends general_functions
 			client ASC";
 		$respGraf5 = $this->selectDynamic('', '', '', '', $query5, '', '', '', '');
 		$monts = [];
-		foreach ($respGraf5 as $element) {
+		foreach ($respGraf5 as &$element) {
 			$SalInt[$element['prefijo']]['ventas'][$element['nameMes']] = (float) $element['neto'] ?: 0;
 			$SalInt[$element['prefijo']]['description'] = $element['description'];
 			$monts[$element['mes']] = $element['nameMes'];
 		}
-		foreach ($SalInt as $val) {
+		foreach ($SalInt as &$val) {
 			$setSal = [];
-			foreach ($val as $key2 => $value) {
-				foreach ($value as $key3 => $value2) {
+			foreach ($val as $key2 => &$value) {
+				foreach ($value as $key3 => &$value2) {
 					$setSal[] = (float) $val['ventas'][$key3] ?: 0;
 				}
 			}
@@ -1614,10 +1615,10 @@ class get_functions extends general_functions
 			"N/A",
 		];
 		$SerEd = [];
-		foreach ($BarA as $sexo => $edad) {
+		foreach ($BarA as $sexo => &$edad) {
 			$SexEdad = [];
 			$dataEd = [];
-			foreach ($IntEdad  as  $key2 => $values) {
+			foreach ($IntEdad  as  $key2 => &$values) {
 				$SexEdad[] = [
 					'name' => $values,
 					'y' => (int) $edad[$values] ?: 0,
@@ -1630,10 +1631,10 @@ class get_functions extends general_functions
 			];
 		}
 		$dataEdad = [];
-		foreach ($BarD as $prefix => $element) {
-			foreach ($element as $sex => $val) {
-				foreach ($val  as $edad => $values) {
-					foreach ($respClientes as $key3) {
+		foreach ($BarD as $prefix => &$element) {
+			foreach ($element as $sex => &$val) {
+				foreach ($val  as $edad => &$values) {
+					foreach ($respClientes as &$key3) {
 						if ($prefix == $key3['prefix']) {
 							$dataEdad[$sex . '-' . $edad][] = [
 								$key3['client'], (int) $values ?: 0
@@ -1644,7 +1645,7 @@ class get_functions extends general_functions
 			}
 		}
 		$DrillEd = [];
-		foreach ($dataEdad as $key => $value) {
+		foreach ($dataEdad as $key => &$value) {
 			$DrillEd[] = [
 				'id' => $key,
 				'data' => $value,
@@ -1677,12 +1678,12 @@ class get_functions extends general_functions
 			orders.prefijo ASC,
 			anio DESC";
 		$respQuery7 = $this->selectDynamic('', '', '', '', $query7, '', '', '', '');
-		foreach ($respQuery7 as $element) {
+		foreach ($respQuery7 as &$element) {
 			$temp[$element['anio']][$element['prefijo']] = (int) $element['cantidad'] ?: 0;
 		}
-		foreach ($temp as $anio => $element) {
+		foreach ($temp as $anio => &$element) {
 			$clAn1 = [];
-			foreach ($respClientes as $key) {
+			foreach ($respClientes as &$key) {
 				$clAn1[] = (int) $element[$key['prefix']] ?: 0;
 				$platName[] = $element['client'] ?: 0;
 			}
@@ -1692,7 +1693,7 @@ class get_functions extends general_functions
 			];
 		}
 		$platName = [];
-		foreach ($respClientes as $element) {
+		foreach ($respClientes as &$element) {
 			$platName[] = $element['client'] ?: 0;
 		}
 		return [
@@ -1911,10 +1912,10 @@ class get_functions extends general_functions
 		$SexEdad = [];
 		$data = [];
 
-		foreach ($BarD  as $key => $val) {
-			foreach ($val  as $key1 => $value) {
+		foreach ($BarD  as $key => &$val) {
+			foreach ($val  as $key1 => &$value) {
 				$data = [];
-				foreach ($IntEdad  as  $key2 => $values) {
+				foreach ($IntEdad  as  $key2 => &$values) {
 					$data[] = (int) $value[$values] ?: 0;
 				}
 				$SexEdad[] = [
@@ -2071,10 +2072,10 @@ class get_functions extends general_functions
 		$SexEdad2 = [];
 		$data3 = [];
 
-		foreach ($BarDPlatf2  as $key => $val) {
-			foreach ($val  as $key1 => $value) {
+		foreach ($BarDPlatf2  as $key => &$val) {
+			foreach ($val  as $key1 => &$value) {
 				$data3 = [];
-				foreach ($IntEdad2  as  $key2 => $values) {
+				foreach ($IntEdad2  as  $key2 => &$values) {
 					$data3[] = (float) $value[$values] ?: 0;
 				}
 				$SexEdad2[] = [
@@ -2094,10 +2095,10 @@ class get_functions extends general_functions
 		$SexEdadPlatf3 = [];
 		$data3 = [];
 
-		foreach ($BarDPlatf3  as $key => $val) {
-			foreach ($val  as $key1 => $value) {
+		foreach ($BarDPlatf3  as $key => &$val) {
+			foreach ($val  as $key1 => &$value) {
 				$data3 = [];
-				foreach ($IntEdad2  as  $key2 => $values) {
+				foreach ($IntEdad2  as  $key2 => &$values) {
 					$data3[] = (float) $value[$values] ?: 0;
 				}
 				$SexEdadPlatf3[] = [
