@@ -271,7 +271,7 @@ class general_functions extends Model
         $manuf          = ($_GET['manuf'] != 'null') && (!empty($_GET['manuf'])) ? $_GET['manuf'] : 'DEV';
         $modelo         = ($_GET['modelo'] != 'null') && (!empty($_GET['modelo'])) ? $_GET['modelo'] : 'DEV';
         $uuid           = ($_GET['uuid'] != 'null') && (!empty($_GET['uuid'])) ? $_GET['uuid'] : 'DEV';
-        $lang_app       = $_GET['lang_app'] ? $_GET['lang_app'] : 'spa';
+        $lang_app       = ($_GET['lang_app'] != 'null') && (!empty($_GET['lang_app']))  ? $_GET['lang_app'] : 'spa';
 
         $data   = [
             'fecha'             => 'NOW()',
