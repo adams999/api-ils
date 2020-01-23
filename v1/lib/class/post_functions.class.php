@@ -25,7 +25,7 @@ class post_functions extends general_functions
 	}
 	public function sendQuote()
 	{
-		$filters = $_GET;
+		$filters     = $_GET;
 		$prefix 	 = $this->data['prefix'];
 		$category 	 = $this->data['category'];
 		$plans		 = $this->data['plans'];
@@ -38,6 +38,21 @@ class post_functions extends general_functions
 		$nameQuote	 = $this->data['name'];
 		$agesQuote 	 = $this->data['ages'];
 		$passQuote 	 = count(explode(',', $agesQuote));
+		$lang_app = "es";
+		switch ($filters['lang_app']) {
+			case 'spa':
+				$lang_app = "es";
+				break;
+
+			case 'eng':
+				$lang_app = "en";
+				break;
+
+			default:
+				$lang_app = "es";
+				break;
+		};
+
 		$dataValida			= [
 			"6027"  => $origin,
 			'6036'	=> $nameQuote,
@@ -78,7 +93,7 @@ class post_functions extends general_functions
 			'broker_sesion'  => $idBroker, //parametro que recibe el core.lib de la plataforma para cargar los parametros de la agencia 
 			'id_broker'      => $idBroker, //parametro que recibe el async_cotizador
 			'type'			 => 'enviar_correo',
-			'selectLanguage' => 'es'
+			'selectLanguage' => $lang_app
 		];
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkQuote 	= $link . "/app/pages/async_cotizador.php";
@@ -192,13 +207,14 @@ class post_functions extends general_functions
 		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
 		return json_decode($response);
 	}
-	public function sendSms()
+	public function sendSms($filters)
 	{
 		$codPhone = $this->data['codPhone'];
 		$numPhone = $this->data['numPhone'];
 		$prefix   = $this->data['prefix'];
 		$code	  = $this->data['code'];
 		$name     = $this->data['name'];
+		$lang_app = $_GET['lang_app'] ?: 'spa';
 		$linkVoucher = $this->data['linkVoucher'];
 		$salida = $this->data['salida'];
 		$nomClient = $this->data['nomClient'];
@@ -221,13 +237,14 @@ class post_functions extends general_functions
 			"40099" => $salida,
 			"50000"  => $nomClient
 		];
-		$validatEmpty		= $this->validatEmpty($dataValida);
-		if (empty($name)) {
-			//$message = "$nomClient le desea un Feliz Viaje que inicia el $salida, su Numero de Voucher es $code. Puede recuperar una copia de la misma aqui $linkVoucher";
-			$message = "$nomClient le desea Feliz Viaje, inicio:$salida, Voucher:$code $linkVoucher";
+		$this->validatEmpty($dataValida);
+
+		if ($lang_app == 'eng') {
+			$message = "$nomClient wishes you a Happy Journey Start:$salida Voucher:$code $linkVoucher";
 		} else {
-			$message = "$nomClient le desea Feliz Viaje, inicio:$salida, Voucher:$code $linkVoucher";
+			$message = "$nomClient le desea Feliz Viaje inicio:$salida Orden:$code $linkVoucher";
 		}
+
 		$dataSms = [
 			"type"			=> "Send_message",
 			"codPhone" 		=> $codPhone,
@@ -253,16 +270,34 @@ class post_functions extends general_functions
 		$id_orden = $this->data['id_orden'];
 		$email    = $this->data['email'];
 		$prefix   = $this->data['prefix'];
+		$lang_app = "es";
+		switch ($_GET['lang_app']) {
+			case 'spa':
+				$lang_app = "es";
+				break;
+
+			case 'eng':
+				$lang_app = "en";
+				break;
+
+			default:
+				$lang_app = "es";
+				break;
+		};
 		$dataValida			= [
 			"40098" => $id_orden,
 			'4004'	=> $email,
 			'9092'	=> $prefix,
 		];
-		$validatEmpty	= $this->validatEmpty($dataValida);
+
+		$this->validatEmpty($dataValida);
+
 		$dataEmail      = [
-			"id_orden" => $id_orden,
-			"email"    => $email
+			"id_orden" 		 => $id_orden,
+			"email"    		 => $email,
+			'selectLanguage' => $lang_app
 		];
+
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkEmail 	= $link . "/app/reports/email_compra.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
@@ -384,7 +419,7 @@ class post_functions extends general_functions
 				FROM
 					clients
 				WHERE
-					clients.prefix = users_extern.prefijo
+					clients.prefix = '$prefix'
 				LIMIT 1
 			) AS nomPlatf",
 			"(
@@ -393,7 +428,7 @@ class post_functions extends general_functions
 				FROM
 					clients
 				WHERE
-					clients.prefix = users_extern.prefijo
+					clients.prefix = '$prefix'
 				LIMIT 1
 			) AS imgPlatf",
 			"(
@@ -402,14 +437,14 @@ class post_functions extends general_functions
 				FROM
 					clients
 				WHERE
-					clients.prefix = users_extern.prefijo
+					clients.prefix = '$prefix'
 				LIMIT 1
 			) AS colorsPlatf"
 		];
 		$userExist	= $this->selectDynamic('', 'users_extern', " users='$user' AND prefijo = '$prefix' ", $data);
-		if ($userExist) {
+		if (!empty($userExist)) {
 			$prefijExist	= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['prefix']);
-			if ($prefijExist) {
+			if (!empty($prefijExist)) {
 				$userActive	= $this->selectDynamic('', '', '', '', "SELECT
 																		user_type,
 																		language_id,
@@ -424,14 +459,14 @@ class post_functions extends general_functions
 																	AND id_status = '1'
 																	AND user_type IN ('1', '2', '5', '13')
 																	AND prefijo = '$prefix'", '', '', '', '');
-				if ($userActive) {
+				if (!empty($userActive)) {
 					if ($prefix == 'CT' || $prefix == 'CE') {
 						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$password'", $data);
 					} else {
 						$passwordEncript 	= $this->encriptKey($password);
 						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$passwordEncript'", $data, '', '', '', '', '');
 					}
-					if ($dataUser) {
+					if (!empty($dataUser)) {
 						$response = [
 							'status'   		=> 'OK',
 							'userType' 		=> $dataUser[0]["user_type"],

@@ -29,17 +29,20 @@ class get_functions extends general_functions
 	{
 		$plan		= $data['plan'];
 		$prefix		= $data['prefix'];
-		$language	= strtolower($data['lenguaje']);
+		$language	= $data['lang_app'] ?: 'spa';
 		$dataValida	= [
 			'6037'	=> !(empty($plan) and empty($language)),
 			'6022'	=> $plan,
 			'6021'	=> $language,
 			'1030'	=> in_array($language, ['spa', 'eng', 'por', 'fra', 'deu'])
 		];
+
 		$validatEmpty	= $this->validatEmpty($dataValida);
+
 		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
+
 		//$restrictionPlan	= $this->verifyRestrictionPlan('',$plan,$language,false,$api,true);
 		// if($restrictionPlan){
 		// 	return $restrictionPlan;
@@ -183,12 +186,30 @@ class get_functions extends general_functions
 	{
 		$idPlan    = $filters['idPlan'];
 		$prefix	   = $filters['prefix'];
+		$lang_app  = $filters['lang_app'] ?: 'spa';
 		$dataValida	= [
 			"5022"  => $idPlan,
 			"9092"  => $prefix
 		];
-		$validatEmpty  = $this->validatEmpty($dataValida);
-		return $this->selectDynamic('', 'plans', "id = $idPlan AND prefijo = '$prefix'", ['id_plans', 'id', 'name', 'description', 'activo', 'id_plan_categoria'], '', '', ['field' => 'name', 'order' => 'ASC'], '', '');
+
+		$this->validatEmpty($dataValida);
+
+		return $this->selectDynamic('', '', '', '', "
+			SELECT
+				plan_detail.description as description,
+				id_plans, 
+				plans.id, 
+				name, 
+				activo, 
+				id_plan_categoria
+			FROM
+				plans
+			JOIN plan_detail ON plans.id = plan_detail.plan_id
+			AND plan_detail.language_id = '$lang_app'
+			AND plan_detail.prefijo = '$prefix'
+			WHERE
+				plans.id = '$idPlan'
+			AND plans.prefijo = '$prefix' ", '', '', '');
 	}
 	public function getVendedor($filters)
 	{
@@ -226,6 +247,7 @@ class get_functions extends general_functions
 		$status	   = ($filters['status']) ? $filters['status'] : 1;
 		$today 	   = date('Y-m-d');
 		$id_user   = $filters['id_user'];
+		$lang_app  = $filters['lang_app'] ?: 'spa';
 
 		$dataValida	= [
 			"9092"  => $prefix,
@@ -372,7 +394,7 @@ class get_functions extends general_functions
 			JOIN plan_category ON plan_category.id_plan_categoria = plans.id_plan_categoria
 			AND plan_category.prefijo = plans.prefijo
 			JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
-			AND plan_categoria_detail.prefijo = plan_category.prefijo AND plan_categoria_detail.language_id = 'spa' ",
+			AND plan_categoria_detail.prefijo = plan_category.prefijo AND plan_categoria_detail.language_id = '$lang_app' ",
 			"$codeWhere",
 			$valueOrders,
 			false,
@@ -668,6 +690,8 @@ class get_functions extends general_functions
 	{
 		$prefix 	= $filters['prefix'];
 		$agencia    = $filters['agencyMaster'];
+		$language	= $filters['lang_app'] ?: 'spa';
+
 		$dataValida	= [
 			"9092"  => $prefix
 		];
@@ -687,7 +711,7 @@ class get_functions extends general_functions
 		INNER JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
 		LEFT JOIN restriction ON plans.id = restriction.id_plans
 		WHERE
-			plan_categoria_detail.language_id = 'spa'
+			plan_categoria_detail.language_id = '$language'
 		AND plan_category.vision_id = 1
 		AND plan_category.id_status = 1";
 		if ($agencia != 'N/A' && !empty($agencia)) {
@@ -816,6 +840,7 @@ class get_functions extends general_functions
 		$ages	   = explode(',', $filters['ages']);
 		$bloque    = $filters['bloque'] ?: '';
 		$today 	   = $this->datePlatform($prefix)[0]['date']; //Obtengo la fecha del servidor que cotizo mas no la de ils
+		$language  = $filters['lang_app'] ?: 'spa';
 
 		$dataValida	= [
 			"9092"  => $prefix,
@@ -1715,6 +1740,8 @@ class get_functions extends general_functions
 		$startDate  = $filters['startDate'];
 		$endDate   	= $filters['endDate'];
 		$today 	   	= date('Y-m-d');
+		$language	= $filters['lang_app'] ?: 'spa';
+
 		$dataValida	= [
 			"9092"  => $prefix,
 			'3030'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate) > strtotime($endDate)) : true,
@@ -2034,28 +2061,28 @@ class get_functions extends general_functions
 			[
 				'y' => $totalConter[0],
 				'drilldown' => 1,
-				'name' => '20 Primeros',
+				'name' => ($language == 'spa') ? '20 Primeros' : '20 First',
 			]
 		];
 		if ($cntData > 10) {
 			$seriesCnt[1] = [
 				'y' => $totalConter[1],
 				'drilldown' => 2,
-				'name' => 'Otros',
+				'name' => ($language == 'spa') ? 'Otros' : 'Other',
 			];
 		}
 		$seriesAmn = [
 			[
 				'y' => $totalAmount[0],
 				'drilldown' => 1,
-				'name' => '20 Primeros',
+				'name' => ($language == 'spa') ? '20 Primeros' : '20 First',
 			]
 		];
 		if ($cntData > 10) {
 			$seriesAmn[1] = [
 				'y' => $totalAmount[1],
 				'drilldown' => 2,
-				'name' => 'Otros',
+				'name' => ($language == 'spa') ? 'Otros' : 'Other',
 			];
 		}
 
