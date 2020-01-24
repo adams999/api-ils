@@ -29,7 +29,7 @@ class get_functions extends general_functions
 	{
 		$plan		= $data['plan'];
 		$prefix		= $data['prefix'];
-		$language	= $data['lang_app'] ?: 'spa';
+		$language	= $this->funcLangApp();
 		$dataValida	= [
 			'6037'	=> !(empty($plan) and empty($language)),
 			'6022'	=> $plan,
@@ -186,7 +186,7 @@ class get_functions extends general_functions
 	{
 		$idPlan    = $filters['idPlan'];
 		$prefix	   = $filters['prefix'];
-		$lang_app  = $filters['lang_app'] ?: 'spa';
+		$lang_app  = $this->funcLangApp();
 		$dataValida	= [
 			"5022"  => $idPlan,
 			"9092"  => $prefix
@@ -247,7 +247,7 @@ class get_functions extends general_functions
 		$status	   = ($filters['status']) ? $filters['status'] : 1;
 		$today 	   = date('Y-m-d');
 		$id_user   = $filters['id_user'];
-		$lang_app  = $filters['lang_app'] ?: 'spa';
+		$lang_app  = $this->funcLangApp();
 
 		$dataValida	= [
 			"9092"  => $prefix,
@@ -690,7 +690,7 @@ class get_functions extends general_functions
 	{
 		$prefix 	= $filters['prefix'];
 		$agencia    = $filters['agencyMaster'];
-		$language	= $filters['lang_app'] ?: 'spa';
+		$language	= $this->funcLangApp();
 
 		$dataValida	= [
 			"9092"  => $prefix
@@ -840,7 +840,20 @@ class get_functions extends general_functions
 		$ages	   = explode(',', $filters['ages']);
 		$bloque    = $filters['bloque'] ?: '';
 		$today 	   = $this->datePlatform($prefix)[0]['date']; //Obtengo la fecha del servidor que cotizo mas no la de ils
-		$language  = $filters['lang_app'] ?: 'spa';
+		$lang_app  = "es";
+		switch ($this->funcLangApp()) {
+			case 'spa':
+				$lang_app = "es";
+				break;
+
+			case 'eng':
+				$lang_app = "en";
+				break;
+
+			default:
+				$lang_app = "es";
+				break;
+		};
 
 		$dataValida	= [
 			"9092"  => $prefix,
@@ -887,7 +900,8 @@ class get_functions extends general_functions
 			'llegada'           =>  $endDate,
 			'id_broker'         =>  $id_broker,
 			'PlanSel'           =>  '',
-			'min_days'          =>  $bloque
+			'min_days'          =>  $bloque,
+			'selectLanguage'    =>  $lang_app
 		];
 
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
@@ -1740,7 +1754,7 @@ class get_functions extends general_functions
 		$startDate  = $filters['startDate'];
 		$endDate   	= $filters['endDate'];
 		$today 	   	= date('Y-m-d');
-		$language	= $filters['lang_app'] ?: 'spa';
+		$language	= $this->funcLangApp();
 
 		$dataValida	= [
 			"9092"  => $prefix,

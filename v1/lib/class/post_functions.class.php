@@ -39,7 +39,7 @@ class post_functions extends general_functions
 		$agesQuote 	 = $this->data['ages'];
 		$passQuote 	 = count(explode(',', $agesQuote));
 		$lang_app = "es";
-		switch ($filters['lang_app']) {
+		switch ($this->funcLangApp()) {
 			case 'spa':
 				$lang_app = "es";
 				break;
@@ -214,7 +214,7 @@ class post_functions extends general_functions
 		$prefix   = $this->data['prefix'];
 		$code	  = $this->data['code'];
 		$name     = $this->data['name'];
-		$lang_app = $_GET['lang_app'] ?: 'spa';
+		$lang_app = $this->funcLangApp();
 		$linkVoucher = $this->data['linkVoucher'];
 		$salida = $this->data['salida'];
 		$nomClient = $this->data['nomClient'];
@@ -271,7 +271,7 @@ class post_functions extends general_functions
 		$email    = $this->data['email'];
 		$prefix   = $this->data['prefix'];
 		$lang_app = "es";
-		switch ($_GET['lang_app']) {
+		switch ($this->funcLangApp()) {
 			case 'spa':
 				$lang_app = "es";
 				break;
@@ -302,7 +302,7 @@ class post_functions extends general_functions
 		$linkEmail 	= $link . "/app/reports/email_compra.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkEmail, http_build_query($dataEmail), $headers);
-		return $response;
+		return strip_tags($response);
 	}
 	public function loginIls()
 	{

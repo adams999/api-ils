@@ -255,6 +255,38 @@ class general_functions extends Model
              }
         }*/
     }
+
+    public function funcLangApp()
+    {
+        $lang = 'spa';
+        switch ($_GET['lang_app']) {
+            case 'spa':
+                $lang = 'spa';
+                break;
+
+            case 'eng':
+                $lang = 'eng';
+                break;
+
+            case 'por':
+                $lang = 'por';
+                break;
+
+            case 'fra':
+                $lang = 'fra';
+                break;
+
+            case 'deu':
+                $lang = 'deu';
+                break;
+
+            default:
+                $lang = 'spa';
+                break;
+        }
+        return $lang;
+    }
+
     public function logsave($request, $response, $operacion, $procedencia, $apikey = '', $id_error = '', $num_voucher = '', $num_referencia = '')
     {
         $datAgency        = $this->datAgency($apikey);
@@ -271,7 +303,7 @@ class general_functions extends Model
         $manuf          = ($_GET['manuf'] != 'null') && (!empty($_GET['manuf'])) ? $_GET['manuf'] : 'DEV';
         $modelo         = ($_GET['modelo'] != 'null') && (!empty($_GET['modelo'])) ? $_GET['modelo'] : 'DEV';
         $uuid           = ($_GET['uuid'] != 'null') && (!empty($_GET['uuid'])) ? $_GET['uuid'] : 'DEV';
-        $lang_app       = ($_GET['lang_app'] != 'null') && (!empty($_GET['lang_app']))  ? $_GET['lang_app'] : 'spa';
+        $lang_app       = $this->funcLangApp();
 
         $data   = [
             'fecha'             => 'NOW()',
