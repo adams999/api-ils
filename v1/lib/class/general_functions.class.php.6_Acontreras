@@ -255,38 +255,6 @@ class general_functions extends Model
              }
         }*/
     }
-
-    public function funcLangApp()
-    {
-        $lang = 'spa';
-        switch ($_GET['lang_app']) {
-            case 'spa':
-                $lang = 'spa';
-                break;
-
-            case 'eng':
-                $lang = 'eng';
-                break;
-
-            case 'por':
-                $lang = 'por';
-                break;
-
-            case 'fra':
-                $lang = 'fra';
-                break;
-
-            case 'deu':
-                $lang = 'deu';
-                break;
-
-            default:
-                $lang = 'spa';
-                break;
-        }
-        return $lang;
-    }
-
     public function logsave($request, $response, $operacion, $procedencia, $apikey = '', $id_error = '', $num_voucher = '', $num_referencia = '')
     {
         $datAgency        = $this->datAgency($apikey);
@@ -298,12 +266,12 @@ class general_functions extends Model
         $request        = json_encode($request);
         $_response      = mysql_real_escape_string($response);
         $_response      = (strlen($_response) > 10000) ? '' : $_response;
-        $so             = ($_GET['so'] != 'null') && (!empty($_GET['so'])) ? $_GET['so'] : 'DEV';
-        $v_so           = ($_GET['v_so'] != 'null') && (!empty($_GET['v_so'])) ? $_GET['v_so'] : 'DEV';
-        $manuf          = ($_GET['manuf'] != 'null') && (!empty($_GET['manuf'])) ? $_GET['manuf'] : 'DEV';
-        $modelo         = ($_GET['modelo'] != 'null') && (!empty($_GET['modelo'])) ? $_GET['modelo'] : 'DEV';
-        $uuid           = ($_GET['uuid'] != 'null') && (!empty($_GET['uuid'])) ? $_GET['uuid'] : 'DEV';
-        $lang_app       = $this->funcLangApp();
+        $so             = ($_GET['so'] != 'null') || (!isset($_GET['so'])) ? $_GET['so'] : 'DEV';
+        $v_so           = ($_GET['v_so'] != 'null') || (!isset($_GET['v_so'])) ? $_GET['v_so'] : 'DEV';
+        $manuf          = ($_GET['manuf'] != 'null') || (!isset($_GET['manuf'])) ? $_GET['manuf'] : 'DEV';
+        $modelo         = ($_GET['modelo'] != 'null') || (!isset($_GET['modelo'])) ? $_GET['modelo'] : 'DEV';
+        $uuid           = ($_GET['uuid'] != 'null') || (!isset($_GET['uuid'])) ? $_GET['uuid'] : 'DEV';
+        $lang_app       = $_GET['lang_app'] && (!isset($_GET['lang_app'])) ? $_GET['lang_app'] : 'spa';
 
         $data   = [
             'fecha'             => 'NOW()',
