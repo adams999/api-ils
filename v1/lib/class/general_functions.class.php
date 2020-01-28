@@ -293,7 +293,7 @@ class general_functions extends Model
         $id_user        = $_GET['id_user'];
         $prefijo        = !empty($request['prefix']) ? $request['prefix'] : 'ILS';
         $prefixApp      = $request['prefixApp'];
-        $platfApp       = $_GET['platfApp'];
+        $platfApp       = ($_GET['platfApp'] != 'null') && (!empty($_GET['platfApp'])) ? $_GET['platfApp'] : 'DEV';
         $versionApp     = $_GET['versionAppApi'];
         $request        = json_encode($request);
         $_response      = mysql_real_escape_string($response);
@@ -1460,42 +1460,116 @@ class general_functions extends Model
 
     public function agencyBroker($idUser, $userType, $prefix)
     {
-        $sql = ['querys' => "SELECT
-                                user_associate.id_associate,
-                                broker.broker
-                            FROM
-                                users
-                            INNER JOIN user_associate ON users.id = user_associate.id_user
-                            INNER JOIN broker ON user_associate.id_associate = broker.id_broker
-                            WHERE
-                                users.id = '$idUser' 
-                                AND users.id_status = '1' 
-                            ORDER BY
-                                user_associate.modified DESC
-                            LIMIT 1"];
+        $sql = "SELECT
+                    user_associate.id_associate,
+                    broker.broker
+                FROM
+                    users_extern
+                JOIN user_associate ON users_extern.id = user_associate.id_user
+                AND users_extern.prefijo = user_associate.prefijo
+                AND users_extern.user_type = user_associate.id_type
+                JOIN broker ON user_associate.id_associate = broker.id_broker
+                AND users_extern.prefijo = broker.prefijo
+                WHERE
+                    users_extern.id = '$idUser'
+                AND users_extern.id_status = '1'
+                AND users_extern.prefijo = '$prefix'
+                ORDER BY
+                    user_associate.id_user_associate DESC
+                LIMIT 1";
 
-        $link          = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
-        $linkParam     = $link . "/app/api/selectDynamic";
-        $headers     = "content-type: application/x-www-form-urlencoded";
-        $response = $this->curlGeneral($linkParam, json_encode($sql), $headers);
-        return json_decode($response, true);
+        $response  = $this->selectDynamic('', '', '', '', $sql, '', '', '');
+
+        return $response;
     }
 
     public function agencysChildren($idBroker, $prefix)
     {
-        $sql = ['querys' => "SELECT broker_nivel.id, 
-                broker_nivel.id_broker, 
-                broker_nivel.nivel, 
-                broker_nivel.parent, 
-                broker_nivel.master 
-            FROM broker_nivel 
-            WHERE parent = '$idBroker' "];
+        $sql = "SELECT broker_nivel.id, 
+					broker_nivel.id_broker, 
+					broker_nivel.nivel, 
+					broker_nivel.parent, 
+					broker_nivel.master 
+				FROM broker_nivel 
+				WHERE parent = '$idBroker' 
+				AND prefijo = '$prefix'";
+        $agencia1 = $this->selectDynamic('', '', '', '', $sql, '', '', '');
+        $datos1 = array_column($agencia1, 'id_broker');
+        $brokerSql = implode(',', $datos1);
 
-        $link          = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
-        $linkParam     = $link . "/app/api/selectDynamic";
-        $headers     = "content-type: application/x-www-form-urlencoded";
-        $response = $this->curlGeneral($linkParam, json_encode($sql), $headers);
-        return json_decode($response, true);
+        if (!empty($agencia1)) {
+            $sqlChildren = "SELECT broker_nivel.id, 
+								broker_nivel.id_broker, 
+								broker_nivel.nivel, 
+								broker_nivel.parent, 
+								broker_nivel.master 
+							FROM broker_nivel 
+							WHERE parent IN ({$brokerSql})
+							AND prefijo = '$prefix'";
+            $agencia2 = $this->selectDynamic('', '', '', '', $sqlChildren, '', '', '');
+            $datos2 = array_column($agencia2, 'id_broker');
+            $brokerSql = implode(',', $datos2);
+
+            if (!empty($agencia2)) {
+                $sqlChildren = "SELECT broker_nivel.id, 
+									broker_nivel.id_broker, 
+									broker_nivel.nivel, 
+									broker_nivel.parent, 
+									broker_nivel.master 
+								FROM broker_nivel 
+								WHERE parent IN ({$brokerSql})
+								AND prefijo = '$prefix'";
+                $agencia3 = $this->selectDynamic('', '', '', '', $sqlChildren, '', '', '');
+                $datos3 = array_column($agencia3, 'id_broker');
+                $brokerSql = implode(',', $datos3);
+
+                if (!empty($agencia3)) {
+                    $sqlChildren = "SELECT broker_nivel.id, 
+										broker_nivel.id_broker, 
+										broker_nivel.nivel, 
+										broker_nivel.parent, 
+										broker_nivel.master 
+									FROM broker_nivel 
+									WHERE parent IN ({$brokerSql})
+									AND prefijo = '$prefix'";
+                    $agencia4 = $this->selectDynamic('', '', '', '', $sqlChildren, '', '', '');
+                    $datos4 = array_column($agencia4, 'id_broker');
+                    $brokerSql = implode(',', $datos4);
+
+                    if (!empty($agencia4)) {
+                        $sqlChildren = "SELECT broker_nivel.id, 
+											broker_nivel.id_broker, 
+											broker_nivel.nivel, 
+											broker_nivel.parent, 
+											broker_nivel.master 
+										FROM broker_nivel 
+										WHERE parent IN ({$brokerSql})
+										AND prefijo = '$prefix'";
+                        $agencia5 = $this->selectDynamic('', '', '', '', $sqlChildren, '', '', '');
+                        $datos5 = array_column($agencia5, 'id_broker');
+
+                        if (!empty($agencia5)) {
+                            $resultado = array_merge($datos1, $datos2, $datos3, $datos4, $datos5);
+                            return array_unique($resultado);
+                        } else {
+                            $resultado = array_merge($datos1, $datos2, $datos3, $datos4);
+                            return array_unique($resultado);
+                        }
+                    } else {
+                        $resultado = array_merge($datos1, $datos2, $datos3, $datos4);
+                        return array_unique($resultado);
+                    }
+                } else {
+                    $resultado = array_merge($datos1, $datos2, $datos3);
+                    return array_unique($resultado);
+                }
+            } else {
+                $resultado = array_merge($datos1, $datos2);
+                return array_unique($resultado);
+            }
+        } else {
+            return [$idBroker];
+        }
     }
 
     public function getAgencyMaster($prefix, $idAgency)

@@ -373,10 +373,10 @@ class get_functions extends general_functions
 				$arrWhere['orders.agencia'] = null;
 				$broker_nivel = $this->agencysChildren($id_agencia, $prefix);
 				if ($broker_nivel) {
-					$arrBrokers = array_column($broker_nivel, 'id_broker');
+					$arrBrokers = $broker_nivel;
 					array_push($arrBrokers, $id_agencia);
 					$arrBrokers = array_values($arrBrokers); //agencias hijas y su agencia master
-					$arr = implode(',', $arrBrokers);
+					$arr = implode(',', array_unique($arrBrokers));
 				} else {
 					$arr = $id_agencia;
 				}
@@ -1065,29 +1065,49 @@ class get_functions extends general_functions
 						WHERE
 							iso_state = parameters.id_state
 					) AS id_state,
-					IFNULL((
-						SELECT
-							description
-						FROM
-							cities
-						WHERE
-							iso_city = parameters.id_city AND iso_city>0
-					LIMIT 1
-					),'N/A') AS id_city,
+					IFNULL(
+						(
+							SELECT
+								description
+							FROM
+								cities
+							WHERE
+								iso_city = parameters.id_city
+							AND iso_city > 0
+							LIMIT 1
+						),
+						'N/A'
+					) AS id_city,
 					address_parameter,
 					zip_code,
-					phone1,
-					phone2,
-					phone3,
-					phone4
+					REPLACE (
+						REPLACE (phone1, '(', ''),
+						')',
+						''
+					) AS phone1,
+					REPLACE (
+						REPLACE (phone2, '(', ''),
+						')',
+						''
+					) AS phone2,
+					REPLACE (
+						REPLACE (phone3, '(', ''),
+						')',
+						''
+					) AS phone3,
+					REPLACE (
+						REPLACE (phone4, '(', ''),
+						')',
+						''
+					) AS phone4
 				FROM
 					parameters
 				WHERE
 					parameter_key IN (
 						'SYSTEM_NAME',
 						'EMAIL_FROM',
-				'ID_WHATSAPP'
-				)
+						'ID_WHATSAPP'
+					)
 				ORDER BY
 					parameter_key ASC";
 		return $this->selectDynamic('', '', '', '', $query, '', '', '', '');
