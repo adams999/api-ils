@@ -841,6 +841,8 @@ class get_functions extends general_functions
 		$bloque    = $filters['bloque'] ?: '';
 		$today 	   = $this->datePlatform($prefix)[0]['date']; //Obtengo la fecha del servidor que cotizo mas no la de ils
 		$lang_app  = "es";
+		$id_plan_cotiza = (!empty($filters['idPlan'])) ? $filters['idPlan'] : '';
+
 		switch ($this->funcLangApp()) {
 			case 'spa':
 				$lang_app = "es";
@@ -901,7 +903,8 @@ class get_functions extends general_functions
 			'id_broker'         =>  $id_broker,
 			'PlanSel'           =>  '',
 			'min_days'          =>  $bloque,
-			'selectLanguage'    =>  $lang_app
+			'selectLanguage'    =>  $lang_app,
+			'id_plan_cotiza'    =>  $id_plan_cotiza
 		];
 
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
@@ -909,6 +912,33 @@ class get_functions extends general_functions
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$respons    = $this->curlGeneral($linkParam, json_encode($dataCurl), $headers);
 		$response   = json_decode($respons, true);
+
+		for ($i = 0; $i < count($response); $i++) { //Simplifica precios
+
+			if (count($response[$i]['arrUsedPrices']) > 1) { //si tiene menores y mayores
+				if ($response[$i]['arrUsedPrices'][1]) { ////si es mayor
+					$response[$i]['numero_mayores'] = $response[$i]['arrUsedPrices'][1]['numPas'];
+					$response[$i]['valorMayor'] = $response[$i]['arrUsedPrices'][1]['pvpBase'];
+					$response[$i]['subTotalMayor'] = $response[$i]['arrUsedPrices'][1]['pvpSubTotal'];
+				}
+				if ($response[$i]['arrUsedPrices'][0]) { ///si es menor
+					$response[$i]['numero_menores'] = $response[$i]['arrUsedPrices'][0]['numPas'];
+					$response[$i]['valorMenor'] = $response[$i]['arrUsedPrices'][0]['pvpBase'];
+					$response[$i]['subTotalMenores'] = $response[$i]['arrUsedPrices'][0]['pvpSubTotal'];
+				}
+			} else {
+				if ($response[$i]['arrUsedPrices'][0]['ageMin'] > $response[$i]['normal_age']) { ///si tiene solo mayores
+					$response[$i]['numero_mayores'] = $response[$i]['arrUsedPrices'][0]['numPas'];
+					$response[$i]['valorMayor'] = $response[$i]['arrUsedPrices'][0]['pvpBase'];
+					$response[$i]['subTotalMayor'] = $response[$i]['arrUsedPrices'][0]['pvpSubTotal'];
+				}
+				if ($response[$i]['arrUsedPrices'][0]['ageMin'] <= $response[$i]['normal_age']) { ///si tiene solo menores
+					$response[$i]['numero_menores'] = $response[$i]['arrUsedPrices'][0]['numPas'];
+					$response[$i]['valorMenor'] = $response[$i]['arrUsedPrices'][0]['pvpBase'];
+					$response[$i]['subTotalMenores'] = $response[$i]['arrUsedPrices'][0]['pvpSubTotal'];
+				}
+			}
+		}
 
 		if ($prefix == 'BT') { //Aplica para BTA
 			for ($i = 0; $i < count($response); $i++) {
@@ -2185,6 +2215,81 @@ class get_functions extends general_functions
 			$this->grafTipoVenta($prefix, $startDate, $endDate, false),
 			$this->grafTipoVenta($prefix, '', '', true)
 		];
+	}
+
+	public function getUpgrades($filters)
+	{
+		$prefix	    = $filters['prefix'];
+		$idPlan 	= $filters['idPlan'];
+		$language	= $this->funcLangApp();
+
+		$dataValida	= [
+			"9092"  => $prefix,
+			'5022'	=> $idPlan
+		];
+		$this->validatEmpty($dataValida);
+
+		$data = [
+			'querys' => "SELECT
+							raiders_detail.name_raider,
+							raiders_detail.description,
+							raiders.id_benefi,
+							raiders.type_raider,
+							raiders.value_raider,
+							raiders.cost_raider,
+							raiders.id_provider,
+							raiders.rd_calc_type,
+							raiders.rd_coverage_amount,
+							raiders.neta_raider,
+							raiders.promocion,
+							raiders.campaign,
+							raiders.specific_benefit,
+							raiders.limiteage,
+							raiders.limiteedadmin,
+							raiders.limiteedadmax
+						FROM
+							plan_raider
+						INNER JOIN raiders ON plan_raider.id_raider = raiders.id_raider
+						INNER JOIN raiders_detail ON raiders.id_raider = raiders_detail.id_raider
+						AND raiders_detail.language_id = '$language'
+						WHERE
+							plan_raider.id_plan = '$idPlan'
+						AND raiders.id_status = '1'
+						ORDER BY
+						raiders_detail.name_raider ASC"
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkParam 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+		return json_decode($response, true);
+	}
+
+	public function getOverageInFactors($filters)
+	{
+		$prefix	    = $filters['prefix'];
+
+		$dataValida	= [
+			"9092"  => $prefix
+		];
+		$this->validatEmpty($dataValida);
+
+		$data = [
+			'querys' => "SELECT
+							parameter_key,
+							parameter_value
+						FROM
+							`parameters`
+						WHERE
+							parameter_key = 'OVERAGE_IN_FACTORS'"
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkParam 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+		return json_decode($response, true);
 	}
 
 	/*  public function getBrokers($filters,$limit){

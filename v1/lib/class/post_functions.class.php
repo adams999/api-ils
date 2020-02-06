@@ -304,6 +304,7 @@ class post_functions extends general_functions
 		$response = $this->curlGeneral($linkEmail, http_build_query($dataEmail), $headers);
 		return strip_tags($response);
 	}
+
 	public function loginIls()
 	{
 		$user 		= $this->data['user'];
@@ -321,21 +322,36 @@ class post_functions extends general_functions
 			"user_type",
 			"firstname",
 			"lastname",
-			"id"
+			"id",
+			"language_id"
 		];
 		$userExist	= $this->selectDynamic('', 'users', "users='$user'", $data);
 		if ($userExist) {
-			$userActive	= $this->selectDynamic(['id_status' => '1', 'user_type' => '1'], 'users', "users='$user'", $data);
+			$userActive	= $this->selectDynamic(['id_status' => '1'], 'users', "users='$user' AND user_type IN (1,2)", $data);
 			if ($userActive) {
 				$passwordEncript 	= $this->encriptKey($password);
 				$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1'], 'users', "password='$passwordEncript'", $data);
 				if ($dataUser) {
+
+					switch ($dataUser[0]["language_id"]) {
+						case '1':
+							$dataUser[0]["language_id"] = 'eng';
+							break;
+						case '2':
+							$dataUser[0]["language_id"] = 'spa';
+							break;
+						default:
+							$dataUser[0]["language_id"] = 'spa';
+							break;
+					}
+
 					return [
-						'status'   	=> 'OK',
-						'userType' 	=> $dataUser[0]["user_type"],
-						'id_user'  	=> $dataUser[0]["id"],
-						'firstname' => $dataUser[0]["firstname"],
-						'lastname' 	=> $dataUser[0]["lastname"]
+						'status'   		=> 'OK',
+						'userType' 		=> $dataUser[0]["user_type"],
+						'id_user'  		=> $dataUser[0]["id"],
+						'firstname'	 	=> $dataUser[0]["firstname"],
+						'lastname' 		=> $dataUser[0]["lastname"],
+						'langApp'	    => $dataUser[0]["language_id"]
 					];
 				} else {
 					return $this->getError(9090);
@@ -347,6 +363,7 @@ class post_functions extends general_functions
 			return $this->getError(9088);
 		}
 	}
+
 	public function login()
 	{
 		$user 		= $this->data['user'];
@@ -467,6 +484,19 @@ class post_functions extends general_functions
 						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$passwordEncript'", $data, '', '', '', '', '');
 					}
 					if (!empty($dataUser)) {
+
+						switch ($dataUser[0]["language_id"]) {
+							case 'eng':
+								$dataUser[0]["language_id"] = 'eng';
+								break;
+							case 'spa':
+								$dataUser[0]["language_id"] = 'spa';
+								break;
+							default:
+								$dataUser[0]["language_id"] = 'spa';
+								break;
+						}
+
 						$response = [
 							'status'   		=> 'OK',
 							'userType' 		=> $dataUser[0]["user_type"],
@@ -487,7 +517,8 @@ class post_functions extends general_functions
 							'prefAgency'    => $dataUser[0]["prefAgency"] ?: 'N/A',
 							'nombreAgenMaster' => $dataUser[0]["nombreAgenMaster"] ?: 'N/A',
 							'urlPlatform' 	=> $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']),
-							'paramAgency' 	=> $dataUser[0]["prefAgency"] ? $this->selectDynamic('', '', '', '', "SELECT * FROM broker_parameters WHERE id_broker = '{$dataUser[0]['agency']}' AND prefijo = '$prefix' ORDER BY id_broker_parameters DESC limit 1", '', '', '', '')[0] : 'N/A'
+							'paramAgency' 	=> $dataUser[0]["prefAgency"] ? $this->selectDynamic('', '', '', '', "SELECT * FROM broker_parameters WHERE id_broker = '{$dataUser[0]['agency']}' AND prefijo = '$prefix' ORDER BY id_broker_parameters DESC limit 1", '', '', '', '')[0] : 'N/A',
+							'langApp'       => $dataUser[0]["language_id"]
 						];
 
 						switch ($response['paramAgency']) {
@@ -520,12 +551,14 @@ class post_functions extends general_functions
 			return $this->getError(9088);
 		}
 	}
+
 	public function getoken()
 	{
 		$ArrayValida = array('6040' => $this->data['user'], '6041' => $this->data['pass']);
 		$this->validatEmpty($ArrayValida);
 		return $this->getApiKey($this->data['user'], $this->data['pass']);
 	}
+
 	public function addOrder()
 	{
 		$quoteGeneral 					= new quote_general_new();
