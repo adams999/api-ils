@@ -2262,8 +2262,37 @@ class get_functions extends general_functions
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
-		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
-		return json_decode($response, true);
+		$response   = $this->curlGeneral($linkParam, json_encode($data), $headers);
+		$response = json_decode($response, true);
+
+		for ($i = 0; $i < count($response); $i++) {
+			switch ($response[$i]['rd_calc_type']) {
+				case '1':
+					$response[$i]['tipo_upgrade'] = 'Comprobante';
+					break;
+
+				case '2':
+					$response[$i]['tipo_upgrade'] = 'Pasajero Especifico';
+					break;
+
+				case '3':
+					$response[$i]['tipo_upgrade'] = 'Pasajero General';
+					break;
+
+				case '4':
+					$response[$i]['tipo_upgrade'] = 'Por Dia por Voucher';
+					break;
+
+				case '5':
+					$response[$i]['tipo_upgrade'] = 'Por Dia por Pasajero';
+					break;
+
+				default:
+					$response[$i]['tipo_upgrade'] = $response[$i]['rd_calc_type'];
+					break;
+			}
+		}
+		return $response;
 	}
 
 	public function getOverageInFactors($filters)
