@@ -938,6 +938,9 @@ class get_functions extends general_functions
 					$response[$i]['subTotalMenores'] = $response[$i]['arrUsedPrices'][0]['pvpSubTotal'];
 				}
 			}
+			$response[$i]['normal_age'] = (int) $response[$i]['normal_age'];
+			$response[$i]['max_age']    = (int) $response[$i]['max_age'];
+			$response[$i]['min_age']    = (int) $response[$i]['min_age'];
 		}
 
 		if ($prefix == 'BT') { //Aplica para BTA
@@ -2246,7 +2249,8 @@ class get_functions extends general_functions
 							raiders.specific_benefit,
 							raiders.limiteage,
 							raiders.limiteedadmin,
-							raiders.limiteedadmax
+							raiders.limiteedadmax,
+							raiders.id_raider
 						FROM
 							plan_raider
 						INNER JOIN raiders ON plan_raider.id_raider = raiders.id_raider
