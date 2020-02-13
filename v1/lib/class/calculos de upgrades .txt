@@ -1,0 +1,65 @@
+PASAJERO GENERAL                                        
+valor: (valor_raider * cant_pasjaeros)
+%: ((valor_raider * sub_total) / 100)
+
+POR DIA POR VOUCHER                                     
+monto: (valor_raider * cant_dias)
+%:  (((valor_raider * sub total) / 100) por cant_dias)
+
+
+POR DIA POR PASAJERO
+monto: ((valor_raider * cant_dias) por cant_pasajero)
+%: ((((sub_total * valor_raider) / 100) por cant_dias)  por cant_pasajero)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---------------------------------------------------------------------
+
+1 COMPROBANTE
+valor: valor_raider
+%	 : (valor_raider / 100) * sub_total
+
+---------------------------------------------------------------------
+
+2 PASAJERO ESPECIFICO (Igual tan solo que "sub_total" es el total del pasajero)
+valor: valor_raider
+%	 : (valor_raider / 100) * sub_total
+
+---------------------------------------------------------------------
+
+3 PASAJERO GENERAL
+valor: valor_raider * n_pasajeros
+%	 : (valor_raider / 100) * sub_total
+
+---------------------------------------------------------------------
+
+4 POR DIA POR VOUCHER
+valor: valor_raider * n_dias
+%	 : ((valor_raider / 100)  sub_total)  n_dias
+
+---------------------------------------------------------------------
+
+5 POR DIA POR PASAJERO
+valor: valor_raider  n_dias  n_pasajeros
+%	 : ((valor_raider / 100)  sub_total)  n_dias * n_pasajeros
