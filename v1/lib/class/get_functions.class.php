@@ -293,6 +293,7 @@ class get_functions extends general_functions
 				'total',
 				'vendedor',
 				'cupon',
+				'cupon_descto',
 				'codeauto',
 				'procesado',
 				'response',
@@ -318,7 +319,7 @@ class get_functions extends general_functions
 			$arrWhere['agencia'] = $idBroker;
 		}
 		if (!empty($code)) {
-			$codeWhere = "codigo LIKE '%$code%'";
+			$codeWhere = " codigo LIKE '%$code%' ";
 		}
 
 		$arrWhere['orders.prefijo'] = $prefix;
@@ -326,25 +327,65 @@ class get_functions extends general_functions
 		if (!empty($name)) {
 			$name = trim($name);
 			$nameSearch = explode(' ', $name);
-			$arrJoin = [
-				'table'		=> 'beneficiaries',
-				'field'		=> "id_orden AND beneficiaries.prefijo = orders.prefijo AND (concat_ws(' ', TRIM(BOTH ' ' FROM beneficiaries.nombre),
-					TRIM(BOTH ' ' FROM beneficiaries.apellido)) LIKE '%$name%'
-					OR (TRIM(BOTH ' ' FROM beneficiaries.nombre) LIKE '%$nameSearch[0]%'
-					AND TRIM(BOTH ' ' FROM beneficiaries.apellido) LIKE '%$nameSearch[1]%')
-					OR (TRIM(BOTH ' ' FROM beneficiaries.nombre) LIKE '%$nameSearch[1]%'
-					AND TRIM(BOTH ' ' FROM beneficiaries.apellido) LIKE '%$nameSearch[0]%'))",
-				'fieldComp'	=> 'id'
-			];
+			$arrJoin = " AND orders.prefijo = plans.prefijo
+			AND (
+				concat_ws(
+					' ',
+					TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.nombre
+					),
+					TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.apellido
+					)
+				) LIKE '%$name%'
+				OR (
+					TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.nombre
+					) LIKE '%$nameSearch[0]%'
+					AND TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.apellido
+					) LIKE '%$nameSearch[1]%'
+				)
+				OR (
+					TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.nombre
+					) LIKE '%$nameSearch[1]%'
+					AND TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.apellido
+					) LIKE '%$nameSearch[0]%'
+				)
+			) ";
+			// $arrJoin = [
+			// 	'table'		=> 'beneficiaries',
+			// 	'field'		=> "id_orden AND beneficiaries.prefijo = orders.prefijo AND (concat_ws(' ', TRIM(BOTH ' ' FROM beneficiaries.nombre),
+			// 		TRIM(BOTH ' ' FROM beneficiaries.apellido)) LIKE '%$name%'
+			// 		OR (TRIM(BOTH ' ' FROM beneficiaries.nombre) LIKE '%$nameSearch[0]%'
+			// 		AND TRIM(BOTH ' ' FROM beneficiaries.apellido) LIKE '%$nameSearch[1]%')
+			// 		OR (TRIM(BOTH ' ' FROM beneficiaries.nombre) LIKE '%$nameSearch[1]%'
+			// 		AND TRIM(BOTH ' ' FROM beneficiaries.apellido) LIKE '%$nameSearch[0]%'))",
+			// 	'fieldComp'	=> 'id'
+			// ];
 		}
 
 		if (!empty($document)) {
-
-			$arrJoin = [
-				'table' => 'beneficiaries',
-				'field' => "id_orden AND beneficiaries.prefijo = orders.prefijo AND beneficiaries.documento LIKE '%$document%'",
-				'fieldComp' => 'id'
-			];
+			$arrJoin = " AND beneficiaries.documento LIKE '%$document%' ";
+			// $arrJoin = [
+			// 	'table' => "beneficiaries",
+			// 	'field' => "id_orden AND beneficiaries.prefijo = orders.prefijo AND beneficiaries.documento LIKE '%$document%'",
+			// 	'fieldComp' => "id"
+			// ];
 			$arrLimit = ['min' => $min, 'max' => $max];
 			array_push($valueOrders, 'beneficiaries.documento');
 		}
@@ -367,14 +408,14 @@ class get_functions extends general_functions
 		$arr;
 		if (!empty($userType) &&  in_array($userType, [5, 2])) { ////// usuario tipo 5 broker access solo vera de su agencia y 2 es broker admin su agencia y las debajo de ella
 			$id_agencia =  $this->agencyBroker($id_user, $userType, $prefix)[0]["id_associate"];
-			$arrWhere['orders.agencia'] = $id_agencia;
+			$arrWhere['orders.agencia'] = $id_agencia ?: 0;
 
 			if (in_array($userType, [2])) { ////// usuario tipo 2 broker admin vera vouchers de ella y sus agencias hijas
 				$arrWhere['orders.agencia'] = null;
 				$broker_nivel = $this->agencysChildren($id_agencia, $prefix);
 				if ($broker_nivel) {
 					$arrBrokers = $broker_nivel;
-					array_push($arrBrokers, $id_agencia);
+					array_push($arrBrokers, (($id_agencia) ?: 0));
 					$arrBrokers = array_values($arrBrokers); //agencias hijas y su agencia master
 					$arr = implode(',', array_unique($arrBrokers));
 				} else {
@@ -394,14 +435,17 @@ class get_functions extends general_functions
 			JOIN plan_category ON plan_category.id_plan_categoria = plans.id_plan_categoria
 			AND plan_category.prefijo = plans.prefijo
 			JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
-			AND plan_categoria_detail.prefijo = plan_category.prefijo AND plan_categoria_detail.language_id = '$lang_app' ",
+			AND plan_categoria_detail.prefijo = plan_category.prefijo AND plan_categoria_detail.language_id = '$lang_app' 
+			INNER JOIN beneficiaries ON orders.id = beneficiaries.id_orden
+			AND beneficiaries.prefijo = orders.prefijo " . $arrJoin,
 			"$codeWhere",
 			$valueOrders,
 			false,
 			$arrLimit,
 			["field" => "fecha", "order" => "DESC"],
 			$between,
-			$arrJoin
+			false //$arrJoin,
+			//true
 		);
 
 		foreach ($dataOrders as $key => &$value) {
@@ -613,6 +657,96 @@ class get_functions extends general_functions
 		}
 
 		return $response;
+	}
+
+
+	public function getCuponDescuento($filters)
+	{
+		$prefix 	  = $filters['prefix'];
+		$userType 	  = $filters['userType'];
+		$id_user	  = $filters['id_user'];
+		$id_broker    = ($filters['agency'] != 'N/A' && !empty($filters['agency'])) ? $filters['agency'] : 118;
+		$idPlan       = $filters['idPlan'];
+		$cupon        = $filters['cupon'];
+		$subTotal     = str_replace(',', '', $filters['subTotal']);
+		$destino      = $filters['destino'];
+		$numpasajeros = $filters['numpasajeros'];
+		$moneda_local = $filters['moneda_local'];
+		$tasa_cambio  = $filters['tasa_cambio'];
+		$lang_app     = "es";
+		$lang_app     = $this->funcLangAppShort($this->funcLangApp());
+
+		$dataValida	= [
+			"9092"  => $prefix,
+			"50005" => $id_user,
+			"5022"  => $idPlan,
+			'50018'	=> $cupon,
+			'50019'	=> $subTotal,
+			'50007'	=> $destino,
+			'50020'	=> $numpasajeros
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$dataQuote = [
+			'id_user'        => $id_user,
+			'user_type'      => $userType,
+			'broker_sesion'  => $id_broker, //parametro que recibe el core.lib de la plataforma para cargar los parametros de la agencia 
+			'type'			 => 'descuento',
+			'selectLanguage' => $lang_app,
+			'cod_promocional' => $cupon,
+			'monto_cancelar' => $subTotal,
+			'iduser'         => $id_user,
+			'IdUser_type'    => $userType,
+			'destino'        => $destino,
+			'plan_producto'  => $idPlan,
+			'id_broker'      => $id_broker,
+			'numpasajeros'   => $numpasajeros,
+			'moneda_local'   => $moneda_local,
+			'tasa_cambio'    => $tasa_cambio
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkQuote 	= $link . "/app/pages/async_cotizador.php";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$resp = $this->curlGeneral($linkQuote, $dataQuote, $headers, 'GET');
+		$resp = json_decode($resp, true);
+
+		if ($resp['STATUS'] == 'OK') {
+			$dataCurl = [
+				'querys' => "SELECT
+					id,
+					codigo,
+					codigo_secundario,
+					porcentaje,
+					credit_amount
+				FROM
+					coupons
+				WHERE
+					codigo = '$cupon'
+				OR codigo_secundario = '$cupon'
+				AND id_status = 1 "
+			];
+
+			$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+			$linkplatf = $link . "/app/api/selectDynamic";
+			$headers 	= "content-type: application/x-www-form-urlencoded";
+			$respuesta = $this->curlGeneral($linkplatf, json_encode($dataCurl), $headers);
+			$resp2 = json_decode($respuesta, true);
+
+			if ((float) $resp2[0]['porcentaje'] > 0) {
+				$resp['VALUE_CUPON'] = (float) $resp2[0]['porcentaje'];
+				$resp['TIPO_CALC']   = '%';
+				$resp['SUBTOTAL']    = (float) $subTotal;
+			} else {
+				$resp['VALUE_CUPON'] = (float) $resp2[0]['credit_amount'];
+				$resp['TIPO_CALC']   = 'monto';
+				$resp['SUBTOTAL']    = (float) $subTotal;
+			}
+			return $resp;
+		} else {
+			return $resp;
+		}
 	}
 
 	public function getDatosUser($filters)
@@ -842,20 +976,8 @@ class get_functions extends general_functions
 		$today 	   = $this->datePlatform($prefix)[0]['date']; //Obtengo la fecha del servidor que cotizo mas no la de ils
 		$lang_app  = "es";
 		$id_plan_cotiza = (!empty($filters['idPlan'])) ? $filters['idPlan'] : '';
-
-		switch ($this->funcLangApp()) {
-			case 'spa':
-				$lang_app = "es";
-				break;
-
-			case 'eng':
-				$lang_app = "en";
-				break;
-
-			default:
-				$lang_app = "es";
-				break;
-		};
+		$lang_app  = $this->funcLangAppShort($this->funcLangApp());
+		$dataPreOrdn = $filters['dataPreOrder'];
 
 		$dataValida	= [
 			"9092"  => $prefix,
@@ -914,33 +1036,37 @@ class get_functions extends general_functions
 		$response   = json_decode($respons, true);
 
 		for ($i = 0; $i < count($response); $i++) { //Simplifica precios
-
-			if (count($response[$i]['arrUsedPrices']) > 1) { //si tiene menores y mayores
-				if ($response[$i]['arrUsedPrices'][1]) { ////si es mayor
-					$response[$i]['numero_mayores'] = $response[$i]['arrUsedPrices'][1]['numPas'];
-					$response[$i]['valorMayor'] = $response[$i]['arrUsedPrices'][1]['pvpBase'];
-					$response[$i]['subTotalMayor'] = $response[$i]['arrUsedPrices'][1]['pvpSubTotal'];
+			if (!empty($response[$i]['arrUsedPrices'])) {
+				if (count($response[$i]['arrUsedPrices']) > 1) { //si tiene menores y mayores
+					if ($response[$i]['arrUsedPrices'][1]) { ////si es mayor
+						$response[$i]['numero_mayores'] = $response[$i]['arrUsedPrices'][1]['numPas'];
+						$response[$i]['valorMayor'] = $response[$i]['arrUsedPrices'][1]['pvpBase'];
+						$response[$i]['subTotalMayor'] = $response[$i]['arrUsedPrices'][1]['pvpSubTotal'];
+					}
+					if ($response[$i]['arrUsedPrices'][0]) { ///si es menor
+						$response[$i]['numero_menores'] = $response[$i]['arrUsedPrices'][0]['numPas'];
+						$response[$i]['valorMenor'] = $response[$i]['arrUsedPrices'][0]['pvpBase'];
+						$response[$i]['subTotalMenores'] = $response[$i]['arrUsedPrices'][0]['pvpSubTotal'];
+					}
+				} else {
+					if ($response[$i]['arrUsedPrices'][0]['ageMin'] > $response[$i]['normal_age']) { ///si tiene solo mayores
+						$response[$i]['numero_mayores'] = $response[$i]['arrUsedPrices'][0]['numPas'];
+						$response[$i]['valorMayor'] = $response[$i]['arrUsedPrices'][0]['pvpBase'];
+						$response[$i]['subTotalMayor'] = $response[$i]['arrUsedPrices'][0]['pvpSubTotal'];
+					}
+					if ($response[$i]['arrUsedPrices'][0]['ageMin'] <= $response[$i]['normal_age']) { ///si tiene solo menores
+						$response[$i]['numero_menores'] = $response[$i]['arrUsedPrices'][0]['numPas'];
+						$response[$i]['valorMenor'] = $response[$i]['arrUsedPrices'][0]['pvpBase'];
+						$response[$i]['subTotalMenores'] = $response[$i]['arrUsedPrices'][0]['pvpSubTotal'];
+					}
 				}
-				if ($response[$i]['arrUsedPrices'][0]) { ///si es menor
-					$response[$i]['numero_menores'] = $response[$i]['arrUsedPrices'][0]['numPas'];
-					$response[$i]['valorMenor'] = $response[$i]['arrUsedPrices'][0]['pvpBase'];
-					$response[$i]['subTotalMenores'] = $response[$i]['arrUsedPrices'][0]['pvpSubTotal'];
-				}
-			} else {
-				if ($response[$i]['arrUsedPrices'][0]['ageMin'] > $response[$i]['normal_age']) { ///si tiene solo mayores
-					$response[$i]['numero_mayores'] = $response[$i]['arrUsedPrices'][0]['numPas'];
-					$response[$i]['valorMayor'] = $response[$i]['arrUsedPrices'][0]['pvpBase'];
-					$response[$i]['subTotalMayor'] = $response[$i]['arrUsedPrices'][0]['pvpSubTotal'];
-				}
-				if ($response[$i]['arrUsedPrices'][0]['ageMin'] <= $response[$i]['normal_age']) { ///si tiene solo menores
-					$response[$i]['numero_menores'] = $response[$i]['arrUsedPrices'][0]['numPas'];
-					$response[$i]['valorMenor'] = $response[$i]['arrUsedPrices'][0]['pvpBase'];
-					$response[$i]['subTotalMenores'] = $response[$i]['arrUsedPrices'][0]['pvpSubTotal'];
+				$response[$i]['normal_age'] = (int) $response[$i]['normal_age'];
+				$response[$i]['max_age']    = (int) $response[$i]['max_age'];
+				$response[$i]['min_age']    = (int) $response[$i]['min_age'];
+				if (count($response[$i]['arrPrices']) > 0) {
+					$response[$i]['calc_new'] = 'Y'; /////parametro para saber si son calculos nuevos 
 				}
 			}
-			$response[$i]['normal_age'] = (int) $response[$i]['normal_age'];
-			$response[$i]['max_age']    = (int) $response[$i]['max_age'];
-			$response[$i]['min_age']    = (int) $response[$i]['min_age'];
 		}
 
 		if ($prefix == 'BT') { //Aplica para BTA
@@ -997,9 +1123,94 @@ class get_functions extends general_functions
 				}
 			} else {
 				//$this->ordenarArray($response, 'name_plan'); //ordenar por nombre
+				$PreOrd = $this->preOrderApp($dataPreOrdn);
+				$response[0]['preOrden'] =  $PreOrd;
 				return $response;
 			}
 		}
+	}
+
+	public function getListMethodPagoApp($filters)
+	{
+		$prefix	   = $filters['prefix'];
+
+		$dataValida	= [
+			"9092"  => $prefix
+		];
+		$this->validatEmpty($dataValida);
+
+		$dataCurl = [
+			"querys" => "SELECT
+			parameter_key,
+			parameter_value
+		FROM
+			parameters
+		WHERE
+			parameter_key IN (
+				'PAY_CREDIT_CARD',
+				'USE_PAYPAL'
+			)"
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkParam 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$response   = json_decode($this->curlGeneral($linkParam, json_encode($dataCurl), $headers), true);
+
+		for ($i = 0; $i < count($response); $i++) {
+			if ($response[$i]['parameter_key'] == 'PAY_CREDIT_CARD' && (int) $response[$i]['parameter_value'] >= 1) {
+				$respons['PAY_CREDIT_CARD'] =  (int) $response[$i]['parameter_value'];
+			}
+			if ($response[$i]['parameter_key'] == 'USE_PAYPAL' && (int) $response[$i]['parameter_value'] == 1) {
+				$respons['USE_PAYPAL'] = (int) $response[$i]['parameter_value'];
+			}
+		}
+
+		return array_merge($response, $respons);
+	}
+
+	public function getTermCond($filters)
+	{
+		$prefix	   = $filters['prefix'];
+		$lang	   = $this->funcLangApp();
+		$idPlan    = $filters['idPlan'];
+		$dataPreOrdn = $filters['dataPreOrder'];
+
+		$dataValida	= [
+			"9092"  => $prefix,
+			"6021"  => $lang,
+			"5022"  => $idPlan
+		];
+		$this->validatEmpty($dataValida);
+		$dataCurl1 = [
+			'lang'     => $lang,
+			'typeCond' => 'CONDICIONADO_GENERAL',
+			'idPlan'   => $idPlan
+		];
+		$dataCurl2 = [
+			'lang'     => $lang,
+			'typeCond' => 'POLITICAS_PRIVACIDAD'
+		];
+		$dataCurl3 = [
+			'lang'     => $lang,
+			'typeCond' => 'POLITICAS_RENOVACION'
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkParam 	= $link . "/app/api/termCondApp";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$respons1    = json_decode($this->curlGeneral($linkParam, json_encode($dataCurl1), $headers), true);
+		$respons2    = json_decode($this->curlGeneral($linkParam, json_encode($dataCurl2), $headers), true);
+		$respons3    = json_decode($this->curlGeneral($linkParam, json_encode($dataCurl3), $headers), true);
+
+		$response = [
+			'COND_GEN' => $respons1,
+			'POL_PRIV' => $respons2,
+			'POL_REN'  => $respons3,
+			'idPreOrd' => $this->preOrderApp($dataPreOrdn),
+			'data'     => json_decode($dataPreOrdn, true)
+		];
+		return $response;
 	}
 
 	public function getPrices($filters, $apikey)
