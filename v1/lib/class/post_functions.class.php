@@ -38,20 +38,8 @@ class post_functions extends general_functions
 		$nameQuote	 = $this->data['name'];
 		$agesQuote 	 = $this->data['ages'];
 		$passQuote 	 = count(explode(',', $agesQuote));
-		$lang_app = "es";
-		switch ($this->funcLangApp()) {
-			case 'spa':
-				$lang_app = "es";
-				break;
-
-			case 'eng':
-				$lang_app = "en";
-				break;
-
-			default:
-				$lang_app = "es";
-				break;
-		};
+		$lang_app    = "es";
+		$lang_app    = $this->funcLangAppShort($this->funcLangApp());
 
 		$dataValida			= [
 			"6027"  => $origin,
@@ -99,9 +87,11 @@ class post_functions extends general_functions
 		$linkQuote 	= $link . "/app/pages/async_cotizador.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$resp = $this->curlGeneral($linkQuote, $dataQuote, $headers, 'GET');
+		$preOrd = $this->preOrderApp(json_encode(array_merge($_GET, $_POST)));
 		return [
 			'resp'      => strip_tags($resp),
-			'status'	=> 'OK'
+			'status'	=> 'OK',
+			'data'      => $preOrd
 		];
 	}
 	public function postParamPlatform()
@@ -265,25 +255,131 @@ class post_functions extends general_functions
 		$this->curlGeneral($linkSms, http_build_query($dataSmsResponse), $headers);
 		return $response;
 	}
+	public function postUpdatePreorden()
+	{
+		$allData        = json_encode(array_merge($_GET, $this->data));
+		return [
+			'preord' => json_decode($this->preOrderApp($allData), true),
+			'data'   => json_decode($allData)
+		];
+	}
+	public function postPagoCreditCard()
+	{
+		return $allData        = array_merge($_GET, json_decode($_POST['data'], true), $_POST);
+		
+		$prefix         = $allData['prefix'];
+		$cardNumber   	= $allData['TDC']["codigoTarjeta"];
+		$cardExpiry   	= $allData['TDC']["yearTarjetaVen"] . '-' . (int) $allData['TDC']["mesTarjetaVen"];
+		$cardCvv      	= $allData['TDC']["CCV"];
+		$cardName     	= $allData['TDC']["nombreTarjeta"];
+		$cardLastname 	= $allData['TDC']["apellidoTarjeta"];
+		$cardType     	= $allData['TDC']["tipoTarjeta"];
+		$orden        	= $allData["id_orden"];
+		$preOrden     	= $allData["idPreOrden"];
+		$invoice      	= !empty($allData["voucher"]) ? $allData["voucher"] : $this->genCodeigoOrden($prefix);
+		$attempt     	= $allData["intento"];
+		$id_broker 		= ($allData['agency'] != 'N/A' && !empty($allData['agency'])) ? $allData['agency'] : 118;
+		$lang_app  		= $this->funcLangAppShort($this->funcLangApp());
+		$userType 	  	= $allData['userType'];
+		$id_user	  	= !empty($allData['id_user']) ? $allData['id_user'] : 0;
+		$dataPasajeros  = json_decode($_POST['data'], true)['dataPasajeros'];
+		for ($i = 0; $i < count($dataPasajeros); $i++) {
+			$dataPasajeros[$i]['codigoVoucher'] = $invoice;
+		}
+		$this->preOrderApp(json_encode($allData));
+
+		$dataValida = [
+			'9092'	=> $prefix,
+			'50022'	=> $cardNumber,
+			'50023'	=> $cardExpiry,
+			'50024'	=> $cardCvv,
+			'50025'	=> $cardName,
+			'50026'	=> $cardLastname,
+			'50027'	=> $cardType,
+			'50029'	=> $preOrden,
+			'50030'	=> $invoice,
+			'50031' => ($attempt + 1)
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$dataCurl = [
+			'type' 				=> 'payment',
+			"numero_tarjeta" 	=> $cardNumber,
+			"fecha_expiracion"	=> $cardExpiry,
+			"cvv"				=> $cardCvv,
+			"nombre"			=> $cardName,
+			"apellido"			=> $cardLastname,
+			"tipo_t"			=> $cardType,
+			"orden"				=> $orden,
+			"pre_orden"			=> $preOrden,
+			"voucher"			=> $invoice,
+			"intento"			=> $attempt,
+			'id_broker'         => $id_broker,
+			'broker_sesion'     => $id_broker,
+			'selectLanguage'    => $lang_app,
+			'id_user'           => $id_user,
+			'user_type'         => $userType,
+			'Datos_Pasajeros'   => $dataPasajeros
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkPlatf 	= $link . "/app/pages/async_cotizador.php";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$response   = json_decode($this->curlGeneral($linkPlatf, $dataCurl, $headers, 'GET'), true);
+		$response['code_orden'] = $invoice;
+		$response['dataApp']    = $dataCurl;
+		$response['dataPasaj']  = json_encode($dataPasajeros);
+
+		if ($response['code'] == 0) {
+			switch ($response['error']['code']) {
+				case '27':
+					///Se ha producido un error al procesar esta transacción.
+					$response['error']['elem_app'] = 'PAY_CREDIT_CARD';
+					break;
+
+				case '6':
+					///Se ha producido un error codigo de tarjeta
+					$response['error']['elem_app'] = 'codigoTarjeta';
+					break;
+
+				case '7':
+					///Se ha producido un error mes de vencimiento de tarjeta 
+					$response['error']['elem_app'] = 'mesTarjetaVen';
+					break;
+
+				case '8':
+					///Se ha producido un error tarjeta vencida caducada
+					$response['error']['elem_app'] = 'mesTarjetaVen';
+					break;
+
+				case '11':
+					///Se ha producido una transaccion duplicada
+					$response['error']['elem_app'] = 'PAY_CREDIT_CARD';
+					break;
+
+				case '17':
+					///Se ha producido una transaccion duplicada
+					$response['error']['elem_app'] = 'codigoTarjeta';
+					break;
+
+				default:
+					$response['error']['elem_app'] = 'codigoTarjeta';
+					break;
+			}
+		}
+
+		return $response;
+	}
+
 	public function sendVouchEmail()
 	{
 		$id_orden = $this->data['id_orden'];
 		$email    = $this->data['email'];
 		$prefix   = $this->data['prefix'];
 		$lang_app = "es";
-		switch ($this->funcLangApp()) {
-			case 'spa':
-				$lang_app = "es";
-				break;
+		$lang_app = $this->funcLangAppShort($this->funcLangApp());
 
-			case 'eng':
-				$lang_app = "en";
-				break;
-
-			default:
-				$lang_app = "es";
-				break;
-		};
 		$dataValida			= [
 			"40098" => $id_orden,
 			'4004'	=> $email,
@@ -1687,6 +1783,7 @@ class post_functions extends general_functions
 			}
 		}
 	}
+
 	public function checkPreorder($data)
 	{
 		$quoteGeneral 					= new quote_general_new();

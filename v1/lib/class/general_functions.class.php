@@ -284,7 +284,52 @@ class general_functions extends Model
                 $lang = 'spa';
                 break;
         }
+        if (($lang != 'spa') && ($lang != 'por') && (strtoupper($_GET['prefix']) == 'RC')) {
+            $lang = 'spa';
+        }
         return $lang;
+    }
+
+    public function genCodigoOrden($prefix)
+    {
+        $dataCurl   = ['prefix' => $prefix];
+        $link         = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+        $linkParam     = $link . "/app/api/genCodeOrderApp";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+        $respons    = $this->curlGeneral($linkParam, json_encode($dataCurl), $headers);
+        return json_decode($respons, true);
+    }
+
+    public function funcLangAppShort($lang)
+    {
+        $lang_short = 'es';
+
+        switch ($lang) {
+            case 'spa':
+                $lang_short = "es";
+                break;
+
+            case 'eng':
+                $lang_short = "en";
+                break;
+
+            case 'por':
+                $lang_short = 'pr';
+                break;
+
+            case 'fra':
+                $lang_short = 'fr';
+                break;
+
+            case 'deu':
+                $lang_short = 'de';
+                break;
+
+            default:
+                $lang_short = "es";
+                break;
+        }
+        return $lang_short;
     }
 
     public function logsave($request, $response, $operacion, $procedencia, $apikey = '', $id_error = '', $num_voucher = '', $num_referencia = '')
@@ -333,7 +378,7 @@ class general_functions extends Model
         $oldGeneralLog = $this->genera_log;
         $this->genera_log = false;
 
-        $return = $this->insertDynamic($data, 'trans_all_webservice');
+        $return = $this->insertDynamic($data, 'trans_all_api_app');
 
         $this->genera_log = $oldGeneralLog;
 
@@ -357,6 +402,87 @@ class general_functions extends Model
     {
         $obj = json_decode(file_get_contents($object));
         return $objArr = (array) $obj;
+    }
+    public function preOrderApp($dataPreorder)
+    {
+        $dataP = json_decode($dataPreorder, true);
+        if (count($dataP) == 0) {
+            return ['id' => ''];
+        }
+        $prefix              = $_GET['prefix'] ? $_GET['prefix'] : ($dataP['prefix'] ? $dataP['prefix'] : '');
+        $FechaSalida         = date('Y-m-d', strtotime(str_replace('/', '-', $dataP['FechaSalida'])));
+        $FechaLlegada        = date('Y-m-d', strtotime(str_replace('/', '-', $dataP['FechaLlegada'])));
+        $nacimiento0         = $dataP['nacimiento0'];
+        $nacimiento1         = $dataP['nacimiento1'];
+        $nacimiento2         = $dataP['nacimiento2'];
+        $nacimiento3         = $dataP['nacimiento3'];
+        $nacimiento4         = $dataP['nacimiento4'];
+        $nacimiento5         = $dataP['nacimiento5'];
+        $nacimiento6         = $dataP['nacimiento6'];
+        $nacimiento7         = $dataP['nacimiento7'];
+        $nacimiento8         = $dataP['nacimiento8'];
+        $usuario_id          = $_GET['id_user'] ? $_GET['id_user'] : ($dataP['id_user'] ? $dataP['id_user'] : 0);
+        $pasajeros           = $dataP['pasajeros'];
+        $id_preorden         = (!empty($dataP['id_preorden']) && (int) $dataP['id_preorden'] > 0) ? (int) $dataP['id_preorden'] : null;
+        $paso                = $dataP['paso'];
+        $id_plan_categoria   = $dataP['id_plan_categoria'];
+        $id_plan             = $dataP['id_plan'];
+        $origen              = $dataP['origen'];
+        $destino             = $dataP['destino'];
+        $cantidad            = count($dataP['edades']);
+        $id_agencia          = ($_GET['agency'] && $_GET['agency'] != 'N/A') ? $_GET['agency'] : (($dataP['agency'] && $dataP['agency'] != 'N/A') ? $dataP['agency'] : 118);
+        $respuesta           = $dataP['respuesta'];
+        $codigo              = $dataP['codigo'];
+        $email_usado         = $dataP['email_usado'];
+        $estatus             = $dataP['estatus'];
+        $site_access         = 'APP';
+        $usedCode            = $dataP['usedCode'];
+        $lang_app            = $this->funcLangAppShort($this->funcLangApp());
+        $idBroker            = $id_agencia;
+        $userType            = $_GET['userType'];
+
+        $dataCurl = [
+            'type'                    => 'add_preorden_select',
+            'usuario_id'              => $usuario_id,
+            'user_type'               => $userType,
+            'broker_sesion'           => $idBroker, //parametro que recibe el core.lib de la plataforma para cargar los parametros de la agencia 
+            'id_broker'               => $idBroker, //parametro que recibe el async_cotizador
+            'selectLanguage'          => $lang_app,
+            'FechaSalida'             => $FechaSalida,
+            'FechaLlegada'            => $FechaLlegada,
+            'nacimiento0'             => $nacimiento0,
+            'nacimiento1'             => $nacimiento1,
+            'nacimiento2'             => $nacimiento2,
+            'nacimiento3'             => $nacimiento3,
+            'nacimiento4'             => $nacimiento4,
+            'nacimiento5'             => $nacimiento5,
+            'nacimiento6'             => $nacimiento6,
+            'nacimiento7'             => $nacimiento7,
+            'nacimiento8'             => $nacimiento8,
+            'pasajeros'               => $pasajeros,
+            'data_pasos'              => $dataP,
+            'id_preorden'             => $id_preorden,
+            'paso'                    => $paso,
+            'id_plan_categoria'       => $id_plan_categoria,
+            'id_plan'                 => $id_plan,
+            'origen'                  => $origen,
+            'destino'                 => $destino,
+            'cantidad'                => $cantidad,
+            'id_agencia'              => $id_agencia,
+            'respuesta'               => $respuesta,
+            'codigo'                  => $codigo,
+            'email_usado'             => $email_usado,
+            'estatus'                 => $estatus,
+            'site_access'             => $site_access,
+            'usedCode'                => $usedCode
+        ];
+
+        $link         = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+        $linkQuote     = $link . "/app/pages/async_cotizador.php";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+        $resp = $this->curlGeneral($linkQuote, http_build_query($dataCurl), $headers);
+
+        return $resp;
     }
     function getCountryAgency($apikey)
     {
@@ -1014,7 +1140,7 @@ class general_functions extends Model
         ));
         $response = curl_exec($curl);
         $err = curl_error($curl);
-        return $response;
+        return $response ? $response : $err;
     }
     public function verifyOrigin($origin)
     {
