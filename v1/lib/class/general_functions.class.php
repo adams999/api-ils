@@ -290,7 +290,7 @@ class general_functions extends Model
         return $lang;
     }
 
-    public function genCodeigoOrden($prefix)
+    public function genCodigoOrden($prefix)
     {
         $dataCurl   = ['prefix' => $prefix];
         $link         = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
@@ -480,9 +480,9 @@ class general_functions extends Model
         $link         = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
         $linkQuote     = $link . "/app/pages/async_cotizador.php";
         $headers     = "content-type: application/x-www-form-urlencoded";
-        $resp = $this->curlGeneral($linkQuote, $dataCurl, $headers, 'GET');
+        $resp = $this->curlGeneral($linkQuote, http_build_query($dataCurl), $headers);
 
-        return $resp = json_decode($resp, true);
+        return $resp;
     }
     function getCountryAgency($apikey)
     {
@@ -1140,7 +1140,7 @@ class general_functions extends Model
         ));
         $response = curl_exec($curl);
         $err = curl_error($curl);
-        return $response;
+        return $response ? $response : $err;
     }
     public function verifyOrigin($origin)
     {

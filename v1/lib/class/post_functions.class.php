@@ -255,9 +255,18 @@ class post_functions extends general_functions
 		$this->curlGeneral($linkSms, http_build_query($dataSmsResponse), $headers);
 		return $response;
 	}
-	public function pagoCreditCard()
+	public function postUpdatePreorden()
 	{
-		$allData        = array_merge($_GET, json_decode($_POST['data'], true), $_POST);
+		$allData        = json_encode(array_merge($_GET, $this->data));
+		return [
+			'preord' => json_decode($this->preOrderApp($allData), true),
+			'data'   => json_decode($allData)
+		];
+	}
+	public function postPagoCreditCard()
+	{
+		return $allData        = array_merge($_GET, json_decode($_POST['data'], true), $_POST);
+		
 		$prefix         = $allData['prefix'];
 		$cardNumber   	= $allData['TDC']["codigoTarjeta"];
 		$cardExpiry   	= $allData['TDC']["yearTarjetaVen"] . '-' . (int) $allData['TDC']["mesTarjetaVen"];
@@ -277,6 +286,7 @@ class post_functions extends general_functions
 		for ($i = 0; $i < count($dataPasajeros); $i++) {
 			$dataPasajeros[$i]['codigoVoucher'] = $invoice;
 		}
+		$this->preOrderApp(json_encode($allData));
 
 		$dataValida = [
 			'9092'	=> $prefix,
@@ -286,7 +296,6 @@ class post_functions extends general_functions
 			'50025'	=> $cardName,
 			'50026'	=> $cardLastname,
 			'50027'	=> $cardType,
-			//'50028'	=> $orden,
 			'50029'	=> $preOrden,
 			'50030'	=> $invoice,
 			'50031' => ($attempt + 1)

@@ -1124,7 +1124,7 @@ class get_functions extends general_functions
 			} else {
 				//$this->ordenarArray($response, 'name_plan'); //ordenar por nombre
 				$PreOrd = $this->preOrderApp($dataPreOrdn);
-				$response[0]['preOrden'] =  $PreOrd;
+				$response[0]['preOrden'] = json_decode($PreOrd, true);
 				return $response;
 			}
 		}
@@ -1174,7 +1174,6 @@ class get_functions extends general_functions
 		$prefix	   = $filters['prefix'];
 		$lang	   = $this->funcLangApp();
 		$idPlan    = $filters['idPlan'];
-		$dataPreOrdn = $filters['dataPreOrder'];
 
 		$dataValida	= [
 			"9092"  => $prefix,
@@ -1206,9 +1205,7 @@ class get_functions extends general_functions
 		$response = [
 			'COND_GEN' => $respons1,
 			'POL_PRIV' => $respons2,
-			'POL_REN'  => $respons3,
-			'idPreOrd' => $this->preOrderApp($dataPreOrdn),
-			'data'     => json_decode($dataPreOrdn, true)
+			'POL_REN'  => $respons3
 		];
 		return $response;
 	}
