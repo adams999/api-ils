@@ -29,7 +29,9 @@ class post_functions extends general_functions
 		$prefix 	 = $this->data['prefix'];
 		$category 	 = $this->data['category'];
 		$plans		 = $this->data['plans'];
-		//$plans 		 = explode(',',$plans);
+		$plans 		 = explode(',', $plans);
+		$plans       = array_unique($plans);
+		$plans       = implode(',', $plans);
 		$startDate	 = $this->data['startDate'];
 		$endDate	 = $this->data['endDate'];
 		$destination = $this->data['destination'];
@@ -54,7 +56,7 @@ class post_functions extends general_functions
 			//'9095'	=> is_array($agesQuote),
 			'9092'	=> $prefix
 		];
-		$validatEmpty		= $this->validatEmpty($dataValida);
+		$this->validatEmpty($dataValida);
 		$departureTrans     = $this->transformerDate($startDate);
 		$arrivalTrans     	= $this->transformerDate($endDate);
 		$daysByPeople 		= $this->betweenDates($departureTrans, $arrivalTrans);
@@ -87,11 +89,11 @@ class post_functions extends general_functions
 		$linkQuote 	= $link . "/app/pages/async_cotizador.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$resp = $this->curlGeneral($linkQuote, $dataQuote, $headers, 'GET');
-		$preOrd = $this->preOrderApp(json_encode(array_merge($_GET, $_POST)));
+		$preOrd = $this->preOrderApp(json_encode($_POST));
 		return [
 			'resp'      => strip_tags($resp),
 			'status'	=> 'OK',
-			'data'      => $preOrd
+			'preOrden'  => json_decode($preOrd, true)
 		];
 	}
 	public function postParamPlatform()
@@ -259,14 +261,14 @@ class post_functions extends general_functions
 	{
 		$allData        = json_encode(array_merge($_GET, $this->data));
 		return [
-			'preord' => json_decode($this->preOrderApp($allData), true),
+			'preOrden' => json_decode($this->preOrderApp($allData), true),
 			'data'   => json_decode($allData)
 		];
 	}
 	public function postPagoCreditCard()
 	{
-		return $allData        = array_merge($_GET, json_decode($_POST['data'], true), $_POST);
-		
+		$allData        = array_merge($_GET, json_decode($_POST['data'], true), $_POST);
+
 		$prefix         = $allData['prefix'];
 		$cardNumber   	= $allData['TDC']["codigoTarjeta"];
 		$cardExpiry   	= $allData['TDC']["yearTarjetaVen"] . '-' . (int) $allData['TDC']["mesTarjetaVen"];
@@ -276,7 +278,7 @@ class post_functions extends general_functions
 		$cardType     	= $allData['TDC']["tipoTarjeta"];
 		$orden        	= $allData["id_orden"];
 		$preOrden     	= $allData["idPreOrden"];
-		$invoice      	= !empty($allData["voucher"]) ? $allData["voucher"] : $this->genCodeigoOrden($prefix);
+		$invoice      	= !empty($allData["voucher"]) ? $allData["voucher"] : $this->genCodigoOrden($prefix);
 		$attempt     	= $allData["intento"];
 		$id_broker 		= ($allData['agency'] != 'N/A' && !empty($allData['agency'])) ? $allData['agency'] : 118;
 		$lang_app  		= $this->funcLangAppShort($this->funcLangApp());
@@ -285,8 +287,28 @@ class post_functions extends general_functions
 		$dataPasajeros  = json_decode($_POST['data'], true)['dataPasajeros'];
 		for ($i = 0; $i < count($dataPasajeros); $i++) {
 			$dataPasajeros[$i]['codigoVoucher'] = $invoice;
+			$dataPreOrden['nacimiento' . $i]  = $dataPasajeros[$i]['fechaNacimiento'];
 		}
-		$this->preOrderApp(json_encode($allData));
+
+		$dataPreOrden['pasajeros']     		= $dataPasajeros;
+		$dataPreOrden['contacto_emergencia'] = json_decode($allData['data'], true)['contactoEmergencia'];
+		$dataPreOrden['upgrades'] 			= json_decode($allData['data'], true)['upgrades'];
+		$dataPreOrden['cupon'] 				= json_decode($allData['data'], true)['cupon'];
+		$dataPreOrden['id_preorden'] 		= json_decode($allData['data'], true)['idPreOrden'];
+		$dataPreOrden['array_prices_app']   = json_decode($allData['array_prices_app']);
+		$dataPreOrden['bloque']   			= $allData['bloque'];
+		$dataPreOrden['FechaSalida']   		= $allData['FechaSalida'];
+		$dataPreOrden['FechaLlegada']   	= $allData['FechaLlegada'];
+		$dataPreOrden['id_plan']  			= $allData['id_plan'];
+		$dataPreOrden['edades'] 			= explode(',',  $allData['edades']);
+		$dataPreOrden['id_plan_categoria']  = $allData['id_plan_categoria'];
+		$dataPreOrden['id_plan']  			= $allData['id_plan'];
+		$dataPreOrden['origen']  			= $allData['origen'];
+		$dataPreOrden['destino']  			= $allData['destino'];
+		$dataPreOrden['paso']  			    = $allData['paso'];
+		$dataPreOrden['estatus']  		    = '2';
+		$dataPreOrden['codigo']  		    = $invoice;
+		$idPreOrden     					= $this->preOrderApp(json_encode($dataPreOrden));
 
 		$dataValida = [
 			'9092'	=> $prefix,
@@ -319,8 +341,7 @@ class post_functions extends general_functions
 			'broker_sesion'     => $id_broker,
 			'selectLanguage'    => $lang_app,
 			'id_user'           => $id_user,
-			'user_type'         => $userType,
-			'Datos_Pasajeros'   => $dataPasajeros
+			'user_type'         => $userType
 		];
 
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
@@ -328,8 +349,9 @@ class post_functions extends general_functions
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response   = json_decode($this->curlGeneral($linkPlatf, $dataCurl, $headers, 'GET'), true);
 		$response['code_orden'] = $invoice;
-		$response['dataApp']    = $dataCurl;
-		$response['dataPasaj']  = json_encode($dataPasajeros);
+		$response['preOrden']   = json_decode($idPreOrden, true);
+		$response['dataPreOrden'] = $dataPreOrden;
+		$response['ALLDATA'] = $allData;
 
 		if ($response['code'] == 0) {
 			switch ($response['error']['code']) {

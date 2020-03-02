@@ -1035,6 +1035,8 @@ class get_functions extends general_functions
 		$respons    = $this->curlGeneral($linkParam, json_encode($dataCurl), $headers);
 		$response   = json_decode($respons, true);
 
+		$PreOrd = $this->preOrderApp($dataPreOrdn);
+
 		for ($i = 0; $i < count($response); $i++) { //Simplifica precios
 			if (!empty($response[$i]['arrUsedPrices'])) {
 				if (count($response[$i]['arrUsedPrices']) > 1) { //si tiene menores y mayores
@@ -1067,6 +1069,7 @@ class get_functions extends general_functions
 					$response[$i]['calc_new'] = 'Y'; /////parametro para saber si son calculos nuevos 
 				}
 			}
+			$response[$i]['preOrden'] = json_decode($PreOrd, true);
 		}
 
 		if ($prefix == 'BT') { //Aplica para BTA
@@ -1123,8 +1126,6 @@ class get_functions extends general_functions
 				}
 			} else {
 				//$this->ordenarArray($response, 'name_plan'); //ordenar por nombre
-				$PreOrd = $this->preOrderApp($dataPreOrdn);
-				$response[0]['preOrden'] = json_decode($PreOrd, true);
 				return $response;
 			}
 		}
