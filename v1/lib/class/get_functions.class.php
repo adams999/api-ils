@@ -713,6 +713,7 @@ class get_functions extends general_functions
 		$resp = json_decode($resp, true);
 
 		if ($resp['STATUS'] == 'OK') {
+
 			$dataCurl = [
 				'querys' => "SELECT
 					id,
@@ -743,8 +744,13 @@ class get_functions extends general_functions
 				$resp['TIPO_CALC']   = 'monto';
 				$resp['SUBTOTAL']    = (float) $subTotal;
 			}
+			$resp['CODIGO']          = $resp2[0]['codigo'];
+			$resp['NOMBRE_AMIGABLE'] = $resp2[0]['codigo_secundario'];
+			$resp['ID_CUPON']        = $resp2[0]['id'];
+			$resp['NOMBRE_INGRESADO'] = $cupon;
 			return $resp;
 		} else {
+			$resp['NOMBRE_INGRESADO']          = $cupon;
 			return $resp;
 		}
 	}
