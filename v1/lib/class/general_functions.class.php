@@ -435,7 +435,7 @@ class general_functions extends Model
         $codigo              = $dataP['codigo'];
         $email_usado         = $dataP['email_usado'];
         $estatus             = $dataP['estatus'];
-        $site_access         = 'APP';
+        $site_access         = 'A';
         $usedCode            = $dataP['usedCode'];
         $lang_app            = $this->funcLangAppShort($this->funcLangApp());
         $idBroker            = $id_agencia;
