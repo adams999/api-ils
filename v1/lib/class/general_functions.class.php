@@ -435,7 +435,7 @@ class general_functions extends Model
         $codigo              = $dataP['codigo'];
         $email_usado         = $dataP['email_usado'];
         $estatus             = $dataP['estatus'];
-        $site_access         = 'APP';
+        $site_access         = 'A';
         $usedCode            = $dataP['usedCode'];
         $lang_app            = $this->funcLangAppShort($this->funcLangApp());
         $idBroker            = $id_agencia;
@@ -443,7 +443,8 @@ class general_functions extends Model
 
         $dataCurl = [
             'type'                    => 'add_preorden_select',
-            'usuario_id'              => $usuario_id,
+            'id_user'                 => (int) $usuario_id,
+            'usuario_id'              => (int) $usuario_id,
             'user_type'               => $userType,
             'broker_sesion'           => $idBroker, //parametro que recibe el core.lib de la plataforma para cargar los parametros de la agencia 
             'id_broker'               => $idBroker, //parametro que recibe el async_cotizador
@@ -477,10 +478,10 @@ class general_functions extends Model
             'usedCode'                => $usedCode
         ];
 
-        $link         = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
-        $linkQuote     = $link . "/app/pages/async_cotizador.php";
-        $headers     = "content-type: application/x-www-form-urlencoded";
-        $resp = $this->curlGeneral($linkQuote, http_build_query($dataCurl), $headers);
+        $link           = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+        $linkQuote      = $link . "/app/pages/async_cotizador.php";
+        $headers        = "content-type: application/x-www-form-urlencoded";
+        $resp           = $this->curlGeneral($linkQuote, http_build_query($dataCurl), $headers);
 
         return $resp;
     }

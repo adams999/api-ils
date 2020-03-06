@@ -29,7 +29,9 @@ class post_functions extends general_functions
 		$prefix 	 = $this->data['prefix'];
 		$category 	 = $this->data['category'];
 		$plans		 = $this->data['plans'];
-		//$plans 		 = explode(',',$plans);
+		$plans 		 = explode(',', $plans);
+		$plans       = array_unique($plans);
+		$plans       = implode(',', $plans);
 		$startDate	 = $this->data['startDate'];
 		$endDate	 = $this->data['endDate'];
 		$destination = $this->data['destination'];
@@ -54,7 +56,7 @@ class post_functions extends general_functions
 			//'9095'	=> is_array($agesQuote),
 			'9092'	=> $prefix
 		];
-		$validatEmpty		= $this->validatEmpty($dataValida);
+		$this->validatEmpty($dataValida);
 		$departureTrans     = $this->transformerDate($startDate);
 		$arrivalTrans     	= $this->transformerDate($endDate);
 		$daysByPeople 		= $this->betweenDates($departureTrans, $arrivalTrans);
@@ -87,11 +89,11 @@ class post_functions extends general_functions
 		$linkQuote 	= $link . "/app/pages/async_cotizador.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$resp = $this->curlGeneral($linkQuote, $dataQuote, $headers, 'GET');
-		$preOrd = $this->preOrderApp(json_encode(array_merge($_GET, $_POST)));
+		$preOrd = $this->preOrderApp(json_encode($_POST));
 		return [
 			'resp'      => strip_tags($resp),
 			'status'	=> 'OK',
-			'data'      => $preOrd
+			'preOrden'  => json_decode($preOrd, true)
 		];
 	}
 	public function postParamPlatform()
@@ -259,49 +261,255 @@ class post_functions extends general_functions
 	{
 		$allData        = json_encode(array_merge($_GET, $this->data));
 		return [
-			'preord' => json_decode($this->preOrderApp($allData), true),
+			'preOrden' => json_decode($this->preOrderApp($allData), true),
 			'data'   => json_decode($allData)
 		];
 	}
-	public function postPagoCreditCard()
+	public function postProcesarEmisionApp()
 	{
-		return $allData        = array_merge($_GET, json_decode($_POST['data'], true), $_POST);
-		
+		$allData        = array_merge($_GET, json_decode($_POST['data'], true), $_POST);
+		$allData['TDC']["codigoTarjeta"] = str_replace(' ', '', $allData['TDC']["codigoTarjeta"]);
+
 		$prefix         = $allData['prefix'];
 		$cardNumber   	= $allData['TDC']["codigoTarjeta"];
-		$cardExpiry   	= $allData['TDC']["yearTarjetaVen"] . '-' . (int) $allData['TDC']["mesTarjetaVen"];
+		$cardExpiry   	= ($allData['TDC']["yearTarjetaVen"] && $allData['TDC']["mesTarjetaVen"]) ? (int) $allData['TDC']["yearTarjetaVen"] . '-' . (int) $allData['TDC']["mesTarjetaVen"] : '';
 		$cardCvv      	= $allData['TDC']["CCV"];
 		$cardName     	= $allData['TDC']["nombreTarjeta"];
 		$cardLastname 	= $allData['TDC']["apellidoTarjeta"];
 		$cardType     	= $allData['TDC']["tipoTarjeta"];
-		$orden        	= $allData["id_orden"];
+		$id_orden       = json_decode($allData['dataRespQuoteApp'], true)['id_orden'] ? json_decode($allData['dataRespQuoteApp'], true)['id_orden'] : '';
+		$ids_pasaj      = json_decode($allData['dataRespQuoteApp'], true)['id_beneficiaries'] ? json_decode($allData['dataRespQuoteApp'], true)['id_beneficiaries'] : '';
 		$preOrden     	= $allData["idPreOrden"];
-		$invoice      	= !empty($allData["voucher"]) ? $allData["voucher"] : $this->genCodeigoOrden($prefix);
-		$attempt     	= $allData["intento"];
+		$invoice      	= !empty($allData["voucher"]) ? $allData["voucher"] : $this->genCodigoOrden($prefix);
+		$attempt     	= ((int) $allData["intento"] + 1);
 		$id_broker 		= ($allData['agency'] != 'N/A' && !empty($allData['agency'])) ? $allData['agency'] : 118;
 		$lang_app  		= $this->funcLangAppShort($this->funcLangApp());
 		$userType 	  	= $allData['userType'];
 		$id_user	  	= !empty($allData['id_user']) ? $allData['id_user'] : 0;
 		$dataPasajeros  = json_decode($_POST['data'], true)['dataPasajeros'];
-		for ($i = 0; $i < count($dataPasajeros); $i++) {
-			$dataPasajeros[$i]['codigoVoucher'] = $invoice;
+		for ($i = 0; $i < count($dataPasajeros); $i++) { //////aqui genero la data de los pasajeros para ser guardados
+			$dataPasajeros[$i]['codigoVoucher'] 		 = $invoice;
+			$dataPreOrden['nacimiento' . $i] 	 		 = $dataPasajeros[$i]['fechaNacimiento'];
 		}
-		$this->preOrderApp(json_encode($allData));
+
+		$dataPreOrden['pasajeros']     		= $dataPasajeros;
+		$dataPreOrden['contacto_emergencia'] = json_decode($allData['data'], true)['contactoEmergencia'];
+		$dataPreOrden['upgrades'] 			= json_decode($allData['data'], true)['upgrades'];
+		$dataPreOrden['cupon'] 				= json_decode($allData['data'], true)['cupon'];
+		$dataPreOrden['id_preorden'] 		= json_decode($allData['data'], true)['idPreOrden'];
+		$dataPreOrden['array_prices_app']   = json_decode($allData['array_prices_app'], true);
+		$dataPreOrden['bloque']   			= $allData['bloque'];
+		$dataPreOrden['FechaSalida']   		= $allData['FechaSalida'];
+		$dataPreOrden['FechaLlegada']   	= $allData['FechaLlegada'];
+		$dataPreOrden['id_plan']  			= $allData['id_plan'];
+		$dataPreOrden['edades'] 			= explode(',',  $allData['edades']);
+		$dataPreOrden['id_plan_categoria']  = $allData['id_plan_categoria'];
+		$dataPreOrden['origen']  			= $allData['origen'];
+		$dataPreOrden['destino']  			= $allData['destino'];
+		$dataPreOrden['paso']  			    = $allData['paso'];
+		$dataPreOrden['estatus']  		    = '2';
+		$dataPreOrden['codigo']  		    = $invoice;
+		$dataPreOrden['dias']  		    	= $allData['total_dias'];
+		$idPreOrden     					= $this->preOrderApp(json_encode($dataPreOrden));
 
 		$dataValida = [
 			'9092'	=> $prefix,
-			'50022'	=> $cardNumber,
-			'50023'	=> $cardExpiry,
-			'50024'	=> $cardCvv,
-			'50025'	=> $cardName,
-			'50026'	=> $cardLastname,
-			'50027'	=> $cardType,
 			'50029'	=> $preOrden,
-			'50030'	=> $invoice,
-			'50031' => ($attempt + 1)
+			'50030'	=> $invoice
 		];
 
+		///validacion de tdc cuando el cupon no cubre toda la emision
+		if (json_decode($allData['data'], true)['cupon']['PAGO_CUPON'] != 'Si') {
+			$dataValida = array_merge(
+				$dataValida,
+				[
+					'50022'	=> $cardNumber,
+					'50023'	=> $cardExpiry,
+					'50024'	=> $cardCvv,
+					'50025'	=> $cardName,
+					'50026'	=> $cardLastname,
+					'50027'	=> $cardType,
+				]
+			);
+		}
+
 		$this->validatEmpty($dataValida);
+
+		$dataGenVoucher = [
+			'cotiza_respuesta'              => 1,
+			'vendedor'                      => $id_user,
+			'broker'                        => $id_broker,
+			'action'                        => '',
+			'idOrder'                       => '',
+			'tipo_plan'                     => $dataPreOrden['id_plan_categoria'],
+			'id_Preorden'                   => $dataPreOrden['id_preorden'],
+			'user'                          => $id_user,
+			'id_agencia'					=> $id_broker,
+			'origen'                        => $dataPreOrden['origen'],
+			'destino'                       => $dataPreOrden['destino'],
+			'mindays'                       => $allData['bloque'] ? $allData['bloque'] : '',
+			'viaje-fecha-inicio'            => $dataPreOrden['FechaSalida'],
+			'viaje-fecha-fin'               => $dataPreOrden['FechaLlegada'],
+			'fechas'                        => json_encode(['start' => $dataPreOrden['FechaSalida'], 'end' => $dataPreOrden['FechaLlegada']]),
+			'llegada'                       => $dataPreOrden['FechaLlegada'],
+			'salida'                        => $dataPreOrden['FechaSalida'],
+			'intervalos'                    => $dataPreOrden['bloque'] ?: '',
+			'cantidad'                      => $dataPreOrden['array_prices_app']['cntPrices'] ?: '',
+			'edades'                        => implode(',', $dataPreOrden['edades']),
+			'numpas'                        => count($dataPreOrden['edades']),
+			'dias'                          => $dataPreOrden['dias'],
+			'email_usado'                   => '',
+			'accion_cotiza'                 => '',
+			'id_categoria'                  => $dataPreOrden['id_plan_categoria'],
+			'PlanSel'                       => $dataPreOrden['id_plan'],
+			'selPlanId'                     => $dataPreOrden['id_plan'],
+			'nombre_cliente'                => '',
+			'email_cliente'                 => '',
+			'x_codigo_final'                => $invoice,
+			'x_id_orden'                    => $id_orden, ////id de la orden
+			'x_id_benefi'                   => $ids_pasaj, ///ids de los benifiarios con ,
+			'active_overage'                => 0,
+			'tiepoid'                       => $dataPreOrden['array_prices_app']['tiepoid'],
+			'n_riders'                      => count($dataPreOrden['upgrades']),
+			'activofactor'                  => ($dataPreOrden['array_prices_app']['activofactor'] == 'si') ? 'Y' : 'N',
+			'family_plan'                   => ($dataPreOrden['array_prices_app']['planfamiliar'] > 0) ? 'Y' : 'N',
+			'moneda_plan'                   => $dataPreOrden['array_prices_app']['moneda'],
+			'tasa_cambio'                   => $dataPreOrden['array_prices_app']['tasa_cambio'],
+			'moneda_local'                  => $dataPreOrden['array_prices_app']['moneda_local'],
+			'overage_in_factor'             => 0,
+			'valor_prima'                   => '',
+			'pax_observacion'               => '',
+			'nombrceC'                      => $dataPreOrden['contacto_emergencia']['nameE'],
+			'EmailC'                        => $dataPreOrden['contacto_emergencia']['correoE'],
+			'cod_telf_C'                    => $dataPreOrden['contacto_emergencia']['codigoTelE'],
+			'id_R'                          => '',
+			'descuento'                     => ($dataPreOrden['cupon']['TIPO_CALC'] == '%') ? ((((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades']) * (float) $dataPreOrden['cupon']['VALUE_CUPON']) / 100) : (((((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades']) - (float) $dataPreOrden['cupon']['VALUE_CUPON']) > 0) ?  (float) $dataPreOrden['cupon']['VALUE_CUPON'] : ((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades'])),
+			'cod_promocional'               => $dataPreOrden['cupon']['NOMBRE_AMIGABLE'] ? $dataPreOrden['cupon']['NOMBRE_AMIGABLE'] : ($dataPreOrden['cupon']['CODIGO'] ? $dataPreOrden['cupon']['CODIGO'] : ''),
+			'cotiza_respuesta'              => 1,
+			'v_authorizado'                 => '',
+			'x_respuesta_full'              => '',
+			'x_contador_intentos'           => $attempt,
+			'x_id_status'                   => '',
+			'credit-cart-type'              => 1,
+			'numero_tarjeta'                => $allData['TDC']['codigoTarjeta'] ?: '',
+			'tipo_tarjeta'                  => $allData['TDC']['tipoTarjeta'] ?: '',
+			'mes_vencimiento'               => (int) $allData['TDC']['mesTarjetaVen'] ?: '',
+			'ano_vencimiento'               => (int) $allData['TDC']['yearTarjetaVen'] ?: '',
+			'expiry-date'                   => (count($cardExpiry) > 2)  ? $cardExpiry : '',
+			'cvv'                           => $allData['TDC']['CCV'] ?: '',
+			'nombre_tarjeta'                => $allData['TDC']['nombreTarjeta'] ?: '',
+			'apellido_tarjeta'              => $allData['TDC']['apellidoTarjeta'] ?: '',
+			'credit-cart-type'              => 1,
+			'paymentType'                   => 1,
+			'pago_Preventa'                 => 'no',
+			'condiciones'                   => 'on',
+			'ac'                            => 'comprar',
+			'plan_producto'                 => $dataPreOrden['id_plan'],
+			'FechaSalida'                   => date('m/d/Y', strtotime($dataPreOrden['FechaSalida'])),
+			'FechaLlegada'                  => date('m/d/Y', strtotime($dataPreOrden['FechaLlegada'])),
+			'categoria'                     => $dataPreOrden['id_plan_categoria'],
+			'cantidapasajero'               => count($dataPreOrden['edades']),
+			'diaxpersona'                   => $dataPreOrden['dias'],
+			'porcetajePFV'                  => $dataPreOrden['array_prices_app']['arrUsedPrices'][0]['pvpBase'],
+			'porcetajePFC'                  => $dataPreOrden['array_prices_app']['arrUsedPrices'][0]['costBase'],
+			'pareja'                        => ($dataPreOrden['array_prices_app']['planpareja'] > 0) ? 'Y' : 'N',
+			'totalcosto'                    => $allData['subTotal'], ////
+			'totalcostocost'                => $dataPreOrden['array_prices_app']['total_costo'],
+			'totalcostoneta'                => $dataPreOrden['array_prices_app']['total_neto'],
+			'telefono'                      => $dataPreOrden['contacto_emergencia']['codigoTelE'] . '-' . $dataPreOrden['contacto_emergencia']['TelefPE'],
+			'dispositivo'                   => 'A',
+			'id_broker'         			=> $id_broker,
+			'broker_sesion'    				=> $id_broker,
+			'selectLanguage'  				=> $lang_app,
+			'id_user'           			=> $id_user,
+			'user_type'         			=> $userType
+		];
+
+		if ($dataPreOrden['cupon']['VALUE_CUPON'] == 100 && $dataPreOrden['cupon']['TIPO_CALC'] == '%') { //////validacion para cupon
+			$dataGenVoucher['pagocupon'] = 'Si';
+			$dataGenVoucher['pago_cupon'] = 'Si';
+		} elseif ($dataPreOrden['cupon']['VALUE_CUPON'] >= ((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades']) && $dataPreOrden['cupon']['TIPO_CALC'] == 'monto') {
+			$dataGenVoucher['pagocupon'] = 'Si';
+			$dataGenVoucher['pago_cupon'] = 'Si';
+		} else {
+			$dataGenVoucher['pagocupon'] = 'No';
+			$dataGenVoucher['pago_cupon'] = 'No';
+		}
+
+		//////aqui genero la data de los pasajeros para ser guardados
+		for ($i = 0; $i < count($dataPasajeros); $i++) {
+			$dataGenVoucher['edades' . $i]				 = $dataPasajeros[$i]['edad'];
+			$dataGenVoucher['nombre' . $i]				 = $dataPasajeros[$i]['nombre'];
+			$dataGenVoucher['apellido' . $i]			 = $dataPasajeros[$i]['apellido'];
+			$dataGenVoucher['edad' . $i]				 = $dataPasajeros[$i]['edad'];
+			$dataGenVoucher['sexo' . $i]				 = strtolower($dataPasajeros[$i]['sexo']);
+			$dataGenVoucher['nacionalidad' . $i]		 = $dataPasajeros[$i]['pais'];
+			$dataGenVoucher['tipo_doc' . $i]    		 = $dataPasajeros[$i]['tipoDocumento'];
+			$dataGenVoucher['numeropasa' . $i]  		 = $dataPasajeros[$i]['documento'];
+			$dataGenVoucher['email' . $i]   			 = $dataPasajeros[$i]['email'];
+			$dataGenVoucher['cod_telf_' . $i]   		 = $dataPasajeros[$i]['codigoTelfono'];
+			$dataGenVoucher['telefonopasagero' . $i]   	 = $dataPasajeros[$i]['codigoTelfono'] . '-' . $dataPasajeros[$i]['telefono'];
+			$dataGenVoucher['pax_condicion_' . $i] 		 = $dataPasajeros[$i]['condMed'] ? 'Y' : 'N';
+			$dataGenVoucher['observacion_med' . $i]   	 = $dataPasajeros[$i]['condMed'];
+			$dataGenVoucher['subtotalv' . $i]  		     = $dataPasajeros[$i]['subtotal'];
+			$dataGenVoucher['subtotal' . $i] 		     = $dataPasajeros[$i]['subtotal'];
+			$dataGenVoucher['costop' . $i]  		     = $dataPasajeros[$i]['costo'];
+			$dataGenVoucher['netop' . $i] 		         = $dataPasajeros[$i]['neto'];
+			$dataGenVoucher['valorplan' . $i]            = $dataPasajeros[$i]['subtotal'];
+			$dataGenVoucher['valorplancost' . $i]        = $dataPasajeros[$i]['costo'];
+			$dataGenVoucher['valorplanNeto' . $i]        = $dataPasajeros[$i]['neto'];
+			$dataGenVoucher['fechanaci' . $i]            = date('m/d/Y', strtotime($dataPasajeros[$i]['fechaNacimiento']));
+		}
+
+		////aqui se cargan la informacion de los raiders para realizar el guardado
+		for ($i = 0; $i < count($dataPreOrden['upgrades']); $i++) {
+			$dataGenVoucher['activoR' . $dataPreOrden['upgrades'][$i]['idUpgrade']] = 'YES';
+			$dataGenVoucher['final_raider' . $dataPreOrden['upgrades'][$i]['idUpgrade']] = $dataPreOrden['upgrades'][$i]['monto_aplicado'];
+			for ($a = 0; $a < count($dataPreOrden['upgrades'][$i]['pasajero']); $a++) {
+				///////aqui comparo los pasajeros para cargar la data de cada pasajero para la data de raiders
+				if ($dataPreOrden['upgrades'][$i]['pasajero'][$a] == $dataPasajeros[$a]['']) {
+					$dataGenVoucher['nombre' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]]			= $dataPasajeros[$a]['nombre'];
+					$dataGenVoucher['apellido' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['apellido'];
+					$dataGenVoucher['fechanaci' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= date('m/d/Y', strtotime($dataPasajeros[$a]['fechaNacimiento']));
+					$dataGenVoucher['edad' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= $dataPasajeros[$a]['edad'];
+					$dataGenVoucher['sexo' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= strtolower($dataPasajeros[$a]['sexo']);
+					$dataGenVoucher['nacionalidad' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 	= $dataPasajeros[$a]['pais'];
+					$dataGenVoucher['tipo_doc' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['tipoDocumento'];
+					$dataGenVoucher['numeropasa' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['codigoTelfono'] . '-' . $dataPasajeros[$a]['telefono'];
+					$dataGenVoucher['email' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= $dataPasajeros[$a]['email'];
+					$dataGenVoucher['cod_telf_' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['codigoTelfono'];
+					$dataGenVoucher['telefonopasagero' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] = $dataPasajeros[$a]['codigoTelfono'] . '-' . $dataPasajeros[$a]['telefono'];
+					$dataGenVoucher['pax_condicion_' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 	= $dataPasajeros[$a]['condMed'] ? 'y' : 'n';
+					$dataGenVoucher['observacion_med' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 	= $dataPasajeros[$a]['condMed'];
+					$dataGenVoucher['subtotalv' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['subtotal'];
+					$dataGenVoucher['subtotal' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['subtotal'];
+					$dataGenVoucher['costop' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= $dataPasajeros[$a]['costo'];
+					$dataGenVoucher['netop' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= $dataPasajeros[$a]['neto'];
+				}
+				$dataGenVoucher['RaidersPax'] .= ',' . $dataPreOrden['upgrades'][$i]['idUpgrade'] . '|' . $dataPreOrden['upgrades'][$i]['pasajero'][$a];
+			}
+		}
+		$dataGenVoucher['RaidersPax'] = '0' . $dataGenVoucher['RaidersPax'];
+
+		//return $dataGenVoucher;
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkPlatf 	= $link . "/app/pages/quote.php";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$responseAddVoucher   = json_decode($this->curlGeneral($linkPlatf, http_build_query($dataGenVoucher), $headers), true);
+
+		//return $responseAddVoucher;
+
+		//valido si el cupon paga todo el voucher
+		if ($dataGenVoucher['pagocupon'] == 'Si') {
+			$response['code_orden'] 		= $invoice;
+			$response['preOrden']   		= json_decode($idPreOrden, true);
+			$response['dataPreOrden'] 		= $dataPreOrden;
+			$response['data_quote'] 		= $responseAddVoucher;
+			$response['ID_ORDER']     	    = (int) $responseAddVoucher['id_orden'];
+			$response['STATUS_EMISION'] 	= 'OK';
+			return $response;
+		}
 
 		$dataCurl = [
 			'type' 				=> 'payment',
@@ -311,7 +519,7 @@ class post_functions extends general_functions
 			"nombre"			=> $cardName,
 			"apellido"			=> $cardLastname,
 			"tipo_t"			=> $cardType,
-			"orden"				=> $orden,
+			"orden"				=> (int) $responseAddVoucher['id_orden'],
 			"pre_orden"			=> $preOrden,
 			"voucher"			=> $invoice,
 			"intento"			=> $attempt,
@@ -320,18 +528,25 @@ class post_functions extends general_functions
 			'selectLanguage'    => $lang_app,
 			'id_user'           => $id_user,
 			'user_type'         => $userType,
-			'Datos_Pasajeros'   => $dataPasajeros
+			'id_broker'        	=> $id_broker,
+			'broker_sesion'    	=> $id_broker,
+			'selectLanguage'  	=> $lang_app,
+			'id_user'          	=> $id_user,
+			'user_type'        	=> $userType
 		];
 
-		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
-		$linkPlatf 	= $link . "/app/pages/async_cotizador.php";
-		$headers 	= "content-type: application/x-www-form-urlencoded";
-		$response   = json_decode($this->curlGeneral($linkPlatf, $dataCurl, $headers, 'GET'), true);
-		$response['code_orden'] = $invoice;
-		$response['dataApp']    = $dataCurl;
-		$response['dataPasaj']  = json_encode($dataPasajeros);
+		$link 						= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkPlatf 					= $link . "/app/pages/async_cotizador.php";
+		$headers 					= "content-type: application/x-www-form-urlencoded";
+		$response   				= json_decode($this->curlGeneral($linkPlatf, $dataCurl, $headers, 'GET'), true);
+		$response['code_orden'] 	= $invoice;
+		$response['preOrden']   	= json_decode($idPreOrden, true);
+		$response['dataPreOrden'] 	= $dataPreOrden;
+		$response['ID_ORDER']       = (int) $responseAddVoucher['id_orden'];
+		$response['data_quote'] 	= $responseAddVoucher;
 
 		if ($response['code'] == 0) {
+			$response['STATUS_EMISION'] 	= 'ERROR';
 			switch ($response['error']['code']) {
 				case '27':
 					///Se ha producido un error al procesar esta transacción.
@@ -366,6 +581,9 @@ class post_functions extends general_functions
 				default:
 					$response['error']['elem_app'] = 'codigoTarjeta';
 					break;
+			}
+			if ($response['code'] == 1) {
+				$response['STATUS_EMISION'] 	= 'OK';
 			}
 		}
 

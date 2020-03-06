@@ -327,7 +327,8 @@ class get_functions extends general_functions
 		if (!empty($name)) {
 			$name = trim($name);
 			$nameSearch = explode(' ', $name);
-			$arrJoin = " AND orders.prefijo = plans.prefijo
+			$arrJoin = " INNER JOIN beneficiaries ON orders.id = beneficiaries.id_orden
+			AND beneficiaries.prefijo = orders.prefijo 
 			AND (
 				concat_ws(
 					' ',
@@ -380,7 +381,8 @@ class get_functions extends general_functions
 		}
 
 		if (!empty($document)) {
-			$arrJoin = " AND beneficiaries.documento LIKE '%$document%' ";
+			$arrJoin = " INNER JOIN beneficiaries ON orders.id = beneficiaries.id_orden
+			AND beneficiaries.prefijo = orders.prefijo AND beneficiaries.documento LIKE '%$document%' ";
 			// $arrJoin = [
 			// 	'table' => "beneficiaries",
 			// 	'field' => "id_orden AND beneficiaries.prefijo = orders.prefijo AND beneficiaries.documento LIKE '%$document%'",
@@ -436,8 +438,7 @@ class get_functions extends general_functions
 			AND plan_category.prefijo = plans.prefijo
 			JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
 			AND plan_categoria_detail.prefijo = plan_category.prefijo AND plan_categoria_detail.language_id = '$lang_app' 
-			INNER JOIN beneficiaries ON orders.id = beneficiaries.id_orden
-			AND beneficiaries.prefijo = orders.prefijo " . $arrJoin,
+			 " . $arrJoin . "",
 			"$codeWhere",
 			$valueOrders,
 			false,
@@ -445,7 +446,7 @@ class get_functions extends general_functions
 			["field" => "fecha", "order" => "DESC"],
 			$between,
 			false //$arrJoin,
-			//true
+			 //true
 		);
 
 		foreach ($dataOrders as $key => &$value) {
@@ -713,6 +714,7 @@ class get_functions extends general_functions
 		$resp = json_decode($resp, true);
 
 		if ($resp['STATUS'] == 'OK') {
+
 			$dataCurl = [
 				'querys' => "SELECT
 					id,
@@ -743,8 +745,13 @@ class get_functions extends general_functions
 				$resp['TIPO_CALC']   = 'monto';
 				$resp['SUBTOTAL']    = (float) $subTotal;
 			}
+			$resp['CODIGO']          = $resp2[0]['codigo'];
+			$resp['NOMBRE_AMIGABLE'] = $resp2[0]['codigo_secundario'];
+			$resp['ID_CUPON']        = $resp2[0]['id'];
+			$resp['NOMBRE_INGRESADO'] = $cupon;
 			return $resp;
 		} else {
+			$resp['NOMBRE_INGRESADO']          = $cupon;
 			return $resp;
 		}
 	}
@@ -1035,6 +1042,8 @@ class get_functions extends general_functions
 		$respons    = $this->curlGeneral($linkParam, json_encode($dataCurl), $headers);
 		$response   = json_decode($respons, true);
 
+		$PreOrd = $this->preOrderApp($dataPreOrdn);
+
 		for ($i = 0; $i < count($response); $i++) { //Simplifica precios
 			if (!empty($response[$i]['arrUsedPrices'])) {
 				if (count($response[$i]['arrUsedPrices']) > 1) { //si tiene menores y mayores
@@ -1067,6 +1076,7 @@ class get_functions extends general_functions
 					$response[$i]['calc_new'] = 'Y'; /////parametro para saber si son calculos nuevos 
 				}
 			}
+			$response[$i]['preOrden'] = json_decode($PreOrd, true);
 		}
 
 		if ($prefix == 'BT') { //Aplica para BTA
@@ -1123,8 +1133,6 @@ class get_functions extends general_functions
 				}
 			} else {
 				//$this->ordenarArray($response, 'name_plan'); //ordenar por nombre
-				$PreOrd = $this->preOrderApp($dataPreOrdn);
-				$response[0]['preOrden'] = json_decode($PreOrd, true);
 				return $response;
 			}
 		}
