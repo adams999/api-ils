@@ -327,7 +327,8 @@ class get_functions extends general_functions
 		if (!empty($name)) {
 			$name = trim($name);
 			$nameSearch = explode(' ', $name);
-			$arrJoin = " AND orders.prefijo = plans.prefijo
+			$arrJoin = " INNER JOIN beneficiaries ON orders.id = beneficiaries.id_orden
+			AND beneficiaries.prefijo = orders.prefijo 
 			AND (
 				concat_ws(
 					' ',
@@ -380,7 +381,8 @@ class get_functions extends general_functions
 		}
 
 		if (!empty($document)) {
-			$arrJoin = " AND beneficiaries.documento LIKE '%$document%' ";
+			$arrJoin = " INNER JOIN beneficiaries ON orders.id = beneficiaries.id_orden
+			AND beneficiaries.prefijo = orders.prefijo AND beneficiaries.documento LIKE '%$document%' ";
 			// $arrJoin = [
 			// 	'table' => "beneficiaries",
 			// 	'field' => "id_orden AND beneficiaries.prefijo = orders.prefijo AND beneficiaries.documento LIKE '%$document%'",
@@ -436,8 +438,7 @@ class get_functions extends general_functions
 			AND plan_category.prefijo = plans.prefijo
 			JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
 			AND plan_categoria_detail.prefijo = plan_category.prefijo AND plan_categoria_detail.language_id = '$lang_app' 
-			INNER JOIN beneficiaries ON orders.id = beneficiaries.id_orden
-			AND beneficiaries.prefijo = orders.prefijo " . $arrJoin,
+			 " . $arrJoin . "",
 			"$codeWhere",
 			$valueOrders,
 			false,
@@ -445,7 +446,7 @@ class get_functions extends general_functions
 			["field" => "fecha", "order" => "DESC"],
 			$between,
 			false //$arrJoin,
-			//true
+			 //true
 		);
 
 		foreach ($dataOrders as $key => &$value) {
