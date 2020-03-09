@@ -333,6 +333,16 @@ class post_functions extends general_functions
 			);
 		}
 
+		//intentos superados 
+		if ($attempt >= 4) {
+			$dataValida = array_merge(
+				$dataValida,
+				[
+					'50032'	=> true
+				]
+			);
+		}
+
 		$this->validatEmpty($dataValida);
 
 		$dataGenVoucher = [
@@ -522,7 +532,7 @@ class post_functions extends general_functions
 			"orden"				=> (int) $responseAddVoucher['id_orden'],
 			"pre_orden"			=> $preOrden,
 			"voucher"			=> $invoice,
-			"intento"			=> $attempt,
+			"intento"			=> ($attempt - 1),
 			'id_broker'         => $id_broker,
 			'broker_sesion'     => $id_broker,
 			'selectLanguage'    => $lang_app,

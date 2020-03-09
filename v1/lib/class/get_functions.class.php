@@ -446,7 +446,7 @@ class get_functions extends general_functions
 			["field" => "fecha", "order" => "DESC"],
 			$between,
 			false //$arrJoin,
-			 //true
+			//true
 		);
 
 		foreach ($dataOrders as $key => &$value) {
