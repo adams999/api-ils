@@ -220,7 +220,7 @@ class get_functions extends general_functions
 			"9092"  => $prefix
 		];
 		$validatEmpty  = $this->validatEmpty($dataValida);
-		return $this->selectDynamic('', 'users_extern', "id = $idVendedor AND prefijo = '$prefix'", ['firstname', 'lastname', 'email'], '', '', '', '', '');
+		return $this->selectDynamic('', 'users_extern', "id = $idVendedor AND prefijo = '$prefix'", ['firstname', 'lastname', 'email', 'phone', 'id'], '', '', '', '', '');
 	}
 	public function getAgencyParam($filters)
 	{
@@ -269,6 +269,7 @@ class get_functions extends general_functions
 			'origen',
 			'destino',
 			"DATE_FORMAT(salida,'%d-%m-%Y') as fsalida",
+			'retorno',
 			"DATE_FORMAT(retorno,'%d-%m-%Y') as fretorno",
 			"DATE_FORMAT(fecha,'%d-%m-%Y') as ffecha",
 			"REPLACE( orders.nombre_contacto,'''','') AS nombre_contacto",
@@ -282,7 +283,9 @@ class get_functions extends general_functions
 			'territory',
 			'producto',
 			'(DATEDIFF(orders.retorno, orders.salida) + 1 ) as diasViaje',
-			'plan_categoria_detail.name_plan AS categoria'
+			'plan_categoria_detail.name_plan AS categoria',
+			'v_authorizado',
+			'currency.value_iso AS moneda'
 		];
 
 		if ($source != 'public') {
@@ -307,8 +310,7 @@ class get_functions extends general_functions
 				'pareja_plan',
 				'orders.Voucher_Individual',
 				'v_authorizado',
-				'credito_numero',
-				'codeauto'
+				'credito_numero'
 			);
 		}
 
@@ -438,7 +440,7 @@ class get_functions extends general_functions
 			AND plan_category.prefijo = plans.prefijo
 			JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
 			AND plan_categoria_detail.prefijo = plan_category.prefijo AND plan_categoria_detail.language_id = '$lang_app' 
-			 " . $arrJoin . "",
+			 JOIN currency ON plans.id_currence = currency.id_currency " . $arrJoin . "",
 			"$codeWhere",
 			$valueOrders,
 			false,
@@ -446,16 +448,17 @@ class get_functions extends general_functions
 			["field" => "fecha", "order" => "DESC"],
 			$between,
 			false //$arrJoin,
-			//true
+
 		);
 
 		foreach ($dataOrders as $key => &$value) {
 
+			$value['response'] = json_decode($value['response'], true);
 			$dataOrders[$key]['beneficiaries'] = $this->selectDynamic(
 				['beneficiaries.prefijo' => $prefix],
 				'beneficiaries',
 				"id_orden= '" . $value['id'] . "'",
-				['id', 'id_orden', "REPLACE(beneficiaries.nombre,'''','') AS nombre ", "REPLACE(beneficiaries.apellido,'''','') AS apellido ", 'documento', 'email', 'nacimiento', 'nacionalidad', 'tipo_doc', 'telefono'],
+				['id', 'id_orden', "REPLACE(beneficiaries.nombre,'''','') AS nombre ", "REPLACE(beneficiaries.apellido,'''','') AS apellido ", 'documento', 'email', 'nacimiento', 'nacionalidad', 'tipo_doc', 'telefono', 'precio_vta', 'precio_cost', "TIMESTAMPDIFF( YEAR, beneficiaries.nacimiento, '{$value['retorno']}' ) AS edad", 'condicion_medica'],
 				'',
 				'',
 				[
@@ -465,7 +468,11 @@ class get_functions extends general_functions
 				'',
 				''
 			);
+
+			///si existe raiders
+			$dataOrders[$key]['raiders'] = $this->raidersOrdersApp($prefix, $lang_app, $value['id'], $value['retorno']);
 		}
+
 		return $dataOrders;
 	}
 
