@@ -478,6 +478,93 @@ class get_functions extends general_functions
 		return $dataOrders;
 	}
 
+	public function getInfoSocialsPlatform($filters)
+	{
+		$prefix  = $filters['prefix'];
+
+		$dataValida	= [
+			"9092"  => $prefix
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$dataCurl = [
+			'querys' => "SELECT
+							parameter_key,
+							parameter_value
+						FROM
+							parameters
+						WHERE
+							parameter_key IN (
+								'SKYPE',
+								'EMAIL_FROM',
+								'ID_WHATSAPP'
+							)
+						AND id_status = 1"
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkplatf = $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$aux = json_decode($this->curlGeneral($linkplatf, json_encode($dataCurl), $headers), true);
+		for ($i = 0; $i < count($aux); $i++) {
+			$auxResp[$aux[$i]['parameter_key']] = $aux[$i]['parameter_value'];
+		}
+		return $auxResp;
+	}
+
+	public function getCondicionadosApp($filters)
+	{
+		$prefix  	= $filters['prefix'];
+		$language	= $this->funcLangApp();
+
+		$dataValida	= [
+			"9092"  => $prefix
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$query = "SELECT url_document FROM wording_parameter WHERE 1 AND language_id = '$language' AND id_status = '1' order by id_status";
+		$dataCurl = [
+			'querys' => $query
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkplatf = $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		return $link . '/app/admin/server/php/files/' . json_decode($this->curlGeneral($linkplatf, json_encode($dataCurl), $headers), true)[0]['url_document'];
+	}
+	public function getinfoTextTelef($filters)
+	{
+		$prefix  	= $filters['prefix'];
+		$language	= $this->funcLangApp();
+
+		$dataValida	= [
+			"9092"  => $prefix
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$query = "SELECT
+					language_id,
+					text_inf_carntet1,
+					text_inf_carntet2
+				FROM
+					content_detalle_backend
+				WHERE
+				 language_id = '$language'
+				AND tipotext IN ('reverso')";
+
+		$dataCurl = [
+			'querys' => $query
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkplatf = $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		return json_decode($this->curlGeneral($linkplatf, json_encode($dataCurl), $headers), true);
+	}
+
 	public function getParamAgencyMaster($filters)
 	{
 		$id_user = $filters['id_user'];
