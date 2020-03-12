@@ -532,7 +532,7 @@ class post_functions extends general_functions
 			"orden"				=> (int) $responseAddVoucher['id_orden'],
 			"pre_orden"			=> $preOrden,
 			"voucher"			=> $invoice,
-			"intento"			=> ($attempt - 1),
+			"intento"			=> $attempt,
 			'id_broker'         => $id_broker,
 			'broker_sesion'     => $id_broker,
 			'selectLanguage'    => $lang_app,

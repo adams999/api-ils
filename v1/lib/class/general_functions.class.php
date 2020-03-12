@@ -775,49 +775,55 @@ class general_functions extends Model
             $this->getError('3030');
         }
     }
-    function raidersOrdersApp($prefix, $lang_app, $id_order, $fechaRetorno)
+    function raidersOrdersApp($prefix, $lang_app, $id_order, $fechaRetorno = null)
     {
+        $sql = "SELECT
+                    orders_raider.id,
+                    orders_raider.id_orden,
+                    orders_raider.id_raider,
+                    orders_raider.value_raider,
+                    orders_raider.cost_raider,
+                    orders_raider.id_beneft,
+                    raiders_detail.name_raider,
+                    raiders.rd_calc_type,
+                    raiders.specific_benefit,
+                    raiders.promocion,
+                    raiders_detail.language_id,
+                    orders.codigo,
+                    beneficiaries.nombre,
+                    beneficiaries.apellido";
+
+        if ($fechaRetorno != null) {
+            $sql .= ", TIMESTAMPDIFF( YEAR, beneficiaries.nacimiento, '$fechaRetorno' ) AS edad ";
+        }
+        $sql .= "
+                FROM
+                    orders_raider
+                INNER JOIN raiders ON orders_raider.id_raider = raiders.id_raider
+                AND orders_raider.prefijo = raiders.prefijo
+                INNER JOIN raiders_detail ON raiders.id_raider = raiders_detail.id_raider
+                AND orders_raider.prefijo = raiders_detail.prefijo
+                LEFT JOIN orders ON orders.id = orders_raider.id_orden
+                AND orders.prefijo=orders_raider.prefijo
+                LEFT JOIN beneficiaries ON beneficiaries.id = orders_raider.id_beneft
+                AND orders_raider.prefijo = beneficiaries.prefijo
+                WHERE
+                    orders_raider.id_orden = '$id_order'
+                AND orders_raider.prefijo = '$prefix'
+                AND raiders_detail.language_id = '$lang_app'
+                AND (
+                    orders_raider.id_status IS NULL
+                    OR orders_raider.id_status <> '2'
+                )
+                GROUP BY id_raider, id_beneft 
+                ORDER BY nombre ASC";
+
         return $this->selectDynamic(
             '',
             '',
             '',
             '',
-            "SELECT
-                orders_raider.id,
-                orders_raider.id_orden,
-                orders_raider.id_raider,
-                orders_raider.value_raider,
-                orders_raider.cost_raider,
-                orders_raider.id_beneft,
-                raiders_detail.name_raider,
-                raiders.rd_calc_type,
-                raiders.specific_benefit,
-                raiders.promocion,
-                raiders_detail.language_id,
-                orders.codigo,
-                beneficiaries.nombre,
-                beneficiaries.apellido,
-                TIMESTAMPDIFF( YEAR, beneficiaries.nacimiento, '$fechaRetorno' ) AS edad
-            FROM
-                orders_raider
-            INNER JOIN raiders ON orders_raider.id_raider = raiders.id_raider
-            AND orders_raider.prefijo = raiders.prefijo
-            INNER JOIN raiders_detail ON raiders.id_raider = raiders_detail.id_raider
-            AND orders_raider.prefijo = raiders_detail.prefijo
-            LEFT JOIN orders ON orders.id = orders_raider.id_orden
-            AND orders.prefijo=orders_raider.prefijo
-            LEFT JOIN beneficiaries ON beneficiaries.id = orders_raider.id_beneft
-            AND orders_raider.prefijo = beneficiaries.prefijo
-            WHERE
-                orders_raider.id_orden = '$id_order'
-            AND orders_raider.prefijo = '$prefix'
-            AND raiders_detail.language_id = '$lang_app'
-            AND (
-                orders_raider.id_status IS NULL
-                OR orders_raider.id_status <> '2'
-            )
-            GROUP BY id_raider, id_beneft 
-            ORDER BY nombre ASC",
+            $sql,
             '',
             '',
             ''

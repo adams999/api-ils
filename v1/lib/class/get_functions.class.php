@@ -285,7 +285,9 @@ class get_functions extends general_functions
 			'(DATEDIFF(orders.retorno, orders.salida) + 1 ) as diasViaje',
 			'plan_categoria_detail.name_plan AS categoria',
 			'v_authorizado',
-			'currency.value_iso AS moneda'
+			'currency.value_iso AS moneda',
+			'credito_tipo',
+			'credito_nombre'
 		];
 
 		if ($source != 'public') {
@@ -976,7 +978,7 @@ class get_functions extends general_functions
 		return [$intervalos];
 	}
 
-	public function GetPricesApiQuoteGeneral($filters, $apikey)
+	public function GetPricesApiQuoteGeneral($filters)
 	{
 		$prefix	   = $filters['prefix'];
 		$origin	   = $filters['origin'];
