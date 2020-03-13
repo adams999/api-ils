@@ -220,7 +220,7 @@ class get_functions extends general_functions
 			"9092"  => $prefix
 		];
 		$validatEmpty  = $this->validatEmpty($dataValida);
-		return $this->selectDynamic('', 'users_extern', "id = $idVendedor AND prefijo = '$prefix'", ['firstname', 'lastname', 'email'], '', '', '', '', '');
+		return $this->selectDynamic('', 'users_extern', "id = $idVendedor AND prefijo = '$prefix'", ['firstname', 'lastname', 'email', 'phone', 'id'], '', '', '', '', '');
 	}
 	public function getAgencyParam($filters)
 	{
@@ -269,6 +269,7 @@ class get_functions extends general_functions
 			'origen',
 			'destino',
 			"DATE_FORMAT(salida,'%d-%m-%Y') as fsalida",
+			'retorno',
 			"DATE_FORMAT(retorno,'%d-%m-%Y') as fretorno",
 			"DATE_FORMAT(fecha,'%d-%m-%Y') as ffecha",
 			"REPLACE( orders.nombre_contacto,'''','') AS nombre_contacto",
@@ -282,7 +283,11 @@ class get_functions extends general_functions
 			'territory',
 			'producto',
 			'(DATEDIFF(orders.retorno, orders.salida) + 1 ) as diasViaje',
-			'plan_categoria_detail.name_plan AS categoria'
+			'plan_categoria_detail.name_plan AS categoria',
+			'v_authorizado',
+			'currency.value_iso AS moneda',
+			'credito_tipo',
+			'credito_nombre'
 		];
 
 		if ($source != 'public') {
@@ -307,8 +312,7 @@ class get_functions extends general_functions
 				'pareja_plan',
 				'orders.Voucher_Individual',
 				'v_authorizado',
-				'credito_numero',
-				'codeauto'
+				'credito_numero'
 			);
 		}
 
@@ -438,7 +442,7 @@ class get_functions extends general_functions
 			AND plan_category.prefijo = plans.prefijo
 			JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
 			AND plan_categoria_detail.prefijo = plan_category.prefijo AND plan_categoria_detail.language_id = '$lang_app' 
-			 " . $arrJoin . "",
+			 JOIN currency ON plans.id_currence = currency.id_currency " . $arrJoin . "",
 			"$codeWhere",
 			$valueOrders,
 			false,
@@ -446,16 +450,17 @@ class get_functions extends general_functions
 			["field" => "fecha", "order" => "DESC"],
 			$between,
 			false //$arrJoin,
-			 //true
+
 		);
 
 		foreach ($dataOrders as $key => &$value) {
 
+			$value['response'] = json_decode($value['response'], true);
 			$dataOrders[$key]['beneficiaries'] = $this->selectDynamic(
 				['beneficiaries.prefijo' => $prefix],
 				'beneficiaries',
 				"id_orden= '" . $value['id'] . "'",
-				['id', 'id_orden', "REPLACE(beneficiaries.nombre,'''','') AS nombre ", "REPLACE(beneficiaries.apellido,'''','') AS apellido ", 'documento', 'email', 'nacimiento', 'nacionalidad', 'tipo_doc', 'telefono'],
+				['id', 'id_orden', "REPLACE(beneficiaries.nombre,'''','') AS nombre ", "REPLACE(beneficiaries.apellido,'''','') AS apellido ", 'documento', 'email', 'nacimiento', 'nacionalidad', 'tipo_doc', 'telefono', 'precio_vta', 'precio_cost', "TIMESTAMPDIFF( YEAR, beneficiaries.nacimiento, '{$value['retorno']}' ) AS edad", 'condicion_medica'],
 				'',
 				'',
 				[
@@ -465,8 +470,141 @@ class get_functions extends general_functions
 				'',
 				''
 			);
+
+			///si existe raiders
+			$dataOrders[$key]['raiders'] = $this->raidersOrdersApp($prefix, $lang_app, $value['id'], $value['retorno']);
 		}
+
 		return $dataOrders;
+	}
+
+	public function getInfoSocialsPlatform($filters)
+	{
+		$prefix  = $filters['prefix'];
+
+		$dataValida	= [
+			"9092"  => $prefix
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$dataCurl = [
+			'querys' => "SELECT
+							parameter_key,
+							parameter_value
+						FROM
+							parameters
+						WHERE
+							parameter_key IN (
+								'SKYPE',
+								'EMAIL_FROM',
+								'ID_WHATSAPP'
+							)
+						AND id_status = 1"
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkplatf = $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$aux = json_decode($this->curlGeneral($linkplatf, json_encode($dataCurl), $headers), true);
+		for ($i = 0; $i < count($aux); $i++) {
+			$auxResp[$aux[$i]['parameter_key']] = $aux[$i]['parameter_value'];
+		}
+		return $auxResp;
+	}
+
+	public function getCondicionadosApp($filters)
+	{
+		$prefix  	= $filters['prefix'];
+		$language	= $this->funcLangApp();
+
+		$dataValida	= [
+			"9092"  => $prefix
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$query = "SELECT url_document FROM wording_parameter WHERE 1 AND language_id = '$language' AND id_status = '1' order by id_status";
+		$dataCurl = [
+			'querys' => $query
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkplatf = $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		return $link . '/app/admin/server/php/files/' . json_decode($this->curlGeneral($linkplatf, json_encode($dataCurl), $headers), true)[0]['url_document'];
+	}
+	public function getinfoTextTelef($filters)
+	{
+		$prefix  	= $filters['prefix'];
+		$language	= $this->funcLangApp();
+
+		$dataValida	= [
+			"9092"  => $prefix
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$query = "SELECT
+					language_id,
+					text_inf_carntet1,
+					text_inf_carntet2
+				FROM
+					content_detalle_backend
+				WHERE
+				 language_id = '$language'
+				AND tipotext IN ('reverso')";
+
+		$dataCurl = [
+			'querys' => $query
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkplatf = $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		return json_decode($this->curlGeneral($linkplatf, json_encode($dataCurl), $headers), true);
+	}
+
+	public function getGuardarOrdenEventsApp($filters)
+	{
+		$prefix             = $filters['prefix'];
+		$idBroker           = (!empty($filters['agency']) && $filters['agency'] != 'N/A')  ? $filters['agency'] : '';
+		$idUser             = $filters['id_user'] ?: '';
+		$userType           = $filters['userType'];
+		$lang_app    		= $this->funcLangAppShort($this->funcLangApp());
+		$id_orden			= $filters['id_orden'];
+		$email				= $filters['email'] ?: '1';
+		$calendario			= $filters['calendario'] ?: '2';
+		$sms				= $filters['sms'] ?: '1';
+		$smstelefono		= $filters['smstelefono'];
+
+		$dataValida			= [
+			'9092'	=> $prefix,
+			'50005'	=> $idUser,
+			'40098'	=> $id_orden,
+			'5029'	=> $smstelefono
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$sql = "INSERT INTO `orders_eventos` (
+					oe_id_orden,
+					noti_correo,
+					add_calendar,
+					noti_sms,
+					num_sms
+				)
+				VALUES
+					('$id_orden', '$email', '$calendario', '$sms', '$smstelefono')";
+
+		$dataquote = [
+			'querys'         => $sql
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkQuote 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		return $this->curlGeneral($linkQuote, json_encode($dataquote), $headers);
 	}
 
 	public function getParamAgencyMaster($filters)
@@ -969,7 +1107,7 @@ class get_functions extends general_functions
 		return [$intervalos];
 	}
 
-	public function GetPricesApiQuoteGeneral($filters, $apikey)
+	public function GetPricesApiQuoteGeneral($filters)
 	{
 		$prefix	   = $filters['prefix'];
 		$origin	   = $filters['origin'];

@@ -269,6 +269,7 @@ class post_functions extends general_functions
 	{
 		$allData        = array_merge($_GET, json_decode($_POST['data'], true), $_POST);
 		$allData['TDC']["codigoTarjeta"] = str_replace(' ', '', $allData['TDC']["codigoTarjeta"]);
+		$tipoPagoApp    = $allData['tipoPagoApp'];
 
 		$prefix         = $allData['prefix'];
 		$cardNumber   	= $allData['TDC']["codigoTarjeta"];
@@ -329,6 +330,16 @@ class post_functions extends general_functions
 					'50025'	=> $cardName,
 					'50026'	=> $cardLastname,
 					'50027'	=> $cardType,
+				]
+			);
+		}
+
+		//intentos superados 
+		if ($attempt >= 4) {
+			$dataValida = array_merge(
+				$dataValida,
+				[
+					'50032'	=> true
 				]
 			);
 		}
@@ -582,9 +593,9 @@ class post_functions extends general_functions
 					$response['error']['elem_app'] = 'codigoTarjeta';
 					break;
 			}
-			if ($response['code'] == 1) {
-				$response['STATUS_EMISION'] 	= 'OK';
-			}
+		}
+		if ($response['code'] == 1) {
+			$response['STATUS_EMISION'] 	= 'OK';
 		}
 
 		return $response;
