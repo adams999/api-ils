@@ -565,6 +565,48 @@ class get_functions extends general_functions
 		return json_decode($this->curlGeneral($linkplatf, json_encode($dataCurl), $headers), true);
 	}
 
+	public function getGuardarOrdenEventsApp($filters)
+	{
+		$prefix             = $filters['prefix'];
+		$idBroker           = (!empty($filters['agency']) && $filters['agency'] != 'N/A')  ? $filters['agency'] : '';
+		$idUser             = $filters['id_user'] ?: '';
+		$userType           = $filters['userType'];
+		$lang_app    		= $this->funcLangAppShort($this->funcLangApp());
+		$id_orden			= $filters['id_orden'];
+		$email				= $filters['email'] ?: '1';
+		$calendario			= $filters['calendario'] ?: '2';
+		$sms				= $filters['sms'] ?: '1';
+		$smstelefono		= $filters['smstelefono'];
+
+		$dataValida			= [
+			'9092'	=> $prefix,
+			'50005'	=> $idUser,
+			'40098'	=> $id_orden,
+			'5029'	=> $smstelefono
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$sql = "INSERT INTO `orders_eventos` (
+					oe_id_orden,
+					noti_correo,
+					add_calendar,
+					noti_sms,
+					num_sms
+				)
+				VALUES
+					('$id_orden', '$email', '$calendario', '$sms', '$smstelefono')";
+
+		$dataquote = [
+			'querys'         => $sql
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkQuote 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		return $this->curlGeneral($linkQuote, json_encode($dataquote), $headers);
+	}
+
 	public function getParamAgencyMaster($filters)
 	{
 		$id_user = $filters['id_user'];
