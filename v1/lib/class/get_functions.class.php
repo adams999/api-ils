@@ -305,14 +305,21 @@ class get_functions extends general_functions
 				'v_authorizado',
 				'neto_prov',
 				'tasa_cambio',
-				'forma_pago',
+				'orders.forma_pago',
 				'neto_prov_mlc',
 				'total_mlc',
 				'orders.compra_minima',
 				'pareja_plan',
 				'orders.Voucher_Individual',
 				'v_authorizado',
-				'credito_numero'
+				'credito_numero',
+				'broker.id_broker as id_agencia',
+				'broker.code_phone1 AS code1_agencia',
+				'broker.phone1 AS phone1_agencia',
+				'broker.code_phone2 AS code2_agencia',
+				'broker.phone2 AS phone2_agencia',
+				'broker.code_phone3 AS code3_agencia',
+				'broker.phone3 AS phone3_agencia'
 			);
 		}
 
@@ -442,7 +449,9 @@ class get_functions extends general_functions
 			AND plan_category.prefijo = plans.prefijo
 			JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
 			AND plan_categoria_detail.prefijo = plan_category.prefijo AND plan_categoria_detail.language_id = '$lang_app' 
-			 JOIN currency ON plans.id_currence = currency.id_currency " . $arrJoin . "",
+			JOIN currency ON currency.id_currency = plans.id_currence
+			JOIN broker ON broker.id_broker = orders.agencia
+			AND broker.prefijo = orders.prefijo " . $arrJoin . "",
 			"$codeWhere",
 			$valueOrders,
 			false,
@@ -1107,6 +1116,41 @@ class get_functions extends general_functions
 		return [$intervalos];
 	}
 
+	public function getStatusCreditAgency($filters)
+	{
+		$prefix	   = $filters['prefix'];
+		$id_broker = ($filters['agency'] != 'N/A' && !empty($filters['agency'])) ? $filters['agency'] : 118;
+
+		$dataValida	= [
+			"9092"  => $prefix
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$sql = "SELECT
+				fecha_credito,
+				credito_actual,
+				credito_base,
+				id_broker,
+				broker,
+				id_bmi,
+				forma_pago
+			FROM
+				broker
+			WHERE
+			broker.id_broker = '$id_broker'
+			AND broker.id_status = '1'";
+
+		$dataCurl = [
+			"querys" => $sql
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkParam 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		return $response   = json_decode($this->curlGeneral($linkParam, json_encode($dataCurl), $headers), true);
+	}
+
 	public function GetPricesApiQuoteGeneral($filters)
 	{
 		$prefix	   = $filters['prefix'];
@@ -1215,6 +1259,7 @@ class get_functions extends general_functions
 				}
 			}
 			$response[$i]['preOrden'] = json_decode($PreOrd, true);
+			$response[$i]['total']    = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
 		}
 
 		if ($prefix == 'BT') { //Aplica para BTA
