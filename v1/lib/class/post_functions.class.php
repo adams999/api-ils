@@ -270,6 +270,23 @@ class post_functions extends general_functions
 		$allData        = array_merge($_GET, json_decode($_POST['data'], true), $_POST);
 		$allData['TDC']["codigoTarjeta"] = str_replace(' ', '', $allData['TDC']["codigoTarjeta"]);
 		$tipoPagoApp    = $allData['tipoPagoApp'];
+		switch (true) {
+			case $tipoPagoApp == 'PAY_CREDIT_CARD':
+				$tipoPago = 1;
+				break;
+
+			case $tipoPagoApp == 'USE_PAYPAL':
+				$tipoPago = 2;
+				break;
+
+			case $tipoPagoApp == 'CREDIT_AGENCY':
+				$tipoPago = 0;
+				break;
+
+			default:
+				$tipoPago = 1;
+				break;
+		}
 
 		$prefix         = $allData['prefix'];
 		$cardNumber   	= $allData['TDC']["codigoTarjeta"];
@@ -320,7 +337,7 @@ class post_functions extends general_functions
 		];
 
 		///validacion de tdc cuando el cupon no cubre toda la emision
-		if (json_decode($allData['data'], true)['cupon']['PAGO_CUPON'] != 'Si') {
+		if (json_decode($allData['data'], true)['cupon']['PAGO_CUPON'] != 'Si' && $tipoPagoApp == 'PAY_CREDIT_CARD') {
 			$dataValida = array_merge(
 				$dataValida,
 				[
@@ -411,7 +428,7 @@ class post_functions extends general_functions
 			'nombre_tarjeta'                => $allData['TDC']['nombreTarjeta'] ?: '',
 			'apellido_tarjeta'              => $allData['TDC']['apellidoTarjeta'] ?: '',
 			'credit-cart-type'              => 1,
-			'paymentType'                   => 1,
+			'paymentType'                   => $tipoPago,
 			'pago_Preventa'                 => 'no',
 			'condiciones'                   => 'on',
 			'ac'                            => 'comprar',
@@ -511,8 +528,8 @@ class post_functions extends general_functions
 
 		//return $responseAddVoucher;
 
-		//valido si el cupon paga todo el voucher
-		if ($dataGenVoucher['pagocupon'] == 'Si') {
+		//valido si el cupon paga todo el voucher o si el credito de la agencia lo paga todo
+		if ($dataGenVoucher['pagocupon'] == 'Si' || $tipoPago == 'CREDIT_AGENCY') {
 			$response['code_orden'] 		= $invoice;
 			$response['preOrden']   		= json_decode($idPreOrden, true);
 			$response['dataPreOrden'] 		= $dataPreOrden;
