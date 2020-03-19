@@ -283,8 +283,8 @@ class post_functions extends general_functions
 				$tipoPago = 0;
 				break;
 
-			default:
-				$tipoPago = 1;
+			case $tipoPagoApp == 'SHIPPING_LINK':
+				$tipoPago = 4;
 				break;
 		}
 
@@ -305,6 +305,7 @@ class post_functions extends general_functions
 		$userType 	  	= $allData['userType'];
 		$id_user	  	= !empty($allData['id_user']) ? $allData['id_user'] : 0;
 		$dataPasajeros  = json_decode($_POST['data'], true)['dataPasajeros'];
+		$dataEnvioLinkPago = json_decode($allData['dataRespQuoteApp'], true)['id_orden'];
 		for ($i = 0; $i < count($dataPasajeros); $i++) { //////aqui genero la data de los pasajeros para ser guardados
 			$dataPasajeros[$i]['codigoVoucher'] 		 = $invoice;
 			$dataPreOrden['nacimiento' . $i] 	 		 = $dataPasajeros[$i]['fechaNacimiento'];
@@ -441,7 +442,7 @@ class post_functions extends general_functions
 			'porcetajePFV'                  => $dataPreOrden['array_prices_app']['arrUsedPrices'][0]['pvpBase'],
 			'porcetajePFC'                  => $dataPreOrden['array_prices_app']['arrUsedPrices'][0]['costBase'],
 			'pareja'                        => ($dataPreOrden['array_prices_app']['planpareja'] > 0) ? 'Y' : 'N',
-			'totalcosto'                    => $allData['subTotal'], ////
+			'totalcosto'                    => $allData['subTotal'],
 			'totalcostocost'                => $dataPreOrden['array_prices_app']['total_costo'],
 			'totalcostoneta'                => $dataPreOrden['array_prices_app']['total_neto'],
 			'telefono'                      => $dataPreOrden['contacto_emergencia']['codigoTelE'] . '-' . $dataPreOrden['contacto_emergencia']['TelefPE'],
@@ -450,7 +451,12 @@ class post_functions extends general_functions
 			'broker_sesion'    				=> $id_broker,
 			'selectLanguage'  				=> $lang_app,
 			'id_user'           			=> $id_user,
-			'user_type'         			=> $userType
+			'user_type'         			=> $userType,
+			'useEmailLink'                  => (!empty($allData['dataLinkPago']['correoLinkPago']) && $tipoPagoApp == 'SHIPPING_LINK') ? 1 : '', //parametros para el link de pago 
+			'usePhoneLink'                  => (!empty($allData['dataLinkPago']['telefLinkPago']) && $tipoPagoApp == 'SHIPPING_LINK') ? 1 : '', //parametros para el link de pago 
+			'email-link'                    => (!empty($allData['dataLinkPago']['correoLinkPago']) && $tipoPagoApp == 'SHIPPING_LINK') ? $allData['dataLinkPago']['correoLinkPago'] : '', //parametros para el link de pago 
+			'phone-link-code'               => (!empty($allData['dataLinkPago']['codigoTelLinkPago']) && $tipoPagoApp == 'SHIPPING_LINK') ? $allData['dataLinkPago']['codigoTelLinkPago'] : '', //parametros para el link de pago 
+			'phone-link'                    => (!empty($allData['dataLinkPago']['telefLinkPago']) && $tipoPagoApp == 'SHIPPING_LINK') ? $allData['dataLinkPago']['telefLinkPago'] : '', //parametros para el link de pago 
 		];
 
 		if ($dataPreOrden['cupon']['VALUE_CUPON'] == 100 && $dataPreOrden['cupon']['TIPO_CALC'] == '%') { //////validacion para cupon
@@ -528,14 +534,37 @@ class post_functions extends general_functions
 
 		//return $responseAddVoucher;
 
-		//valido si el cupon paga todo el voucher o si el credito de la agencia lo paga todo
-		if ($dataGenVoucher['pagocupon'] == 'Si' || $tipoPago == 'CREDIT_AGENCY') {
+		///valido si el cupon paga toda la emision
+		if ($dataGenVoucher['pagocupon'] == 'Si') {
 			$response['code_orden'] 		= $invoice;
 			$response['preOrden']   		= json_decode($idPreOrden, true);
 			$response['dataPreOrden'] 		= $dataPreOrden;
 			$response['data_quote'] 		= $responseAddVoucher;
 			$response['ID_ORDER']     	    = (int) $responseAddVoucher['id_orden'];
 			$response['STATUS_EMISION'] 	= 'OK';
+			return $response;
+		}
+
+		//valido si el credito de la agencia lo paga todo
+		if ($tipoPagoApp == 'CREDIT_AGENCY') {
+			$response['code_orden'] 		= $invoice;
+			$response['preOrden']   		= json_decode($idPreOrden, true);
+			$response['dataPreOrden'] 		= $dataPreOrden;
+			$response['data_quote'] 		= $responseAddVoucher;
+			$response['ID_ORDER']     	    = (int) $responseAddVoucher['id_orden'];
+			$response['STATUS_EMISION'] 	= 'OK';
+			return $response;
+		}
+
+		///valido  si se paga con link de pago
+		if ($tipoPagoApp == 'SHIPPING_LINK') {
+			$response['code_orden'] 		= $invoice;
+			$response['preOrden']   		= json_decode($idPreOrden, true);
+			$response['dataPreOrden'] 		= $dataPreOrden;
+			$response['data_quote'] 		= $responseAddVoucher;
+			$response['ID_ORDER']     	    = (int) $responseAddVoucher['id_orden'];
+			$response['STATUS_EMISION'] 	= 'OK';
+			$response['link_pago_send'] 	= 'OK';
 			return $response;
 		}
 

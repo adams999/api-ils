@@ -1328,6 +1328,7 @@ class get_functions extends general_functions
 		$dataValida	= [
 			"9092"  => $prefix
 		];
+
 		$this->validatEmpty($dataValida);
 
 		$dataCurl = [
@@ -1339,7 +1340,8 @@ class get_functions extends general_functions
 		WHERE
 			parameter_key IN (
 				'PAY_CREDIT_CARD',
-				'USE_PAYPAL'
+				'USE_PAYPAL',
+				'SHIPPING_LINK'
 			)"
 		];
 
@@ -1354,6 +1356,9 @@ class get_functions extends general_functions
 			}
 			if ($response[$i]['parameter_key'] == 'USE_PAYPAL' && (int) $response[$i]['parameter_value'] == 1) {
 				$respons['USE_PAYPAL'] = (int) $response[$i]['parameter_value'];
+			}
+			if ($response[$i]['parameter_key'] == 'SHIPPING_LINK' && (int) $response[$i]['parameter_value'] == 1) {
+				$respons['SHIPPING_LINK'] = (int) $response[$i]['parameter_value'];
 			}
 		}
 
