@@ -276,7 +276,7 @@ class post_functions extends general_functions
 				break;
 
 			case $tipoPagoApp == 'USE_PAYPAL':
-				$tipoPago = 2;
+				$tipoPago = 3;
 				break;
 
 			case $tipoPagoApp == 'CREDIT_AGENCY':
@@ -305,7 +305,7 @@ class post_functions extends general_functions
 		$userType 	  	= $allData['userType'];
 		$id_user	  	= !empty($allData['id_user']) ? $allData['id_user'] : 0;
 		$dataPasajeros  = json_decode($_POST['data'], true)['dataPasajeros'];
-		$dataEnvioLinkPago = json_decode($allData['dataRespQuoteApp'], true)['id_orden'];
+
 		for ($i = 0; $i < count($dataPasajeros); $i++) { //////aqui genero la data de los pasajeros para ser guardados
 			$dataPasajeros[$i]['codigoVoucher'] 		 = $invoice;
 			$dataPreOrden['nacimiento' . $i] 	 		 = $dataPasajeros[$i]['fechaNacimiento'];
@@ -553,6 +553,17 @@ class post_functions extends general_functions
 			$response['data_quote'] 		= $responseAddVoucher;
 			$response['ID_ORDER']     	    = (int) $responseAddVoucher['id_orden'];
 			$response['STATUS_EMISION'] 	= 'OK';
+			return $response;
+		}
+
+		///valido  si se paga con paypal
+		if ($tipoPagoApp == 'USE_PAYPAL') {
+			$response['code_orden'] 		= $invoice;
+			$response['preOrden']   		= json_decode($idPreOrden, true);
+			$response['dataPreOrden'] 		= $dataPreOrden;
+			$response['data_quote'] 		= $responseAddVoucher;
+			$response['ID_ORDER']     	    = (int) $responseAddVoucher['id_orden'];
+			$response['STATUS_EMISION'] 	= 'paypal';
 			return $response;
 		}
 
