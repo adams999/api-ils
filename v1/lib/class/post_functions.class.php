@@ -658,6 +658,24 @@ class post_functions extends general_functions
 		return $response;
 	}
 
+	public function postUpdateOrderPaypalApp()
+	{
+		$prefix   					= $this->data['prefix'];
+		$lang_app 					= $this->funcLangApp();
+		$lang_app_short 			= $this->funcLangAppShort($this->funcLangApp());
+		$allData 					= array_merge($_GET, json_decode($_POST['dataEmisionApp'], true));
+		$allData['resp_paypal_all'] = json_decode($_POST['resp_paypal'], true);
+		return $idTransPaypal = $allData['resp_paypal_all']['transaction_complete_paypal']['purchase_units'][0]['payments']['captures'][0]['id'];
+
+		$dataValida			= [
+			'9092'	=> $prefix
+		];
+
+		$this->validatEmpty($dataValida);
+
+		return $allData;
+	}
+
 	public function sendVouchEmail()
 	{
 		$id_orden = $this->data['id_orden'];
@@ -669,7 +687,7 @@ class post_functions extends general_functions
 		$dataValida			= [
 			"40098" => $id_orden,
 			'4004'	=> $email,
-			'9092'	=> $prefix,
+			'9092'	=> $prefix
 		];
 
 		$this->validatEmpty($dataValida);
