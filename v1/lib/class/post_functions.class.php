@@ -661,11 +661,17 @@ class post_functions extends general_functions
 	public function postUpdateOrderPaypalApp()
 	{
 		$prefix   					= $this->data['prefix'];
-		$lang_app 					= $this->funcLangApp();
 		$lang_app_short 			= $this->funcLangAppShort($this->funcLangApp());
 		$allData 					= array_merge($_GET, json_decode($_POST['dataEmisionApp'], true));
 		$allData['resp_paypal_all'] = json_decode($_POST['resp_paypal'], true);
-		return $idTransPaypal = $allData['resp_paypal_all']['transaction_complete_paypal']['purchase_units'][0]['payments']['captures'][0]['id'];
+		$allData['id_trans_paypal'] = $allData['resp_paypal_all']['transaction_complete_paypal']['purchase_units'][0]['payments']['captures'][0]['id'];
+		$id_orden                   = $allData['dataQuote']['data_quote']['id_orden'];
+		$email                      = $allData['dataQuote']['dataPreOrden']['pasajeros'][0]['email'];
+		$id_broker 					= ($allData['agency'] != 'N/A' && !empty($allData['agency'])) ? $allData['agency'] : 118;
+		$userType 	  				= $allData['userType'];
+		$id_user	  				= !empty($allData['id_user']) ? $allData['id_user'] : 0;
+		$payment_status             = ($allData['resp_paypal_all']['details_paypal']['status'] == "APPROVED") ? 'Completed' : '';
+		$payer_id                   = $allData['resp_paypal_all']['details_paypal']['payer']['payer_id'];
 
 		$dataValida			= [
 			'9092'	=> $prefix
@@ -673,7 +679,25 @@ class post_functions extends general_functions
 
 		$this->validatEmpty($dataValida);
 
-		return $allData;
+		return $dataCurl      = [
+			"type"                          => 'Update_order_payment',
+			'id_broker'         			=> $id_broker,
+			'broker_sesion'    				=> $id_broker,
+			'selectLanguage'  				=> $lang_app_short,
+			'id_user'           			=> $id_user,
+			'user_type'         			=> $userType,
+			'invoice'                       => $id_orden,
+			'custom'                        => $email,
+			'payment_status'                => $payment_status,
+			'verify_sign'                   => $allData['id_trans_paypal'],
+			'payer_id'                      => $payer_id
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkEmail 	= $link . "/app/pages/async_cotizador.php";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$response = $this->curlGeneral($linkEmail, http_build_query($dataCurl), $headers);
+		return $response;
 	}
 
 	public function sendVouchEmail()
