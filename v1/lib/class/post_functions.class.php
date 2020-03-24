@@ -509,7 +509,7 @@ class post_functions extends general_functions
 					$dataGenVoucher['sexo' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= strtolower($dataPasajeros[$a]['sexo']);
 					$dataGenVoucher['nacionalidad' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 	= $dataPasajeros[$a]['pais'];
 					$dataGenVoucher['tipo_doc' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['tipoDocumento'];
-					$dataGenVoucher['numeropasa' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['codigoTelfono'] . '-' . $dataPasajeros[$a]['telefono'];
+					$dataGenVoucher['numeropasa' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['documento'];
 					$dataGenVoucher['email' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= $dataPasajeros[$a]['email'];
 					$dataGenVoucher['cod_telf_' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['codigoTelfono'];
 					$dataGenVoucher['telefonopasagero' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] = $dataPasajeros[$a]['codigoTelfono'] . '-' . $dataPasajeros[$a]['telefono'];
@@ -531,8 +531,11 @@ class post_functions extends general_functions
 		$linkPlatf 	= $link . "/app/pages/quote.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$responseAddVoucher   = json_decode($this->curlGeneral($linkPlatf, http_build_query($dataGenVoucher), $headers), true);
-
 		//return $responseAddVoucher;
+
+		if (empty($responseAddVoucher)) {
+			return $responseAddVoucher;
+		}
 
 		///valido si el cupon paga toda la emision
 		if ($dataGenVoucher['pagocupon'] == 'Si') {
@@ -665,6 +668,7 @@ class post_functions extends general_functions
 		$allData 					= array_merge($_GET, json_decode($_POST['dataEmisionApp'], true));
 		$allData['resp_paypal_all'] = json_decode($_POST['resp_paypal'], true);
 		$allData['id_trans_paypal'] = $allData['resp_paypal_all']['transaction_complete_paypal']['purchase_units'][0]['payments']['captures'][0]['id'];
+		unset($allData['resp_paypal_all']['proccess_paypal']);
 		$id_orden                   = $allData['dataQuote']['data_quote']['id_orden'];
 		$email                      = $allData['dataQuote']['dataPreOrden']['pasajeros'][0]['email'];
 		$id_broker 					= ($allData['agency'] != 'N/A' && !empty($allData['agency'])) ? $allData['agency'] : 118;
@@ -679,7 +683,7 @@ class post_functions extends general_functions
 
 		$this->validatEmpty($dataValida);
 
-		return $dataCurl      = [
+		$dataCurl      = [
 			"type"                          => 'Update_order_payment',
 			'id_broker'         			=> $id_broker,
 			'broker_sesion'    				=> $id_broker,
@@ -690,14 +694,18 @@ class post_functions extends general_functions
 			'custom'                        => $email,
 			'payment_status'                => $payment_status,
 			'verify_sign'                   => $allData['id_trans_paypal'],
-			'payer_id'                      => $payer_id
+			'payer_id'                      => $payer_id,
+			'resp_paypal_all'               => $allData['resp_paypal_all']
 		];
 
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkEmail 	= $link . "/app/pages/async_cotizador.php";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkEmail, http_build_query($dataCurl), $headers);
-		return $response;
+		return [
+			'response_platf'     =>   $response,
+			'status'             =>   'OK'
+		];
 	}
 
 	public function sendVouchEmail()
