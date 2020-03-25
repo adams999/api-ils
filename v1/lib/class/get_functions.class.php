@@ -1003,7 +1003,20 @@ class get_functions extends general_functions
 		AND plan_category.vision_id = 1
 		AND plan_category.id_status = 1";
 		if ($agencia != 'N/A' && !empty($agencia)) {
-			$query .= " AND ((restriction.id_broker in (" . $agencia . ") and restriction.dirigido='6') or (restriction.dirigido='2' and restriction.id_broker in (" . $agencia . "))) ";
+			$query .= " AND (
+				(
+					restriction.id_broker IN ('$agencia')
+					AND restriction.dirigido IN ('6', '2')
+				)
+				OR (
+					restriction.dirigido = '0'
+					OR restriction.dirigido IS NULL
+					OR restriction.dirigido = '1'
+					OR 
+						restriction.id_broker IN ('$agencia')
+						AND restriction.dirigido IN ('6', '2')
+				)
+			) ";
 		} else {
 			if (in_array($prefix, ['AF', 'TH', 'TK', 'VY'])) { ///Plataformas que si poseen esta restriccion
 				$query .= " AND (
@@ -1260,6 +1273,20 @@ class get_functions extends general_functions
 			}
 			$response[$i]['preOrden'] = json_decode($PreOrd, true);
 			$response[$i]['total']    = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
+
+			switch (true) {
+				case $response[$i]['moneda'] == 'US$':
+					$response[$i]['moneda_paypal'] = 'USD';
+					break;
+
+				case $response[$i]['moneda'] == 'US$':
+					$response[$i]['moneda_paypal'] = 'USD';
+					break;
+
+				default:
+					$response[$i]['moneda_paypal'] = 'USD';
+					break;
+			}
 		}
 
 		if ($prefix == 'BT') { //Aplica para BTA
@@ -1356,6 +1383,17 @@ class get_functions extends general_functions
 			}
 			if ($response[$i]['parameter_key'] == 'USE_PAYPAL' && (int) $response[$i]['parameter_value'] == 1) {
 				$respons['USE_PAYPAL'] = (int) $response[$i]['parameter_value'];
+				$dataCurl = ['querys' => "SELECT
+											parameter_key,
+											parameter_value
+											FROM
+											parameters
+											WHERE
+											parameter_key = 'PAYPAL_CLIENT_ID'
+												AND show_parameter = 1"];
+
+				$response   = json_decode($this->curlGeneral($linkParam, json_encode($dataCurl), $headers), true);
+				$respons['CREDENTIAL_PAYPAL'] = $response[0]['parameter_value'];
 			}
 			if ($response[$i]['parameter_key'] == 'SHIPPING_LINK' && (int) $response[$i]['parameter_value'] == 1) {
 				$respons['SHIPPING_LINK'] = (int) $response[$i]['parameter_value'];
