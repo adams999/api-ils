@@ -1012,14 +1012,9 @@ class get_functions extends general_functions
 					restriction.dirigido = '0'
 					OR restriction.dirigido IS NULL
 					OR restriction.dirigido = '1'
-					OR (
+					OR 
 						restriction.id_broker IN ('$agencia')
-						AND restriction.dirigido = '6'
-					)
-					OR (
-						restriction.dirigido = '2'
-						AND restriction.id_broker IN ('$agencia')
-					)
+						AND restriction.dirigido IN ('6', '2')
 				)
 			) ";
 		} else {

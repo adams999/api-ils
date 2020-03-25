@@ -704,6 +704,7 @@ class post_functions extends general_functions
 		$response = $this->curlGeneral($linkEmail, http_build_query($dataCurl), $headers);
 		return [
 			'response_platf'     =>   $response,
+			'data_enviada'       =>   $dataCurl,
 			'status'             =>   'OK'
 		];
 	}
