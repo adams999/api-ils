@@ -1780,6 +1780,7 @@ class get_functions extends general_functions
 		}
 		return [[$series, $drilldown], [$clientAnual], [$AnSales]];
 	}
+
 	////////////////////////GRAFICOS PARA LA SEGUNDA PESTAÑA DE GENERAL/TOTAL HOME ILS
 	public function getGrafGenAgenGeneral($filters)
 	{
@@ -1790,7 +1791,8 @@ class get_functions extends general_functions
 			'50002'	=> $yearBus,
 			'50003'	=> $mesBus,
 		];
-		$validatEmpty  = $this->validatEmpty($dataValida);
+
+		$this->validatEmpty($dataValida);
 		/////////////////query para consultar meses del a;o y poder graficar bien las graficas de columnas de higcharts
 		$queryMeses = "SELECT DISTINCT
 			MONTH (orders.fecha) AS mes,
@@ -1810,59 +1812,46 @@ class get_functions extends general_functions
 			$Months[(int) $element['mes']] = $element['nameMes'];
 		}
 		////////////////////GRAFICA DE TORTA DRILLDOWN DE AGENCIAS VOUCHERS ACTIVOS GENERAL/TOTAL
-		$query1 = "SELECT
-			orders.prefijo,
-			COUNT(orders. STATUS) AS cantidad,
-			clients.client AS description,
-				(
-					SELECT
-						plan_category.name_plan
-					FROM
-						plans
-					JOIN plan_category ON plan_category.id_plan_categoria = plans.id_plan_categoria
-					AND plan_category.prefijo = plans.prefijo
-					WHERE
-						orders.producto = plans.id
-					AND orders.prefijo = plans.prefijo
-					LIMIT 1
-				) AS category
-			FROM
-				orders
-			JOIN clients ON clients.prefix = orders.prefijo
-			WHERE
-				clients.data_activa = 'SI'
-			AND orders.`status` IN (1, 3) ";
+		$status = Clients::getLabelStatusVoucher();
+		$query = "SELECT
+					orders.status,
+					COUNT(orders.status) AS total,
+					prefijo,
+					clients.client
+				FROM
+					orders
+				JOIN clients ON clients.prefix = orders.prefijo
+				WHERE 1 ";
 		if ($mesBus == 'ALL') {
-			$query1 .= "AND YEAR(orders.fecha) = '$yearBus' ";
+			$query .= "AND YEAR(orders.fecha) = '$yearBus' ";
 		} else {
-			$query1 .= "AND YEAR (orders.fecha) = '$yearBus '
-			AND MONTH (orders.fecha) = '$mesBus'";
+			$query .= "AND YEAR (orders.fecha) = '$yearBus'
+			AND MONTH (orders.fecha) = '$mesBus' ";
 		}
-		$query1 .= "AND IFNULL(inactive_platform, 0) <> 2
-			GROUP BY
-				orders.prefijo,
-				category
-			ORDER BY
-				description ASC";
-		$respGraf1 = $this->selectDynamic('', '', '', '', $query1, '', '', '', '');
-		$VouchCant = [];
-		foreach ($respGraf1 as &$element) {
-			$VouchCant[$element['description']] += (int) $element['cantidad'] ?: 0;
-			$VouchNet[$element['description']] = $element['category'];
-			$drillVouch[$element['description']][] = [$element['category'], (int) $element['cantidad']];
+		$query .= " AND IFNULL(inactive_platform, 0) <> 2
+				AND clients.data_activa = 'SI'
+				GROUP BY
+					status,
+					orders.prefijo";
+
+		$dataSql = $this->selectDynamic('', '', '', '', $query, '', '', '', '');
+		foreach ($dataSql as &$element) {
+			$ordersTot[$status[$element['status']]] += (int) $element['total'] ?: 0;
+			$ordersSt[$status[$element['status']]] = $element['client'] ?: "N/A";
+			$drillOrder[$status[$element['status']]][] = [$element['client'] ?: "N/A", (int) $element['total']];
 		}
-		$seriesVouch = [];
-		$drilldownVouch = [];
-		foreach ($VouchNet as $key => &$val) {
-			$seriesVouch[] = [
-				'name' => $key,
-				'y' => (float) $VouchCant[$key],
-				'drilldown' => $key,
+		$seriesOrd = [];
+		$drilldownOrd = [];
+		foreach ($ordersSt as $key => &$val) {
+			$seriesOrd[] = [
+				'name' => $key ?: 'N/A',
+				'y' => (int) $ordersTot[$key],
+				'drilldown' => $key ?: 'N/A',
 			];
-			$drilldownVouch[] = [
-				'name' => $key,
-				'id' => $key,
-				'data' => $drillVouch[$key],
+			$drilldownOrd[] = [
+				'name' => $key ?: 'N/A',
+				'id' => $key ?: 'N/A',
+				'data' => $drillOrder[$key],
 			];
 		}
 		///////////grafica de vouchers activos de netos 
@@ -2231,7 +2220,7 @@ class get_functions extends general_functions
 			$platName[] = $element['client'] ?: 0;
 		}
 		return [
-			[$seriesVouch, $drilldownVouch],
+			[$seriesOrd, $drilldownOrd],
 			[$seriesNeto, $drilldownNeto],
 			[$seriesOrig, $drilldownOrig],
 			[$MonthInt, array_values($monts1)],
@@ -2239,6 +2228,511 @@ class get_functions extends general_functions
 			[$SerEd, $DrillEd],
 			[$final, $platName],
 			'YEAR' => $yearBus
+		];
+	}
+
+	///////////////////////////////////////GRAFICOS CON TODOS LOS STATUS DE LAS ORDENES Y DRILLDOWN ILS
+	public function getChartVouchersStatus($filters)
+	{
+		$prefix	    = $filters['prefix'];
+		$startDate  = $filters['startDate'];
+		$endDate   	= $filters['endDate'];
+		$today 	   	= date('Y-m-d');
+		$language	= $this->funcLangApp();
+		$prefix	    = $filters['prefix'];
+		$startDate  = $filters['startDate'];
+		$endDate   	= $filters['endDate'];
+		$today 	   	= date('Y-m-d');
+		$language	= $this->funcLangApp();
+		$status     = Clients::getLabelStatusVoucher();
+
+		$dataValida	= [
+			"9092"  => $prefix,
+			'3030'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate) > strtotime($endDate)) : true,
+			'9068'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($endDate)	> strtotime($today)) : true,
+			'9069'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate)	> strtotime($today)) : true,
+		];
+		$this->validatEmpty($dataValida);
+
+		$IntEdad = [
+			'0-10',
+			'11-20',
+			'21-30',
+			'31-40',
+			'41-50',
+			'51-60',
+			'61-70',
+			'71-75',
+			'76-84',
+			'85+',
+		];
+
+		//    GRAFICA VOUCHERS CATEGORIAS 
+		$query1 = "SELECT
+				COUNT(orders.cantidad) AS total,
+				orders.status,
+				(
+					SELECT
+						plan_category.name_plan
+					FROM
+						plans
+					JOIN plan_category ON plan_category.id_plan_categoria = plans.id_plan_categoria
+					AND plan_category.prefijo = plans.prefijo
+					WHERE
+						orders.producto = plans.id
+					AND orders.prefijo = plans.prefijo
+					LIMIT 1
+				) AS category
+			FROM
+				orders
+			JOIN clients ON clients.prefix = orders.prefijo
+			WHERE
+				clients.data_activa = 'SI'
+			AND DATE( orders.fecha) BETWEEN '$startDate'
+			AND '$endDate'
+			AND IFNULL(inactive_platform, 0) <> 2
+			AND orders.prefijo = '$prefix'
+			GROUP BY
+				status,
+				category";
+		$respGraf1 = $this->selectDynamic('', '', '', '', $query1, '', '', '', '');
+		foreach ($respGraf1 as &$element) {
+			$salesTot[$status[$element['status']]] += (int) $element['total'] ?: 0;
+			$salesSt[$status[$element['status']]] = $element['category'] ?: "N/A";
+			$drillSales[$status[$element['status']]][] = [$element['category'] ?: "N/A", (int) $element['total']];
+		}
+		$seriesCat = [];
+		$drilldownCat = [];
+		foreach ($salesSt as $key => &$val) {
+			$seriesCat[] = [
+				'name' => $key ?: 'N/A',
+				'y' => (int) $salesTot[$key],
+				'drilldown' => $key ?: 'N/A',
+			];
+			$drilldownCat[] = [
+				'name' => $key ?: 'N/A',
+				'id' => $key ?: 'N/A',
+				'data' => $drillSales[$key],
+			];
+		}
+
+		//GRAFICA 2 NETOS VOUCHERS
+		$query2 = "SELECT
+				SUM(neto_prov) AS neto,
+                (
+                SELECT
+                    plans.`name`
+                FROM
+                    plans
+                WHERE
+                    orders.producto = plans.id
+                AND orders.prefijo = plans.prefijo
+                LIMIT 1
+            ) AS name_plan,
+                orders.status
+			FROM
+				orders
+			JOIN clients ON clients.prefix = orders.prefijo
+			WHERE
+				clients.data_activa = 'SI'
+			AND DATE( orders.fecha) BETWEEN '$startDate'
+			AND '$endDate'
+			AND IFNULL(inactive_platform, 0) <> 2
+			AND orders.prefijo = '$prefix'
+			GROUP BY
+				status,
+				name_plan";
+		$respGraf2 = $this->selectDynamic('', '', '', '', $query2, '', '', '', '');
+		foreach ($respGraf2 as &$element) {
+			$netoTot[$status[$element['status']]] += (float) $element['neto'] ?: 0;
+			$netoSt[$status[$element['status']]] = $element['name_plan'] ?: "N/A";
+			$drillNeto[$status[$element['status']]][] = [$element['name_plan'] ?: "N/A", (float) $element['neto']];
+		}
+		$seriesNet = [];
+		$drilldownNet = [];
+		foreach ($netoSt as $key => &$val) {
+			$seriesNet[] = [
+				'name' => $key ?: 'N/A',
+				'y' => (float) $netoTot[$key],
+				'drilldown' => $key ?: 'N/A',
+			];
+			$drilldownNet[] = [
+				'name' => $key ?: 'N/A',
+				'id' => $key ?: 'N/A',
+				'data' => $drillNeto[$key],
+			];
+		}
+		//GRAFICO 3 DE PAISES PARA VOUCHERS
+		$query3 = "SELECT
+					orders.origen,
+                orders.status,
+                COUNT(orders.cantidad) AS total,
+				(
+					SELECT
+						description
+					FROM
+						countries
+					WHERE
+						iso_country = orders.origen
+				LIMIT 1
+				) AS country
+				FROM
+					orders
+				JOIN clients ON clients.prefix = orders.prefijo
+				WHERE
+					clients.data_activa = 'SI'
+				AND DATE( orders.fecha) BETWEEN '$startDate'
+				AND '$endDate'
+				AND IFNULL(inactive_platform, 0) <> 2
+				AND orders.prefijo = '$prefix'
+				GROUP BY 
+					status, 
+					orders.origen";
+		$respGraf3 = $this->selectDynamic('', '', '', '', $query3, '', '', '', '');
+		foreach ($respGraf3 as &$element) {
+			$origTot[$status[$element['status']]] += (int) $element['total'] ?: 0;
+			$origSt[$status[$element['status']]] = $element['country'] ?: "N/A";
+			$drillorig[$status[$element['status']]][] = [$element['country'] ?: "N/A", (int) $element['total']];
+		}
+		$seriesOrig = [];
+		$drilldownOrig = [];
+		foreach ($origSt as $key => &$val) {
+			$seriesOrig[] = [
+				'name' => $key ?: 'N/A',
+				'y' => (int) $origTot[$key],
+				'drilldown' => $key ?: 'N/A',
+			];
+			$drilldownOrig[] = [
+				'name' => $key ?: 'N/A',
+				'id' => $key ?: 'N/A',
+				'data' => $drillorig[$key],
+			];
+		}
+
+		//GRAFICA SOLO PARA STATUS EN CANTIDADES SENCILLA
+		$query4 = "SELECT
+					COUNT(orders.status) AS total,
+                	orders.status
+				FROM orders
+				JOIN clients ON clients.prefix = orders.prefijo
+				WHERE
+					clients.data_activa = 'SI'
+				AND DATE( orders.fecha) BETWEEN '$startDate'
+				AND '$endDate'
+				AND IFNULL(inactive_platform, 0) <> 2
+				AND orders.prefijo = '$prefix'
+				GROUP BY 
+					status";
+
+		$respGraf4 = $this->selectDynamic('', '', '', '', $query4, '', '', '', '');
+		foreach ($respGraf4 as $key => &$val) {
+			$response[] = [
+				'name' => $status[$val['status']] ?: 'N/A',
+				'y' => (int) $val['total'],
+			];
+		}
+
+		//////GRAFICA DE EDADES STATUS ILS
+		$query5 = "SELECT
+					orders.status,
+                 	IFNULL(beneficiaries.sexo,'N/A') AS sexo,
+                	TIMESTAMPDIFF(
+                        YEAR,
+                        beneficiaries.nacimiento,
+                        orders.fecha) AS edad,
+                	COUNT(*) AS cant
+				FROM orders
+                JOIN clients ON clients.prefix = orders.prefijo
+                JOIN beneficiaries ON beneficiaries.id_orden = orders.id
+                AND orders.prefijo = beneficiaries.prefijo
+				WHERE
+					clients.data_activa = 'SI'
+				AND DATE( orders.fecha) BETWEEN '$startDate'
+				AND '$endDate'
+				AND IFNULL(inactive_platform, 0) <> 2
+				AND orders.prefijo = '$prefix'
+				GROUP BY 
+					status, 
+					sexo, 
+					edad 
+				ORDER BY 
+					edad ASC";
+
+		$respGraf5 = $this->selectDynamic('', '', '', '', $query5, '', '', '', '');
+
+		$BarD = [];
+		foreach ($respGraf5 as &$element) {
+			$arrSt[$element['sexo']][$element['status']] += $element['cant'];
+			statistics::EdadResult($BarD[$element['status']], $element['edad'], $element['sexo'], $element['cant']);
+		}
+		$SerEd = [];
+		foreach ($arrSt as $sex => $st) {
+			$SexEdad = [];
+			foreach ($st  as  $key => $val) {
+				$SexEdad[] = [
+					'name' => $status[$key],
+					'y' => (int) $val ?: 0,
+					'drilldown' => $sex . '-' . $status[$key],
+				];
+			}
+			$SerEd[] = [
+				'name' => $sex,
+				'data' => $SexEdad,
+			];
+		}
+		$dataEdad = [];
+		foreach ($arrSt as $sex => &$st) {
+			foreach ($st as $key => &$val) {
+				foreach ($BarD[$key][strtoupper($sex)] as $k => $v) {
+					$dataEdad[$sex . '-' . $status[$key]][] = [
+						$k, (int) $v
+					];
+				}
+			}
+		}
+		foreach ($dataEdad as $key => &$value) {
+			$DrillEd[] = [
+				'id' => $key,
+				'data' => $value,
+			];
+		}
+
+		//////GRAFICA DE EDADES
+		$IntEdad2 = [
+			'S-E',
+			'0-10',
+			'11-20',
+			'21-30',
+			'31-40',
+			'41-50',
+			'51-60',
+			'61-70',
+			'71-75',
+			'76-84',
+			'85+',
+		];
+
+		$BarA = [];
+		$BarD = [];
+		foreach ($respGraf4 as &$element) {
+			statistics::EdadResult($BarD[$element['prefijo']], $element['edad'], $element['sexo'], $element['cant']);
+			statistics::EdadResult($BarA, $element['edad'], $element['sexo'], $element['cant']);
+		}
+		$SexEdad = [];
+		$data = [];
+
+		foreach ($BarD  as $key => &$val) {
+			foreach ($val  as $key1 => &$value) {
+				$data = [];
+				foreach ($IntEdad  as  $key2 => &$values) {
+					$data[] = (int) $value[$values] ?: 0;
+				}
+				$SexEdad[] = [
+					'name' => $key1,
+					'data' => $data,
+				];
+			}
+		}
+
+		//////GRAFICAS PLATAFORMA de agencias
+		$sqlBroker = "SELECT
+			REPLACE( broker.broker,'''','') AS broker,
+			COUNT(orders.id) AS cant,
+			SUM(orders.total) AS monto,
+			broker.id_broker AS id_broker
+		FROM
+			broker
+		INNER JOIN orders ON orders.agencia = broker.id_broker
+		AND broker.prefijo = orders.prefijo
+		WHERE
+			DATE(orders.fecha) BETWEEN DATE('$startDate')
+		AND DATE('$endDate')
+		AND orders. STATUS IN (1, 3)
+		AND orders.prefijo = '$prefix'
+		GROUP BY
+			orders.prefijo,
+			broker
+		ORDER BY
+			cant DESC";
+
+		$arrCounterData = $this->selectDynamic('', '', '', '', $sqlBroker, '', '', '', '');
+		$cntCounterData = count($arrCounterData);
+
+		$sqlBrokerMonto = "SELECT
+			REPLACE( broker.broker,'''','') AS broker,
+			COUNT(orders.id) AS cant,
+			SUM(orders.total) AS monto,
+			broker.id_broker AS id_broker
+		FROM
+			broker
+		INNER JOIN orders ON orders.agencia = broker.id_broker
+		AND broker.prefijo = orders.prefijo
+		WHERE
+			DATE(orders.fecha) BETWEEN DATE('$startDate')
+		AND DATE('$endDate')
+		AND orders. STATUS IN (1, 3)
+		AND orders.prefijo = '$prefix'
+		GROUP BY
+			orders.prefijo,
+			broker
+		ORDER BY
+			cant DESC";
+
+		$arrAmountData = $this->selectDynamic('', '', '', '', $sqlBrokerMonto, '', '', '', '');
+
+		$cntData = $cntCounterData;
+		$arrAmount  = [];
+		$arrCount   = [];
+		$sortAmount = [];
+		$sortCount  = [];
+		$totalAmount = [0, 0];
+		$totalConter = [0, 0];
+		$arrDataCnt  = [
+			[
+				'id' => 1,
+				'name' => '20 Primeros',
+				'data' => []
+			]
+		];
+		if ($cntData > 20) {
+			$arrDataCnt[1] = [
+				'id' => 2,
+				'name' => 'Otros',
+				'data' => []
+			];
+		}
+		$arrDataAmn = [
+			[
+				'id' => 1,
+				'name' => '20 Primeros',
+				'data' => []
+			]
+		];
+		if ($cntData > 20) {
+			$arrDataAmn[1] = [
+				'id' => 2,
+				'name' => 'Otros',
+				'data' => []
+			];
+		}
+
+		for ($i = 0; $i < $cntData; $i++) {
+			$group = ($i < 20) ? 0 : 1;
+			$totalCount = $arrCounterData[$i]['cant'];
+			$totalPrice = $arrAmountData[$i]['monto'];
+
+			settype($totalCount, 'integer');
+			settype($totalPrice, 'float');
+
+			$totalAmount[$group] += $totalPrice;
+			$totalConter[$group] += $totalCount;
+
+			$sortCount[$group][] = $totalCount;
+			$sortAmount[$group][] = $totalPrice;
+
+			$arrCount[$group][] = [$arrCounterData[$i]['broker'], $totalCount];
+			$arrAmount[$group][] = [$arrAmountData[$i]['broker'], $totalPrice];
+		}
+
+		$arrDataCnt[0]['data'] = $arrCount[0];
+		$arrDataCnt[1]['data'] = $arrCount[1];
+		$arrDataAmn[0]['data'] = $arrAmount[0];
+		$arrDataAmn[1]['data'] = $arrAmount[1];
+
+		$seriesCnt = [
+			[
+				'y' => $totalConter[0],
+				'drilldown' => 1,
+				'name' => ($language == 'spa') ? '20 Primeros' : '20 First',
+			]
+		];
+		if ($cntData > 10) {
+			$seriesCnt[1] = [
+				'y' => $totalConter[1],
+				'drilldown' => 2,
+				'name' => ($language == 'spa') ? 'Otros' : 'Other',
+			];
+		}
+		$seriesAmn = [
+			[
+				'y' => $totalAmount[0],
+				'drilldown' => 1,
+				'name' => ($language == 'spa') ? '20 Primeros' : '20 First',
+			]
+		];
+		if ($cntData > 10) {
+			$seriesAmn[1] = [
+				'y' => $totalAmount[1],
+				'drilldown' => 2,
+				'name' => ($language == 'spa') ? 'Otros' : 'Other',
+			];
+		}
+
+		//////CONSULTA GENERAL PARA LA DATA DE LAS GRAFICAS DE EDADES PARA LA APP CANTIDAD Y MONTO
+		$dataGrafEdVentasCantidadMonto = $this->grafVentEd($prefix, $startDate, $endDate);
+
+		///////GRAFICAS EDADES CANTIDAD
+		$BarAPlatf2 = [];
+		$BarDPlatf2 = [];
+		foreach ($dataGrafEdVentasCantidadMonto as &$element) {
+			statistics::EdadResult($BarDPlatf2[$element['prefijo']], $element['edad'], $element['sexo'],  $element['cant']);
+			statistics::EdadResult($BarAPlatf2, $element['edad'], $element['sexo'],  $element['cant']);
+		}
+		$SexEdad2 = [];
+		$data3 = [];
+
+		foreach ($BarDPlatf2  as $key => &$val) {
+			foreach ($val  as $key1 => &$value) {
+				$data3 = [];
+				foreach ($IntEdad2  as  $key2 => &$values) {
+					$data3[] = (float) $value[$values] ?: 0;
+				}
+				$SexEdad2[] = [
+					'name' => $key1,
+					'data' => $data3,
+				];
+			}
+		}
+
+		/////GRAFICAS PLATAFORMA DE EDADES / VENTAS MONTO
+		$BarAPlatf3 = [];
+		$BarDPlatf3 = [];
+		foreach ($dataGrafEdVentasCantidadMonto as &$element) {
+			statistics::EdadResult($BarDPlatf3[$element['prefijo']], $element['edad'], $element['sexo'],  $element['neto']);
+			statistics::EdadResult($BarAPlatf3, $element['edad'], $element['sexo'],  $element['neto']);
+		}
+		$SexEdadPlatf3 = [];
+		$data3 = [];
+
+		foreach ($BarDPlatf3  as $key => &$val) {
+			foreach ($val  as $key1 => &$value) {
+				$data3 = [];
+				foreach ($IntEdad2  as  $key2 => &$values) {
+					$data3[] = (float) $value[$values] ?: 0;
+				}
+				$SexEdadPlatf3[] = [
+					'name' => $key1,
+					'data' => $data3,
+				];
+			}
+		}
+
+		return [
+			[$seriesCat, $drilldownCat],
+			[$seriesNet, $drilldownNet],
+			[$seriesOrig, $drilldownOrig],
+			$response,
+			[$SerEd, $DrillEd, array_values($status)],
+			array([
+				'arrDataCnt' => $arrDataCnt,
+				'arrDataAmn' => $arrDataAmn,
+				'seriesCnt' => $seriesCnt,
+				'seriesAmn' => $seriesAmn
+			]),
+			$SexEdad2,
+			$SexEdadPlatf3,
+			$this->grafTipoVenta($prefix, $startDate, $endDate, false),
+			$this->grafTipoVenta($prefix, '', '', true)
 		];
 	}
 
