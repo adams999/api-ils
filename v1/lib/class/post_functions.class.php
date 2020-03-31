@@ -298,7 +298,7 @@ class post_functions extends general_functions
 		$id_orden       = json_decode($allData['dataRespQuoteApp'], true)['id_orden'] ? json_decode($allData['dataRespQuoteApp'], true)['id_orden'] : '';
 		$ids_pasaj      = json_decode($allData['dataRespQuoteApp'], true)['id_beneficiaries'] ? json_decode($allData['dataRespQuoteApp'], true)['id_beneficiaries'] : '';
 		$preOrden     	= $allData["idPreOrden"];
-		$invoice      	= !empty($allData["voucher"]) ? $allData["voucher"] : $this->genCodigoOrden($prefix);
+		$invoice      	= !empty($allData["voucher"]) ? $allData["voucher"] : $this->genCodigoOrden((!empty($allData['prefAgency']) && $allData['prefAgency'] != 'N/A') ? $allData['prefAgency'] : $prefix);
 		$attempt     	= ((int) $allData["intento"] + 1);
 		$id_broker 		= ($allData['agency'] != 'N/A' && !empty($allData['agency'])) ? $allData['agency'] : 118;
 		$lang_app  		= $this->funcLangAppShort($this->funcLangApp());

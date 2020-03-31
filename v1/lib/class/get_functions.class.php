@@ -51,7 +51,7 @@ class get_functions extends general_functions
 	}
 	public function getClients()
 	{
-		$response = $this->selectDynamic('', 'clients', "data_activa='si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2 AND notificacion_error_ws = 1 ORDER BY client ASC", ['client', 'id_country', 'img_cliente', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '');
+		$response = $this->selectDynamic('', 'clients', "data_activa='si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2 AND notificacion_error_ws = 1 AND type_platform = '1' ORDER BY client ASC", ['client', 'id_country', 'img_cliente', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '');
 		for ($i = 0; $i < count($response); $i++) {
 			$response[$i]['web'] = $this->baseURL($response[$i]['web']);
 		}
@@ -1264,13 +1264,13 @@ class get_functions extends general_functions
 						$response[$i]['subTotalMenores'] = $response[$i]['arrUsedPrices'][0]['pvpSubTotal'];
 					}
 				}
-				$response[$i]['normal_age'] = (int) $response[$i]['normal_age'];
-				$response[$i]['max_age']    = (int) $response[$i]['max_age'];
-				$response[$i]['min_age']    = (int) $response[$i]['min_age'];
 				if (count($response[$i]['arrPrices']) > 0) {
 					$response[$i]['calc_new'] = 'Y'; /////parametro para saber si son calculos nuevos 
 				}
 			}
+			$response[$i]['normal_age'] ? $response[$i]['normal_age'] = (int) $response[$i]['normal_age'] : '';
+			$response[$i]['max_age']    ? $response[$i]['max_age']    = (int) $response[$i]['max_age'] : '';
+			$response[$i]['min_age']    ? $response[$i]['min_age']    = (int) $response[$i]['min_age'] : '';
 			$response[$i]['preOrden'] = json_decode($PreOrd, true);
 			$response[$i]['total']    = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
 
