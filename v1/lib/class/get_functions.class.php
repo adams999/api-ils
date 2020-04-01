@@ -305,6 +305,8 @@ class get_functions extends general_functions
 				'v_authorizado',
 				'neto_prov',
 				'tasa_cambio',
+				'alter_cur',
+				'total_mlc',
 				'orders.forma_pago',
 				'neto_prov_mlc',
 				'total_mlc',
@@ -319,7 +321,11 @@ class get_functions extends general_functions
 				'broker.code_phone2 AS code2_agencia',
 				'broker.phone2 AS phone2_agencia',
 				'broker.code_phone3 AS code3_agencia',
-				'broker.phone3 AS phone3_agencia'
+				'broker.phone3 AS phone3_agencia',
+				'orders.type_anulacion',
+				'credit_note.monto_nc',
+				'credit_note.Fecha_aplicado',
+				'orders.USE_nro_notaCredito'
 			);
 		}
 
@@ -449,7 +455,9 @@ class get_functions extends general_functions
 			AND plan_category.prefijo = plans.prefijo
 			JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
 			AND plan_categoria_detail.prefijo = plan_category.prefijo AND plan_categoria_detail.language_id = '$lang_app' 
-			JOIN currency ON currency.id_currency = plans.id_currence
+			JOIN currency ON currency.id_currency = plans.id_currence 
+			LEFT JOIN credit_note ON credit_note.nro_voucher = orders.codigo 
+			AND credit_note.prefijo = orders.prefijo 
 			JOIN broker ON broker.id_broker = orders.agencia
 			AND broker.prefijo = orders.prefijo " . $arrJoin . "",
 			"$codeWhere",
