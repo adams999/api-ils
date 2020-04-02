@@ -102,7 +102,7 @@ class post_functions extends general_functions
 		$dataValida			= [
 			'9092'	=> $prefix
 		];
-		$validatEmpty		= $this->validatEmpty($dataValida);
+		$this->validatEmpty($dataValida);
 		$data = [
 			'querys' => "SELECT
 			parameter_key,
@@ -117,8 +117,8 @@ class post_functions extends general_functions
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
-		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
-		if (empty($response)) {
+		$response   = $this->curlGeneral($linkParam, json_encode($data), $headers);
+		if (empty($response) || $response == '[]') {
 			$data = [
 				'querys' => "INSERT INTO parameters (parameter_key, parameter_value, description) VALUES
 				('DOWNLOAD_PDF_VOUCHER_APP', 'Y', 'APPIONIC'),

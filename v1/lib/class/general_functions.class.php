@@ -342,7 +342,7 @@ class general_functions extends Model
         $versionApp     = $_GET['versionAppApi'];
         $request        = json_encode($request);
         $_response      = mysql_real_escape_string($response);
-        $_response      = (strlen($_response) > 10000) ? '' : $_response;
+        $_response      = (strlen($_response) > 30000) ? '' : $_response;
         $so             = ($_GET['so'] != 'null') && (!empty($_GET['so'])) ? $_GET['so'] : 'DEV';
         $v_so           = ($_GET['v_so'] != 'null') && (!empty($_GET['v_so'])) ? $_GET['v_so'] : 'DEV';
         $manuf          = ($_GET['manuf'] != 'null') && (!empty($_GET['manuf'])) ? $_GET['manuf'] : 'DEV';
@@ -356,7 +356,7 @@ class general_functions extends Model
             'ip'                => $_SERVER['REMOTE_ADDR'],
             'operacion'         => $operacion,
             'datos'             => $request,
-            'respuesta'         => $response,
+            'respuesta'         => $_response,
             'prefijo'           => $prefijo,
             'procedencia'       => $procedencia,
             'apikey'            => $apikey,
