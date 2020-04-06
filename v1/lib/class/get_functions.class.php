@@ -324,7 +324,7 @@ class get_functions extends general_functions
 				'broker.phone3 AS phone3_agencia',
 				'orders.type_anulacion',
 				'credit_note.monto_nc',
-				'credit_note.Fecha_aplicado',
+				"DATE_FORMAT(credit_note.Fecha_aplicado,'%d-%m-%Y') as Fecha_aplicado",
 				'orders.USE_nro_notaCredito'
 			);
 		}
@@ -477,7 +477,7 @@ class get_functions extends general_functions
 				['beneficiaries.prefijo' => $prefix],
 				'beneficiaries',
 				"id_orden= '" . $value['id'] . "'",
-				['id', 'id_orden', "REPLACE(beneficiaries.nombre,'''','') AS nombre ", "REPLACE(beneficiaries.apellido,'''','') AS apellido ", 'documento', 'email', 'nacimiento', 'nacionalidad', 'tipo_doc', 'telefono', 'precio_vta', 'precio_cost', "TIMESTAMPDIFF( YEAR, beneficiaries.nacimiento, '{$value['retorno']}' ) AS edad", 'condicion_medica'],
+				['id', 'id_orden', "REPLACE(beneficiaries.nombre,'''','') AS nombre ", "REPLACE(beneficiaries.apellido,'''','') AS apellido ", 'documento', 'email', "DATE_FORMAT(nacimiento,'%d-%m-%Y') as nacimiento", 'nacionalidad', 'tipo_doc', 'telefono', 'precio_vta', 'precio_cost', "TIMESTAMPDIFF( YEAR, beneficiaries.nacimiento, '{$value['retorno']}' ) AS edad", 'condicion_medica'],
 				'',
 				'',
 				[
