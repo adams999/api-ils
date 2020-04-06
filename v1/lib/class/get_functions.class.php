@@ -1376,7 +1376,9 @@ class get_functions extends general_functions
 			parameter_key IN (
 				'PAY_CREDIT_CARD',
 				'USE_PAYPAL',
-				'SHIPPING_LINK'
+				'SHIPPING_LINK',
+				'REFERENCIA_QUOTE',
+				'PAYMENT_MANAGER_MESSAGE'
 			)"
 		];
 
@@ -1405,6 +1407,12 @@ class get_functions extends general_functions
 			}
 			if ($response[$i]['parameter_key'] == 'SHIPPING_LINK' && (int) $response[$i]['parameter_value'] == 1) {
 				$respons['SHIPPING_LINK'] = (int) $response[$i]['parameter_value'];
+			}
+			if ($response[$i]['parameter_key'] == 'REFERENCIA_QUOTE' && (int) $response[$i]['parameter_value'] == 1) {
+				$respons['REFERENCIA_QUOTE'] = (int) $response[$i]['parameter_value'];
+			}
+			if ($response[$i]['parameter_key'] == 'PAYMENT_MANAGER_MESSAGE' && (int) $response[$i]['parameter_value'] == 1) {
+				$respons['PAYMENT_MANAGER_MESSAGE'] = (int) $response[$i]['parameter_value'];
 			}
 		}
 

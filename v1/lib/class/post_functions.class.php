@@ -233,6 +233,8 @@ class post_functions extends general_functions
 
 		if ($lang_app == 'eng') {
 			$message = "$nomClient wishes you a Happy Journey Start:$salida Voucher:$code $linkVoucher";
+		} else if ($lang_app == 'por') {
+			$message = "$nomClient deseja-lhe Feliz Jornada Começar:$salida Ordem:$code $linkVoucher";
 		} else {
 			$message = "$nomClient le desea Feliz Viaje inicio:$salida Orden:$code $linkVoucher";
 		}
@@ -457,6 +459,7 @@ class post_functions extends general_functions
 			'email-link'                    => (!empty($allData['dataLinkPago']['correoLinkPago']) && $tipoPagoApp == 'SHIPPING_LINK') ? $allData['dataLinkPago']['correoLinkPago'] : '', //parametros para el link de pago 
 			'phone-link-code'               => (!empty($allData['dataLinkPago']['codigoTelLinkPago']) && $tipoPagoApp == 'SHIPPING_LINK') ? $allData['dataLinkPago']['codigoTelLinkPago'] : '', //parametros para el link de pago 
 			'phone-link'                    => (!empty($allData['dataLinkPago']['telefLinkPago']) && $tipoPagoApp == 'SHIPPING_LINK') ? $allData['dataLinkPago']['telefLinkPago'] : '', //parametros para el link de pago 
+			'referencia'                    => $allData['referencia']
 		];
 
 		if ($dataPreOrden['cupon']['VALUE_CUPON'] == 100 && $dataPreOrden['cupon']['TIPO_CALC'] == '%') { //////validacion para cupon
