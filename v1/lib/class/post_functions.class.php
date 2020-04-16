@@ -271,7 +271,7 @@ class post_functions extends general_functions
 	{
 		$allData        = array_merge($_GET, json_decode($_POST['data'], true), $_POST);
 		$allData['TDC']["codigoTarjeta"] = str_replace(' ', '', $allData['TDC']["codigoTarjeta"]);
-		(bool) $platfProcNuevo = ($allData['array_prices_app']['calc_new'] == 'Y') ? true : false; ////// aqui se identifica si la plataforma es con la version nueva del cotizador 
+		(bool) $platfProcNuevo = (json_decode($allData['array_prices_app'], true)['calc_new'] == 'Y') ? true : false; ////// aqui se identifica si la plataforma es con la version nueva del cotizador 
 		$tipoPagoApp    = $allData['tipoPagoApp'];
 		switch (true) {
 			case $tipoPagoApp == 'PAY_CREDIT_CARD':
@@ -403,7 +403,7 @@ class post_functions extends general_functions
 			'active_overage'                => 0,
 			'tiepoid'                       => $dataPreOrden['array_prices_app']['tiepoid'],
 			'n_riders'                      => count($dataPreOrden['upgrades']),
-			'activofactor'                  => ($platfProcNuevo) ? (($dataPreOrden['array_prices_app']['activofactor'] == 'si') ? 'Y' : 'N') : (($dataPreOrden['array_prices_app']['activofactor'] == 'si') ? 'si' : 'no'),
+			'activofactor'                  => ($platfProcNuevo) ? (($dataPreOrden['array_prices_app']['activofactor']) == 'si' ? 'Y' : 'N') : (($dataPreOrden['array_prices_app']['activofactor']) == 'si' ? 'si' : 'no'),
 			'family_plan'                   => ($dataPreOrden['array_prices_app']['planfamiliar'] > 0) ? 'Y' : 'N',
 			'moneda_plan'                   => $dataPreOrden['array_prices_app']['moneda'],
 			'tasa_cambio'                   => $dataPreOrden['array_prices_app']['tasa_cambio'],
