@@ -271,10 +271,11 @@ class post_functions extends general_functions
 	{
 		$allData        = array_merge($_GET, json_decode($_POST['data'], true), $_POST);
 		$allData['TDC']["codigoTarjeta"] = str_replace(' ', '', $allData['TDC']["codigoTarjeta"]);
+		(bool) $platfProcNuevo = (json_decode($allData['array_prices_app'], true)['calc_new'] == 'Y') ? true : false; ////// aqui se identifica si la plataforma es con la version nueva del cotizador 
 		$tipoPagoApp    = $allData['tipoPagoApp'];
 		switch (true) {
 			case $tipoPagoApp == 'PAY_CREDIT_CARD':
-				$tipoPago = 1;
+				$tipoPago = ($platfProcNuevo) ? 1 : 2;
 				break;
 
 			case $tipoPagoApp == 'USE_PAYPAL':
@@ -282,7 +283,7 @@ class post_functions extends general_functions
 				break;
 
 			case $tipoPagoApp == 'CREDIT_AGENCY':
-				$tipoPago = 0;
+				$tipoPago = ($platfProcNuevo) ? 0 : 1;
 				break;
 
 			case $tipoPagoApp == 'SHIPPING_LINK':
@@ -368,7 +369,7 @@ class post_functions extends general_functions
 
 		$dataGenVoucher = [
 			'cotiza_respuesta'              => 1,
-			'vendedor'                      => $id_user,
+			'vendedor'                      => (int) $id_user,
 			'broker'                        => $id_broker,
 			'action'                        => '',
 			'idOrder'                       => '',
@@ -402,7 +403,7 @@ class post_functions extends general_functions
 			'active_overage'                => 0,
 			'tiepoid'                       => $dataPreOrden['array_prices_app']['tiepoid'],
 			'n_riders'                      => count($dataPreOrden['upgrades']),
-			'activofactor'                  => ($dataPreOrden['array_prices_app']['activofactor'] == 'si') ? 'Y' : 'N',
+			'activofactor'                  => ($platfProcNuevo) ? (($dataPreOrden['array_prices_app']['activofactor']) == 'si' ? 'Y' : 'N') : (($dataPreOrden['array_prices_app']['activofactor']) == 'si' ? 'si' : 'no'),
 			'family_plan'                   => ($dataPreOrden['array_prices_app']['planfamiliar'] > 0) ? 'Y' : 'N',
 			'moneda_plan'                   => $dataPreOrden['array_prices_app']['moneda'],
 			'tasa_cambio'                   => $dataPreOrden['array_prices_app']['tasa_cambio'],
@@ -416,7 +417,6 @@ class post_functions extends general_functions
 			'id_R'                          => '',
 			'descuento'                     => ($dataPreOrden['cupon']['TIPO_CALC'] == '%') ? ((((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades']) * (float) $dataPreOrden['cupon']['VALUE_CUPON']) / 100) : (((((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades']) - (float) $dataPreOrden['cupon']['VALUE_CUPON']) > 0) ?  (float) $dataPreOrden['cupon']['VALUE_CUPON'] : ((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades'])),
 			'cod_promocional'               => $dataPreOrden['cupon']['NOMBRE_AMIGABLE'] ? $dataPreOrden['cupon']['NOMBRE_AMIGABLE'] : ($dataPreOrden['cupon']['CODIGO'] ? $dataPreOrden['cupon']['CODIGO'] : ''),
-			'cotiza_respuesta'              => 1,
 			'v_authorizado'                 => '',
 			'x_respuesta_full'              => '',
 			'x_contador_intentos'           => $attempt,
@@ -441,9 +441,10 @@ class post_functions extends general_functions
 			'categoria'                     => $dataPreOrden['id_plan_categoria'],
 			'cantidapasajero'               => count($dataPreOrden['edades']),
 			'diaxpersona'                   => $dataPreOrden['dias'],
-			'porcetajePFV'                  => $dataPreOrden['array_prices_app']['arrUsedPrices'][0]['pvpBase'],
-			'porcetajePFC'                  => $dataPreOrden['array_prices_app']['arrUsedPrices'][0]['costBase'],
-			'pareja'                        => ($dataPreOrden['array_prices_app']['planpareja'] > 0) ? 'Y' : 'N',
+			'porcetajePFV'                  => ($platfProcNuevo) ? ($dataPreOrden['array_prices_app']['arrUsedPrices'][0]['pvpBase']) : ($dataPreOrden['array_prices_app']['total']),
+			'porcetajePFC'                  => ($platfProcNuevo) ? ($dataPreOrden['array_prices_app']['arrUsedPrices'][0]['costBase']) : ($dataPreOrden['array_prices_app']['total_costo']),
+			'porcetajePFN'                  => 0,
+			'pareja'                        => ($platfProcNuevo) ? (($dataPreOrden['array_prices_app']['planpareja'] > 0) ? 'Y' : 'N') : (($dataPreOrden['array_prices_app']['planpareja'] > 0) ? 1 : 'N'),
 			'totalcosto'                    => $allData['subTotal'],
 			'totalcostocost'                => $dataPreOrden['array_prices_app']['total_costo'],
 			'totalcostoneta'                => $dataPreOrden['array_prices_app']['total_neto'],
@@ -529,6 +530,11 @@ class post_functions extends general_functions
 		$dataGenVoucher['RaidersPax'] = '0' . $dataGenVoucher['RaidersPax'];
 
 		//return $dataGenVoucher;
+		if ($prefix == 'TC') {
+			//return $allData;
+			//return $dataGenVoucher;
+			//return $responseAddVoucher;
+		}
 
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkPlatf 	= $link . "/app/pages/quote.php";
@@ -598,11 +604,6 @@ class post_functions extends general_functions
 			"voucher"			=> $invoice,
 			"intento"			=> $attempt,
 			'id_broker'         => $id_broker,
-			'broker_sesion'     => $id_broker,
-			'selectLanguage'    => $lang_app,
-			'id_user'           => $id_user,
-			'user_type'         => $userType,
-			'id_broker'        	=> $id_broker,
 			'broker_sesion'    	=> $id_broker,
 			'selectLanguage'  	=> $lang_app,
 			'id_user'          	=> $id_user,
