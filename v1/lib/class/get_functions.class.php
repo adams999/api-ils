@@ -1290,11 +1290,12 @@ class get_functions extends general_functions
 					$response[$i]['costoMenor'] = substr($response[$i]['costoMenor'], 0, strpos($response[$i]['costoMenor'], '.') + 3);
 					$response[$i]['total_costo'] = substr($response[$i]['total_costo'], 0, strpos($response[$i]['total_costo'], '.') + 3);
 					if (!empty($id_plan_cotiza)) {
-						///////// proceso para cuadrar precios de los pasajeros con 2 decimales y poder cuadrar el total
+						///////// proceso para cuadrar precios de los pasajeros con 2 decimales y poder cuadrar el total y el subtotal de menores
 						$response[$i]['total'] = ($response[$i]['total'] / $response[$i]['numero_menores']);
 						$response[$i]['total'] = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
 						$response[$i]['total'] = ($response[$i]['total'] * $response[$i]['numero_menores']);
 						$response[$i]['total'] = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
+						$response[$i]['subTotalMenores'] = $response[$i]['total'];
 					}
 				}
 				//////calcular bien el precio de costo por pasajero y costo toal cuando aplica plan familiar
