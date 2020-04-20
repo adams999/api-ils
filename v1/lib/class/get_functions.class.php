@@ -1248,6 +1248,11 @@ class get_functions extends general_functions
 		$PreOrd = $this->preOrderApp($dataPreOrdn);
 
 		for ($i = 0; $i < count($response); $i++) { //Simplifica precios
+			$response[$i]['normal_age'] ? $response[$i]['normal_age'] = (int) $response[$i]['normal_age'] : '';
+			$response[$i]['max_age']    ? $response[$i]['max_age']    = (int) $response[$i]['max_age'] : '';
+			$response[$i]['min_age']    ? $response[$i]['min_age']    = (int) $response[$i]['min_age'] : '';
+			$response[$i]['preOrden'] = json_decode($PreOrd, true);
+			$response[$i]['total']    = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
 			if (!empty($response[$i]['arrUsedPrices'])) {
 				if (count($response[$i]['arrUsedPrices']) > 1) { //si tiene menores y mayores
 					if ($response[$i]['arrUsedPrices'][1]) { ////si es mayor
@@ -1275,18 +1280,37 @@ class get_functions extends general_functions
 				if (count($response[$i]['arrPrices']) > 0) {
 					$response[$i]['calc_new'] = 'Y'; /////parametro para saber si son calculos nuevos 
 				}
+			} else {
+				//////calcular bien el precio de costo por pasajero y costo toal cuando aplica plan pareja
+				if ($response[$i]['planpareja'] == 1) {
+					$response[$i]['costoMenor'] = (($response[$i]['costoMenor'] * $response[$i]['factor_pareja']) / $response[$i]['numero_menores']);
+					$response[$i]['total_costo'] = ($response[$i]['costoMenor'] * $response[$i]['numero_menores']);
+					$response[$i]['subTotalMenores_costo'] = ($response[$i]['costoMenor'] * $response[$i]['numero_menores']);
+					$response[$i]['subTotalMenores_costo'] = substr($response[$i]['subTotalMenores_costo'], 0, strpos($response[$i]['subTotalMenores_costo'], '.') + 3);
+					$response[$i]['costoMenor'] = substr($response[$i]['costoMenor'], 0, strpos($response[$i]['costoMenor'], '.') + 3);
+					$response[$i]['total_costo'] = substr($response[$i]['total_costo'], 0, strpos($response[$i]['total_costo'], '.') + 3);
+					if (!empty($id_plan_cotiza)) {
+						///////// proceso para cuadrar precios de los pasajeros con 2 decimales y poder cuadrar el total y el subtotal de menores
+						$response[$i]['total'] = ($response[$i]['total'] / $response[$i]['numero_menores']);
+						$response[$i]['total'] = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
+						$response[$i]['total'] = ($response[$i]['total'] * $response[$i]['numero_menores']);
+						$response[$i]['total'] = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
+						$response[$i]['subTotalMenores'] = $response[$i]['total'];
+					}
+				}
+				//////calcular bien el precio de costo por pasajero y costo toal cuando aplica plan familiar
+				elseif ($response[$i]['planfamiliar'] == 1) {
+					$response[$i]['costoMenor'] = (($response[$i]['costoMenor'] * $response[$i]['factor_family']) / $response[$i]['numero_menores']);
+					$response[$i]['total_costo'] = ($response[$i]['costoMenor'] * $response[$i]['numero_menores']);
+					$response[$i]['subTotalMenores_costo'] = ($response[$i]['costoMenor'] * $response[$i]['numero_menores']);
+					$response[$i]['subTotalMenores_costo'] = substr($response[$i]['subTotalMenores_costo'], 0, strpos($response[$i]['subTotalMenores_costo'], '.') + 3);
+					$response[$i]['costoMenor'] = substr($response[$i]['costoMenor'], 0, strpos($response[$i]['costoMenor'], '.') + 3);
+					$response[$i]['total_costo'] = substr($response[$i]['total_costo'], 0, strpos($response[$i]['total_costo'], '.') + 3);
+				}
 			}
-			$response[$i]['normal_age'] ? $response[$i]['normal_age'] = (int) $response[$i]['normal_age'] : '';
-			$response[$i]['max_age']    ? $response[$i]['max_age']    = (int) $response[$i]['max_age'] : '';
-			$response[$i]['min_age']    ? $response[$i]['min_age']    = (int) $response[$i]['min_age'] : '';
-			$response[$i]['preOrden'] = json_decode($PreOrd, true);
-			$response[$i]['total']    = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
 
+			///////////switch para la moneda en la cotizacion
 			switch (true) {
-				case $response[$i]['moneda'] == 'US$':
-					$response[$i]['moneda_paypal'] = 'USD';
-					break;
-
 				case $response[$i]['moneda'] == 'US$':
 					$response[$i]['moneda_paypal'] = 'USD';
 					break;

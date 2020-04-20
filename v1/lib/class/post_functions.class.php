@@ -441,9 +441,9 @@ class post_functions extends general_functions
 			'categoria'                     => $dataPreOrden['id_plan_categoria'],
 			'cantidapasajero'               => count($dataPreOrden['edades']),
 			'diaxpersona'                   => $dataPreOrden['dias'],
-			'porcetajePFV'                  => ($platfProcNuevo) ? ($dataPreOrden['array_prices_app']['arrUsedPrices'][0]['pvpBase']) : ($dataPreOrden['array_prices_app']['total']),
-			'porcetajePFC'                  => ($platfProcNuevo) ? ($dataPreOrden['array_prices_app']['arrUsedPrices'][0]['costBase']) : ($dataPreOrden['array_prices_app']['total_costo']),
-			'porcetajePFN'                  => 0,
+			'porcetajePFV'                  => ($platfProcNuevo) ? ($dataPreOrden['array_prices_app']['arrUsedPrices'][0]['pvpBase']) : ($dataPreOrden['array_prices_app']['valorMenor']),
+			'porcetajePFC'                  => ($platfProcNuevo) ? ($dataPreOrden['array_prices_app']['arrUsedPrices'][0]['costBase']) : ($dataPreOrden['array_prices_app']['CostoMenor2']),
+			'porcetajePFN'                  => ($platfProcNuevo) ? ($dataPreOrden['array_prices_app']['arrUsedPrices'][0]['net']) : ($dataPreOrden['array_prices_app']['netoMenor']),
 			'pareja'                        => ($platfProcNuevo) ? (($dataPreOrden['array_prices_app']['planpareja'] > 0) ? 'Y' : 'N') : (($dataPreOrden['array_prices_app']['planpareja'] > 0) ? 1 : 'N'),
 			'totalcosto'                    => $allData['subTotal'],
 			'totalcostocost'                => $dataPreOrden['array_prices_app']['total_costo'],
@@ -489,11 +489,11 @@ class post_functions extends general_functions
 			$dataGenVoucher['telefonopasagero' . $i]   	 = $dataPasajeros[$i]['codigoTelfono'] . '-' . $dataPasajeros[$i]['telefono'];
 			$dataGenVoucher['pax_condicion_' . $i] 		 = $dataPasajeros[$i]['condMed'] ? 'Y' : 'N';
 			$dataGenVoucher['observacion_med' . $i]   	 = $dataPasajeros[$i]['condMed'];
-			$dataGenVoucher['subtotalv' . $i]  		     = $dataPasajeros[$i]['subtotal'];
-			$dataGenVoucher['subtotal' . $i] 		     = $dataPasajeros[$i]['subtotal'];
+			$dataGenVoucher['subtotalv' . $i]  		     = ($platfProcNuevo) ? ($dataPasajeros[$i]['subtotal']) : (($dataPreOrden['array_prices_app']['planfamiliar'] == 1) ? ($dataPreOrden['array_prices_app']['total'] / $dataPreOrden['array_prices_app']['numero_menores']) : ($dataPasajeros[$i]['subtotal'])); //////proceso y falidacion para que cuadren los montos netos y el total en la version sin calculos nuevos de las plataformas en plan familia
+			$dataGenVoucher['subtotal' . $i] 		     = ($platfProcNuevo) ? ($dataPasajeros[$i]['subtotal']) : (($dataPreOrden['array_prices_app']['planfamiliar'] == 1) ? ($dataPreOrden['array_prices_app']['total'] / $dataPreOrden['array_prices_app']['numero_menores']) : ($dataPasajeros[$i]['subtotal'])); //////proceso y falidacion para que cuadren los montos netos y el total en la version sin calculos nuevos de las plataformas en plan familia
 			$dataGenVoucher['costop' . $i]  		     = $dataPasajeros[$i]['costo'];
 			$dataGenVoucher['netop' . $i] 		         = $dataPasajeros[$i]['neto'];
-			$dataGenVoucher['valorplan' . $i]            = $dataPasajeros[$i]['subtotal'];
+			$dataGenVoucher['valorplan' . $i]            = ($platfProcNuevo) ? ($dataPasajeros[$i]['subtotal']) : (($dataPreOrden['array_prices_app']['planfamiliar'] == 1) ? ($dataPreOrden['array_prices_app']['total'] / $dataPreOrden['array_prices_app']['numero_menores']) : ($dataPasajeros[$i]['subtotal'])); //////proceso y falidacion para que cuadren los montos netos y el total en la version sin calculos nuevos de las plataformas en plan familia
 			$dataGenVoucher['valorplancost' . $i]        = $dataPasajeros[$i]['costo'];
 			$dataGenVoucher['valorplanNeto' . $i]        = $dataPasajeros[$i]['neto'];
 			$dataGenVoucher['fechanaci' . $i]            = date('m/d/Y', strtotime($dataPasajeros[$i]['fechaNacimiento']));
@@ -519,8 +519,8 @@ class post_functions extends general_functions
 					$dataGenVoucher['telefonopasagero' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] = $dataPasajeros[$a]['codigoTelfono'] . '-' . $dataPasajeros[$a]['telefono'];
 					$dataGenVoucher['pax_condicion_' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 	= $dataPasajeros[$a]['condMed'] ? 'y' : 'n';
 					$dataGenVoucher['observacion_med' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 	= $dataPasajeros[$a]['condMed'];
-					$dataGenVoucher['subtotalv' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['subtotal'];
-					$dataGenVoucher['subtotal' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['subtotal'];
+					$dataGenVoucher['subtotalv' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= ($platfProcNuevo) ? ($dataPasajeros[$i]['subtotal']) : (($dataPreOrden['array_prices_app']['planfamiliar'] == 1) ? ($dataPreOrden['array_prices_app']['total'] / $dataPreOrden['array_prices_app']['numero_menores']) : ($dataPasajeros[$i]['subtotal'])); //////proceso y falidacion para que cuadren los montos netos y el total en la version sin calculos nuevos de las plataformas en plan familia
+					$dataGenVoucher['subtotal' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= ($platfProcNuevo) ? ($dataPasajeros[$i]['subtotal']) : (($dataPreOrden['array_prices_app']['planfamiliar'] == 1) ? ($dataPreOrden['array_prices_app']['total'] / $dataPreOrden['array_prices_app']['numero_menores']) : ($dataPasajeros[$i]['subtotal'])); //////proceso y falidacion para que cuadren los montos netos y el total en la version sin calculos nuevos de las plataformas en plan familia
 					$dataGenVoucher['costop' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= $dataPasajeros[$a]['costo'];
 					$dataGenVoucher['netop' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= $dataPasajeros[$a]['neto'];
 				}
