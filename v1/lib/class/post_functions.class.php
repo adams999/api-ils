@@ -530,7 +530,7 @@ class post_functions extends general_functions
 		$dataGenVoucher['RaidersPax'] = '0' . $dataGenVoucher['RaidersPax'];
 
 		//return $dataGenVoucher;
-		if ($prefix == 'TC') {
+		if ($prefix == 'TK') {
 			//return $allData;
 			//return $dataGenVoucher;
 			//return $responseAddVoucher;

@@ -1413,10 +1413,10 @@ class get_functions extends general_functions
 
 		for ($i = 0; $i < count($response); $i++) {
 			if ($response[$i]['parameter_key'] == 'PAY_CREDIT_CARD' && (int) $response[$i]['parameter_value'] >= 1) {
-				$respons['PAY_CREDIT_CARD'] =  (int) $response[$i]['parameter_value'];
+				$respons['PAY_CREDIT_CARD'] =  1;
 			}
 			if ($response[$i]['parameter_key'] == 'USE_PAYPAL' && (int) $response[$i]['parameter_value'] == 1) {
-				$respons['USE_PAYPAL'] = (int) $response[$i]['parameter_value'];
+				$respons['USE_PAYPAL'] = 1;
 				$dataCurl = ['querys' => "SELECT
 											parameter_key,
 											parameter_value
@@ -1430,13 +1430,13 @@ class get_functions extends general_functions
 				$respons['CREDENTIAL_PAYPAL'] = $response[0]['parameter_value'];
 			}
 			if ($response[$i]['parameter_key'] == 'SHIPPING_LINK' && (int) $response[$i]['parameter_value'] == 1) {
-				$respons['SHIPPING_LINK'] = (int) $response[$i]['parameter_value'];
+				$respons['SHIPPING_LINK'] = 1;
 			}
 			if ($response[$i]['parameter_key'] == 'REFERENCIA_QUOTE' && (int) $response[$i]['parameter_value'] == 1) {
-				$respons['REFERENCIA_QUOTE'] = (int) $response[$i]['parameter_value'];
+				$respons['REFERENCIA_QUOTE'] = 1;
 			}
 			if ($response[$i]['parameter_key'] == 'PAYMENT_MANAGER_MESSAGE' && (int) $response[$i]['parameter_value'] == 1) {
-				$respons['PAYMENT_MANAGER_MESSAGE'] = (int) $response[$i]['parameter_value'];
+				$respons['PAYMENT_MANAGER_MESSAGE'] = 1;
 			}
 		}
 
