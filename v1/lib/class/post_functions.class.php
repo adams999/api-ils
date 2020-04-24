@@ -713,6 +713,79 @@ class post_functions extends general_functions
 		];
 	}
 
+	public function postUpdateOrden()
+	{
+		$allData = array_merge($_GET, $_POST);
+		$prefix  = $allData['prefix'];
+		$idOrden = $allData['idOrden'];
+		$statusNew = (string) $allData['statusNew'];
+		$id_broker = ($allData['agency'] != 'N/A' && !empty($allData['agency'])) ? $allData['agency'] : 118;
+		$lang_app  = $this->funcLangAppShort($this->funcLangApp());
+		$userType  = $allData['userType'];
+		$cupon     = $allData['cupon'];
+		$id_user   = !empty($allData['id_user']) ? $allData['id_user'] : 0;
+
+		$dataValida			= [
+			'9092'	=> $prefix,
+			'50033' => $idOrden,
+			'9065'  => $statusNew
+		];
+
+		$this->validatEmpty($dataValida);
+
+		$query = "SELECT * FROM orders where prefijo = '{$prefix}' AND id = {$idOrden}";
+
+		$dataOrden = $this->selectDynamic('', '', '', '', $query)[0];
+
+		if (empty($dataOrden)) {
+			return $dataOrden;
+		}
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+
+		//curl para la plataforma en el envio de correo
+		$dataAddCurlEmail = [
+			'broker_sesion'    		=> $id_broker,
+			'selectLanguage'  		=> $lang_app,
+			'id_user'           	=> $id_user,
+			'user_type'         	=> $userType,
+			'act'                   => 'update_order',
+			'idorder'               => $dataOrden['id'],
+			'id_order'              => $dataOrden['id'],
+			'Anulado_Por_Admin'     => $userType == 13 ? 1 : 0, /////si es usuario master 13
+			'id_emision_type'       => $dataOrden['id_emision_type'],
+			'id_group'		        => $dataOrden['id_group'],
+			'codigo'				=> $dataOrden['codigo'],
+			'id_status'             => $statusNew,
+			'cupon'                 => $dataOrden['cupon'],
+			'nombre_contacto'		=> $dataOrden['nombre_contacto'],
+			'telefono_contacto'		=> $dataOrden['telefono_contacto'],
+			'email_contacto'		=> $dataOrden['email_contacto'],
+			'origin'				=> $dataOrden['origen'],
+			'destino'				=> $dataOrden['destino'],
+			'territory'				=> $dataOrden['territory'],
+			'id_broker'				=> $dataOrden['agencia'],
+			'idplan'				=> $dataOrden['producto'],
+			'idorder'				=> $dataOrden['id'],
+			'precio'				=> $dataOrden['total'],
+			'nombre_agencia'		=> $dataOrden['nombre_agencia'],
+			'comentarios'			=> $dataOrden['comentarios'],
+			'vendedor'				=> $dataOrden['vendedor'],
+			'agente_vendedor'		=> $dataOrden['vendedor'],
+			'comentario_interno'	=> $dataOrden['comentario_interno'],
+			'name_broker'			=> $dataOrden['nombre_agencia'],
+			'comentariolog'			=> 'Update status voucher ' . $dataOrden['codigo'],
+			'cupon'                 => $cupon
+		];
+
+		//return $dataCurlEmail = $dataAddCurlEmail;
+		$linkCurl 	= $link . "/app/admin/async_report_man_serv.php";
+		$curlEmail   = $this->curlGeneral($linkCurl, http_build_query($dataAddCurlEmail), $headers);
+
+		return ['data' => $curlEmail, "status" => 'OK'];
+	}
+
 	public function sendVouchEmail()
 	{
 		$id_orden = $this->data['id_orden'];

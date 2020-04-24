@@ -249,6 +249,21 @@ class get_functions extends general_functions
 		$id_user   = $filters['id_user'];
 		$lang_app  = $this->funcLangApp();
 
+		$dataCurl = [
+			'querys' => "SELECT
+							parameter_value
+						FROM
+							parameters
+						WHERE
+							parameters.parameter_key = 'GRACE_PERIOD'
+						AND show_parameter = 1 LIMIT 1"
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkplatf 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$periodGrace = json_decode($this->curlGeneral($linkplatf, json_encode($dataCurl), $headers), true)[0]['parameter_value'];
+
 		$dataValida	= [
 			"9092"  => $prefix,
 			"9017"  => !empty($status) ? in_array($status, [1, 2, 3, 4, 5]) : true,
@@ -473,6 +488,7 @@ class get_functions extends general_functions
 		foreach ($dataOrders as $key => &$value) {
 
 			$value['response'] = json_decode($value['response'], true);
+			$dataOrders[$key]['period_grace'] = (int) $periodGrace ?: 3;
 			$dataOrders[$key]['beneficiaries'] = $this->selectDynamic(
 				['beneficiaries.prefijo' => $prefix],
 				'beneficiaries',
