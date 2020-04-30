@@ -367,6 +367,52 @@ class post_functions extends general_functions
 
 		$this->validatEmpty($dataValida);
 
+		///Ordenar data de cupones para versiones de cotizador con un solo descuento 
+		if ($dataPreOrden['cupon']['NOMBRE_AMIGABLE'] || $dataPreOrden['cupon']['CODIGO']) {
+			$descuentoAux = $dataPreOrden['cupon']['NOMBRE_AMIGABLE'] ? $dataPreOrden['cupon']['NOMBRE_AMIGABLE'] : ($dataPreOrden['cupon']['CODIGO'] ? $dataPreOrden['cupon']['CODIGO'] : '');
+		} else { ////////validacion para los dos codigos de descuentos cupon y NC
+			$auxDesc = '';
+
+			foreach ($dataPreOrden['cupon'] as $key => $value) {
+				foreach ($value as $key2 => $value2) {
+					if ($key2 == 'TEXT_APP') {
+						$auxDesc .= $value2 . ',';
+					}
+				}
+			}
+
+			$auxDesc = substr($auxDesc, 0, -1);
+			$auxDesc = explode(',', $auxDesc);
+			$dataDescOrd = '';
+			if (strtoupper(substr($auxDesc[0], 0, 2)) == 'NC') {
+				$descOrdenados['CUPON']		= $auxDesc[1];
+				$descOrdenados['NC']		= $auxDesc[0];
+			} else {
+				$descOrdenados['CUPON']		= $auxDesc[0];
+				$descOrdenados['NC']		= $auxDesc[1];
+			}
+			if (strtoupper(substr($auxDesc[0], 0, 2)) == 'NC' && strtoupper(substr($auxDesc[1], 0, 2)) == 'NC') {
+				$descOrdenados['NC']		= $auxDesc[0];
+				unset($descOrdenados['CUPON']);
+			}
+			if (strtoupper(substr($auxDesc[0], 0, 2)) != 'NC' && strtoupper(substr($auxDesc[1], 0, 2)) != 'NC') {
+				$descOrdenados['CUPON']		= $auxDesc[0];
+				unset($descOrdenados['NC']);
+			}
+			$descOrdenados = array_filter($descOrdenados);
+			if (count($descOrdenados) >= 2) {
+				$dataDescOrd = '2|' . $descOrdenados['CUPON'] . ',1|' . $descOrdenados['NC'];
+			} else {
+				if ($descOrdenados['CUPON']) {
+					$dataDescOrd = '2|' . $descOrdenados['CUPON'];
+				} else {
+					$dataDescOrd .= '1|' . $descOrdenados['NC'];
+				}
+			}
+		}
+
+
+
 		$dataGenVoucher = [
 			'cotiza_respuesta'              => 1,
 			'vendedor'                      => (int) $id_user,
@@ -416,7 +462,8 @@ class post_functions extends general_functions
 			'cod_telf_C'                    => $dataPreOrden['contacto_emergencia']['codigoTelE'],
 			'id_R'                          => '',
 			'descuento'                     => ($dataPreOrden['cupon']['TIPO_CALC'] == '%') ? ((((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades']) * (float) $dataPreOrden['cupon']['VALUE_CUPON']) / 100) : (((((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades']) - (float) $dataPreOrden['cupon']['VALUE_CUPON']) > 0) ?  (float) $dataPreOrden['cupon']['VALUE_CUPON'] : ((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades'])),
-			'cod_promocional'               => $dataPreOrden['cupon']['NOMBRE_AMIGABLE'] ? $dataPreOrden['cupon']['NOMBRE_AMIGABLE'] : ($dataPreOrden['cupon']['CODIGO'] ? $dataPreOrden['cupon']['CODIGO'] : ''),
+			'cod_promocional'               => $descuentoAux,
+			'descuentos'                    => !empty($dataDescOrd) ? $dataDescOrd : ((strtoupper(substr($descuentoAux, 0, 2)) == 'NC') ? "1|$descuentoAux" : "2|$descuentoAux"),
 			'v_authorizado'                 => '',
 			'x_respuesta_full'              => '',
 			'x_contador_intentos'           => $attempt,
@@ -529,12 +576,9 @@ class post_functions extends general_functions
 		}
 		$dataGenVoucher['RaidersPax'] = '0' . $dataGenVoucher['RaidersPax'];
 
-		//return $dataGenVoucher;
-		if ($prefix == 'TK') {
-			//return $allData;
-			//return $dataGenVoucher;
-			//return $responseAddVoucher;
-		}
+		// if (in_array($_SERVER["REMOTE_ADDR"], array("179.32.116.209"))) {
+		// 	return $dataGenVoucher;
+		// }
 
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkPlatf 	= $link . "/app/pages/quote.php";
@@ -757,7 +801,7 @@ class post_functions extends general_functions
 			'id_emision_type'       => $dataOrden['id_emision_type'],
 			'id_group'		        => $dataOrden['id_group'],
 			'codigo'				=> $dataOrden['codigo'],
-			'id_status'             => $statusNew,
+			'id_status'             => $statusNew == 'NC' ? '0' : $statusNew,
 			'cupon'                 => $dataOrden['cupon'],
 			'nombre_contacto'		=> $dataOrden['nombre_contacto'],
 			'telefono_contacto'		=> $dataOrden['telefono_contacto'],
@@ -778,6 +822,50 @@ class post_functions extends general_functions
 			'comentariolog'			=> 'Update status voucher ' . $dataOrden['codigo'],
 			'cupon'                 => $cupon
 		];
+
+		if (!empty($cupon)) {
+			$queryCupon = [
+				'broker_sesion'    		=> $id_broker,
+				'selectLanguage'  		=> $lang_app,
+				'id_user'           	=> $id_user,
+				'user_type'         	=> $userType,
+				"querys"  =>  "SELECT
+									*
+								FROM
+									coupons
+								WHERE
+									(
+										codigo = '$cupon'
+										OR codigo_secundario = '$cupon'
+									)
+								AND id_status = '1'
+								AND NOW() BETWEEN DATE(fecha_desde)
+								AND DATE(fecha_hasta)
+								AND ussage > 0"
+			];
+			$linkCurl 	= $link . "/app/api/selectDynamic";
+			$dataCupon   = json_decode($this->curlGeneral($linkCurl, json_encode($queryCupon), $headers), true)[0];
+
+			if (empty($dataCupon)) {
+				switch ($lang_app) {
+					case 'es':
+						return [['notes' => 'Cupón Ingresado Inválido']];
+						break;
+
+					case 'pr':
+						return [['notes' => 'Cupom inserido inválido']];
+						break;
+
+					case 'en':
+						return [['notes' => 'Coupon Entered Invalid']];
+						break;
+
+					default:
+						return [['notes' => 'Cupon Ingresado Inválido']];
+						break;
+				}
+			}
+		}
 
 		//return $dataCurlEmail = $dataAddCurlEmail;
 		$linkCurl 	= $link . "/app/admin/async_report_man_serv.php";
