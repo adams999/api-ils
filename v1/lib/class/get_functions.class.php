@@ -831,7 +831,6 @@ class get_functions extends general_functions
 		return $response;
 	}
 
-
 	public function getCuponDescuento($filters)
 	{
 		$prefix 	  = $filters['prefix'];
@@ -886,8 +885,35 @@ class get_functions extends general_functions
 
 		if ($resp['STATUS'] == 'OK') {
 
-			$dataCurl = [
-				'querys' => "SELECT
+			if (strtoupper(substr($cupon, 0, 2)) == 'NC') {
+
+				$dataCurl = [
+					'querys' => "SELECT 
+									* 
+								FROM
+									credit_note
+									INNER JOIN orders ON orders.codigo = credit_note.nro_voucher 
+								WHERE
+								credit_note.nro_notaCredito = '$cupon'"
+				];
+
+				$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+				$linkplatf = $link . "/app/api/selectDynamic";
+				$headers 	= "content-type: application/x-www-form-urlencoded";
+				$respuesta = $this->curlGeneral($linkplatf, json_encode($dataCurl), $headers);
+				$resp2 = json_decode($respuesta, true);
+
+				$resp['VALUE_CUPON'] 		= (float) $resp2[0]['monto_nc'];
+				$resp['TIPO_CALC']   		= 'monto';
+				$resp['SUBTOTAL']    		= (float) $subTotal;
+				$resp['CODIGO']          	= $cupon;
+				$resp['NOMBRE_AMIGABLE'] 	= $cupon;
+				$resp['ID_NC']        	 	= $resp2[0]['id'];
+				$resp['NOMBRE_INGRESADO'] 	= $cupon;
+				return $resp;
+			} else {
+				$dataCurl = [
+					'querys' => "SELECT
 					id,
 					codigo,
 					codigo_secundario,
@@ -899,6 +925,149 @@ class get_functions extends general_functions
 					codigo = '$cupon'
 				OR codigo_secundario = '$cupon'
 				AND id_status = 1 "
+				];
+
+				$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+				$linkplatf = $link . "/app/api/selectDynamic";
+				$headers 	= "content-type: application/x-www-form-urlencoded";
+				$respuesta = $this->curlGeneral($linkplatf, json_encode($dataCurl), $headers);
+				$resp2 = json_decode($respuesta, true);
+
+				if ((float) $resp2[0]['porcentaje'] > 0) {
+					$resp['VALUE_CUPON'] 	= (float) $resp2[0]['porcentaje'];
+					$resp['TIPO_CALC']   	= '%';
+					$resp['SUBTOTAL']    	= (float) $subTotal;
+				} else {
+					$resp['VALUE_CUPON'] 	= (float) $resp2[0]['credit_amount'];
+					$resp['TIPO_CALC']   	= 'monto';
+					$resp['SUBTOTAL']    	= (float) $subTotal;
+				}
+				$resp['CODIGO']          	= $resp2[0]['codigo'];
+				$resp['NOMBRE_AMIGABLE'] 	= $resp2[0]['codigo_secundario'];
+				$resp['ID_CUPON']        	= $resp2[0]['id'];
+				$resp['NOMBRE_INGRESADO'] 	= $cupon;
+				return $resp;
+			}
+		} else {
+			$resp['NOMBRE_INGRESADO']   = $cupon;
+			return $resp;
+		}
+	}
+
+	public function getCuponDescuentoNC($filters)
+	{
+		$prefix 	  = $filters['prefix'];
+		$userType 	  = $filters['userType'];
+		$id_user	  = $filters['id_user'];
+		$id_broker    = ($filters['agency'] != 'N/A' && !empty($filters['agency'])) ? $filters['agency'] : 118;
+		$idPlan       = $filters['idPlan'];
+		$cupon        = $filters['cupon'];
+		$cupones      = explode(',', $cupon);
+		$subTotal     = str_replace(',', '', $filters['subTotal']);
+		$destino      = $filters['destino'];
+		$numpasajeros = $filters['numpasajeros'];
+		$moneda_local = $filters['moneda_local'];
+		$tasa_cambio  = $filters['tasa_cambio'];
+		$lang_app     = "es";
+		$lang_app     = $this->funcLangAppShort($this->funcLangApp());
+		$descOrdenados = [];
+
+		$dataValida	= [
+			"9092"  => $prefix,
+			"50005" => $id_user,
+			"5022"  => $idPlan,
+			'50018'	=> $cupon,
+			'50019'	=> $subTotal,
+			'50007'	=> $destino,
+			'50020'	=> $numpasajeros,
+			'50035' => !(count($cupones) > 2)
+		];
+
+		$this->validatEmpty($dataValida);
+
+		if (strtoupper(substr($cupones[0], 0, 2)) == 'NC') {
+			$descOrdenados['CUPON']		= $cupones[1];
+			$descOrdenados['NC']		= $cupones[0];
+		} else {
+			$descOrdenados['CUPON']		= $cupones[0];
+			$descOrdenados['NC']		= $cupones[1];
+		}
+		if (strtoupper(substr($cupones[0], 0, 2)) == 'NC' && strtoupper(substr($cupones[1], 0, 2)) == 'NC') {
+			$descOrdenados['NC']		= $cupones[0];
+			unset($descOrdenados['CUPON']);
+		}
+		if (strtoupper(substr($cupones[0], 0, 2)) != 'NC' && strtoupper(substr($cupones[1], 0, 2)) != 'NC') {
+			$descOrdenados['CUPON']		= $cupones[0];
+			unset($descOrdenados['NC']);
+		}
+		$descOrdenados = array_filter($descOrdenados);
+
+		$dataQuote = [
+			'id_user'        	=> $id_user,
+			'user_type'      	=> $userType,
+			'broker_sesion'  	=> $id_broker, //parametro que recibe el core.lib de la plataforma para cargar los parametros de la agencia 
+			'type'			 	=> 'descuento',
+			'selectLanguage' 	=> $lang_app,
+			'cod_promocional' 	=> $cupon,
+			'monto_cancelar' 	=> $subTotal,
+			'iduser'         	=> $id_user,
+			'IdUser_type'    	=> $userType,
+			'destino'        	=> $destino,
+			'plan_producto'  	=> $idPlan,
+			'id_broker'      	=> $id_broker,
+			'numpasajeros'   	=> $numpasajeros,
+			'moneda_local'   	=> $moneda_local,
+			'tasa_cambio'    	=> $tasa_cambio
+		];
+
+		foreach ($descOrdenados as $key => &$value) {
+			$dataQuote['cod_promocional'] = $descOrdenados[$key];
+			$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+			$linkQuote 	= $link . "/app/pages/async_cotizador.php";
+			$headers 	= "content-type: application/x-www-form-urlencoded";
+			$resp[$key]   = json_decode($this->curlGeneral($linkQuote, $dataQuote, $headers, 'GET'), true);
+		}
+
+		if ($resp['NC']['STATUS'] == 'OK') { /////////si es nota de credito
+			$dataCurl = [
+				'querys' => "SELECT 
+									* 
+								FROM
+									credit_note
+									INNER JOIN orders ON orders.codigo = credit_note.nro_voucher 
+								WHERE
+								credit_note.nro_notaCredito = '{$descOrdenados['NC']}'"
+			];
+
+			$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+			$linkplatf = $link . "/app/api/selectDynamic";
+			$headers 	= "content-type: application/x-www-form-urlencoded";
+			$respuesta = $this->curlGeneral($linkplatf, json_encode($dataCurl), $headers);
+			$resp1 = json_decode($respuesta, true);
+
+			$resp['NC']['VALUE_CUPON'] 		= (float) $resp1[0]['monto_nc'];
+			$resp['NC']['TIPO_CALC']   		= 'monto';
+			$resp['NC']['SUBTOTAL']    		= (float) $subTotal;
+			$resp['NC']['CODIGO']          	= $cupon;
+			$resp['NC']['NOMBRE_AMIGABLE'] 	= $cupon;
+			$resp['NC']['ID_NC']        	= $resp1[0]['id'];
+			$resp['NC']['NOMBRE_INGRESADO'] = $descOrdenados['NC'];
+			$resp['NC']['TEXT_APP'] 		= $descOrdenados['NC'];
+		}
+		if ($resp['CUPON']['STATUS'] == 'OK') { ///////////////si es cupon
+			$dataCurl = [
+				'querys' => "SELECT
+					id,
+					codigo,
+					codigo_secundario,
+					porcentaje,
+					credit_amount
+				FROM
+					coupons
+				WHERE
+					codigo = '{$descOrdenados['CUPON']}'
+				OR codigo_secundario = '{$descOrdenados['CUPON']}'
+				AND id_status = 1 "
 			];
 
 			$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
@@ -908,23 +1077,23 @@ class get_functions extends general_functions
 			$resp2 = json_decode($respuesta, true);
 
 			if ((float) $resp2[0]['porcentaje'] > 0) {
-				$resp['VALUE_CUPON'] = (float) $resp2[0]['porcentaje'];
-				$resp['TIPO_CALC']   = '%';
-				$resp['SUBTOTAL']    = (float) $subTotal;
+				$resp['CUPON']['VALUE_CUPON'] 	= (float) $resp2[0]['porcentaje'];
+				$resp['CUPON']['TIPO_CALC']   	= '%';
+				$resp['CUPON']['SUBTOTAL']    	= (float) $subTotal;
 			} else {
-				$resp['VALUE_CUPON'] = (float) $resp2[0]['credit_amount'];
-				$resp['TIPO_CALC']   = 'monto';
-				$resp['SUBTOTAL']    = (float) $subTotal;
+				$resp['CUPON']['VALUE_CUPON'] 	= (float) $resp2[0]['credit_amount'];
+				$resp['CUPON']['TIPO_CALC']   	= 'monto';
+				$resp['CUPON']['SUBTOTAL']    	= (float) $subTotal;
 			}
-			$resp['CODIGO']          = $resp2[0]['codigo'];
-			$resp['NOMBRE_AMIGABLE'] = $resp2[0]['codigo_secundario'];
-			$resp['ID_CUPON']        = $resp2[0]['id'];
-			$resp['NOMBRE_INGRESADO'] = $cupon;
-			return $resp;
+			$resp['CUPON']['CODIGO']          	= $resp2[0]['codigo'];
+			$resp['CUPON']['NOMBRE_AMIGABLE'] 	= $resp2[0]['codigo_secundario'];
+			$resp['CUPON']['ID_CUPON']        	= $resp2[0]['id'];
+			$resp['CUPON']['NOMBRE_INGRESADO'] 	= $descOrdenados['CUPON'];
+			$resp['CUPON']['TEXT_APP'] 			= $descOrdenados['CUPON'];
 		} else {
-			$resp['NOMBRE_INGRESADO']          = $cupon;
 			return $resp;
 		}
+		return $resp;
 	}
 
 	public function getDatosUser($filters)
