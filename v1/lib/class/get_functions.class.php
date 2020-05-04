@@ -489,6 +489,8 @@ class get_functions extends general_functions
 
 			$value['response'] = json_decode($value['response'], true);
 			$dataOrders[$key]['period_grace'] = (int) $periodGrace ?: 3;
+			$dataOrders[$key]['total']    = substr($dataOrders[$key]['total'], 0, strpos($dataOrders[$key]['total'], '.') + 3);
+			$dataOrders[$key]['total_mlc']  = substr($dataOrders[$key]['total_mlc'], 0, strpos($dataOrders[$key]['total_mlc'], '.') + 3);
 			$dataOrders[$key]['beneficiaries'] = $this->selectDynamic(
 				['beneficiaries.prefijo' => $prefix],
 				'beneficiaries',
@@ -888,13 +890,17 @@ class get_functions extends general_functions
 			if (strtoupper(substr($cupon, 0, 2)) == 'NC') {
 
 				$dataCurl = [
-					'querys' => "SELECT 
-									* 
+					'querys' => "SELECT
+									id,
+									monto_nc 
 								FROM
 									credit_note
-									INNER JOIN orders ON orders.codigo = credit_note.nro_voucher 
+								INNER JOIN orders ON orders.codigo = credit_note.nro_voucher
 								WHERE
-								credit_note.nro_notaCredito = '$cupon'"
+									credit_note.nro_notaCredito = '$cupon'
+								AND (
+									ISNULL(orders.USE_nro_notaCredito)
+									OR orders.USE_nro_notaCredito = '')"
 				];
 
 				$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
@@ -914,7 +920,7 @@ class get_functions extends general_functions
 			} else {
 				$dataCurl = [
 					'querys' => "SELECT
-					id,
+					coupons.id,
 					codigo,
 					codigo_secundario,
 					porcentaje,
@@ -924,7 +930,7 @@ class get_functions extends general_functions
 				WHERE
 					codigo = '$cupon'
 				OR codigo_secundario = '$cupon'
-				AND id_status = 1 "
+				AND coupons.id_status = 1 "
 				];
 
 				$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
@@ -1030,13 +1036,17 @@ class get_functions extends general_functions
 
 		if ($resp['NC']['STATUS'] == 'OK') { /////////si es nota de credito
 			$dataCurl = [
-				'querys' => "SELECT 
-									* 
-								FROM
-									credit_note
-									INNER JOIN orders ON orders.codigo = credit_note.nro_voucher 
-								WHERE
-								credit_note.nro_notaCredito = '{$descOrdenados['NC']}'"
+				'querys' => "SELECT
+								id,
+								monto_nc 
+							FROM
+								credit_note
+							INNER JOIN orders ON orders.codigo = credit_note.nro_voucher
+							WHERE
+								credit_note.nro_notaCredito = '{$descOrdenados['NC']}'
+							AND (
+								ISNULL(orders.USE_nro_notaCredito)
+								OR orders.USE_nro_notaCredito = '')"
 			];
 
 			$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
@@ -1057,17 +1067,17 @@ class get_functions extends general_functions
 		if ($resp['CUPON']['STATUS'] == 'OK') { ///////////////si es cupon
 			$dataCurl = [
 				'querys' => "SELECT
-					id,
-					codigo,
-					codigo_secundario,
-					porcentaje,
-					credit_amount
-				FROM
-					coupons
-				WHERE
-					codigo = '{$descOrdenados['CUPON']}'
-				OR codigo_secundario = '{$descOrdenados['CUPON']}'
-				AND id_status = 1 "
+								coupons.id,
+								codigo,
+								codigo_secundario,
+								porcentaje,
+								credit_amount
+							FROM
+								coupons
+							WHERE
+								codigo = '{$descOrdenados['CUPON']}'
+							OR codigo_secundario = '{$descOrdenados['CUPON']}'
+							AND coupons.id_status = 1 "
 			];
 
 			$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
@@ -1438,6 +1448,8 @@ class get_functions extends general_functions
 			$response[$i]['min_age']    ? $response[$i]['min_age']    = (int) $response[$i]['min_age'] : '';
 			$response[$i]['preOrden'] = json_decode($PreOrd, true);
 			$response[$i]['total']    = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
+			$response[$i]['USDTotal']    = substr($response[$i]['USDTotal'], 0, strpos($response[$i]['USDTotal'], '.') + 3);
+			strtoupper($response[$i]['moneda_local'])  == 'Y' ? $response[$i]['tasa_cambio'] = (float) $response[$i]['tasa_cambio'] : $response[$i]['tasa_cambio'] = (float) 1;
 			if (!empty($response[$i]['arrUsedPrices'])) {
 				if (count($response[$i]['arrUsedPrices']) > 1) { //si tiene menores y mayores
 					if ($response[$i]['arrUsedPrices'][1]) { ////si es mayor
@@ -1498,6 +1510,10 @@ class get_functions extends general_functions
 			switch (true) {
 				case $response[$i]['moneda'] == 'US$':
 					$response[$i]['moneda_paypal'] = 'USD';
+					break;
+
+				case $response[$i]['moneda'] == 'EUR':
+					$response[$i]['moneda_paypal'] = 'EUR';
 					break;
 
 				default:
@@ -3399,8 +3415,8 @@ class get_functions extends general_functions
 							raiders_detail.description,
 							raiders.id_benefi,
 							raiders.type_raider,
-							raiders.value_raider,
-							raiders.cost_raider,
+							value_raider,
+							cost_raider,
 							raiders.id_provider,
 							raiders.rd_calc_type,
 							raiders.rd_coverage_amount,
@@ -3417,6 +3433,8 @@ class get_functions extends general_functions
 						INNER JOIN raiders ON plan_raider.id_raider = raiders.id_raider
 						INNER JOIN raiders_detail ON raiders.id_raider = raiders_detail.id_raider
 						AND raiders_detail.language_id = '$language'
+						INNER JOIN plans ON plan_raider.id_plan = plans.id
+						INNER JOIN currency ON plans.id_currence = currency.id_currency
 						WHERE
 							plan_raider.id_plan = '$idPlan'
 						AND raiders.id_status = '1'
