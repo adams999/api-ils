@@ -411,8 +411,6 @@ class post_functions extends general_functions
 			}
 		}
 
-
-
 		$dataGenVoucher = [
 			'cotiza_respuesta'              => 1,
 			'vendedor'                      => (int) $id_user,
@@ -510,10 +508,10 @@ class post_functions extends general_functions
 			'referencia'                    => $allData['referencia']
 		];
 
-		if ($dataPreOrden['cupon']['VALUE_CUPON'] == 100 && $dataPreOrden['cupon']['TIPO_CALC'] == '%') { //////validacion para cupon
+		if (($dataPreOrden['cupon']['VALUE_CUPON'] == 100 && $dataPreOrden['cupon']['TIPO_CALC'] == '%') || ($dataPreOrden['cupon']['PAGO_CUPON'] == 'Si')) { //////validacion para cupon
 			$dataGenVoucher['pagocupon'] = 'Si';
 			$dataGenVoucher['pago_cupon'] = 'Si';
-		} elseif ($dataPreOrden['cupon']['VALUE_CUPON'] >= ((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades']) && $dataPreOrden['cupon']['TIPO_CALC'] == 'monto') {
+		} elseif (($dataPreOrden['cupon']['VALUE_CUPON'] >= ((float) $allData['subTotal'] + (float) $allData['subTotalUpgrades']) && $dataPreOrden['cupon']['TIPO_CALC'] == 'monto') || ($dataPreOrden['cupon']['PAGO_CUPON'] == 'Si')) {
 			$dataGenVoucher['pagocupon'] = 'Si';
 			$dataGenVoucher['pago_cupon'] = 'Si';
 		} else {

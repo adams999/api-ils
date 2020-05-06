@@ -1448,7 +1448,7 @@ class get_functions extends general_functions
 			$response[$i]['min_age']    ? $response[$i]['min_age']    = (int) $response[$i]['min_age'] : '';
 			$response[$i]['preOrden'] = json_decode($PreOrd, true);
 			$response[$i]['total']    = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
-			$response[$i]['USDTotal']    = substr($response[$i]['USDTotal'], 0, strpos($response[$i]['USDTotal'], '.') + 3);
+			$response[$i]['USDTotal'] ? ($response[$i]['USDTotal'] = substr($response[$i]['USDTotal'], 0, strpos($response[$i]['USDTotal'], '.') + 3)) : ($response[$i]['USDTotal'] = $response[$i]['total']);
 			strtoupper($response[$i]['moneda_local'])  == 'Y' ? $response[$i]['tasa_cambio'] = (float) $response[$i]['tasa_cambio'] : $response[$i]['tasa_cambio'] = (float) 1;
 			if (!empty($response[$i]['arrUsedPrices'])) {
 				if (count($response[$i]['arrUsedPrices']) > 1) { //si tiene menores y mayores
@@ -1493,6 +1493,7 @@ class get_functions extends general_functions
 						$response[$i]['total'] = ($response[$i]['total'] * $response[$i]['numero_menores']);
 						$response[$i]['total'] = substr($response[$i]['total'], 0, strpos($response[$i]['total'], '.') + 3);
 						$response[$i]['subTotalMenores'] = $response[$i]['total'];
+						$response[$i]['USDTotal'] = $response[$i]['total'];
 					}
 				}
 				//////calcular bien el precio de costo por pasajero y costo toal cuando aplica plan familiar
