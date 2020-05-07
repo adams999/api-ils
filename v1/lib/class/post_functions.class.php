@@ -1088,6 +1088,9 @@ class post_functions extends general_functions
 							case 'spa':
 								$dataUser[0]["language_id"] = 'spa';
 								break;
+							case 'por':
+								$dataUser[0]["language_id"] = 'por';
+								break;
 							default:
 								$dataUser[0]["language_id"] = 'spa';
 								break;
