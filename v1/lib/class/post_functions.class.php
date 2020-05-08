@@ -301,7 +301,7 @@ class post_functions extends general_functions
 		$id_orden       = json_decode($allData['dataRespQuoteApp'], true)['id_orden'] ? json_decode($allData['dataRespQuoteApp'], true)['id_orden'] : '';
 		$ids_pasaj      = json_decode($allData['dataRespQuoteApp'], true)['id_beneficiaries'] ? json_decode($allData['dataRespQuoteApp'], true)['id_beneficiaries'] : '';
 		$preOrden     	= $allData["idPreOrden"];
-		$invoice      	= !empty($allData["voucher"]) ? $allData["voucher"] : $this->genCodigoOrden((!empty($allData['prefAgency']) && $allData['prefAgency'] != 'N/A') ? $allData['prefAgency'] : $prefix);
+		$invoice      	= !empty($allData["voucher"]) ? $allData["voucher"] : $this->genCodigoOrden($prefix, (!empty($allData['prefAgency']) && $allData['prefAgency'] != 'N/A') ? $allData['prefAgency'] : null);
 		$attempt     	= ((int) $allData["intento"] + 1);
 		$id_broker 		= ($allData['agency'] != 'N/A' && !empty($allData['agency'])) ? $allData['agency'] : 118;
 		$lang_app  		= $this->funcLangAppShort($this->funcLangApp());
@@ -574,7 +574,7 @@ class post_functions extends general_functions
 		}
 		$dataGenVoucher['RaidersPax'] = '0' . $dataGenVoucher['RaidersPax'];
 
-		// if (in_array($_SERVER["REMOTE_ADDR"], array("179.32.116.209"))) {
+		// if (in_array($_SERVER["REMOTE_ADDR"], array("179.32.178.119"))) {
 		// 	return $dataGenVoucher;
 		// }
 
