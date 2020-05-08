@@ -290,9 +290,9 @@ class general_functions extends Model
         return $lang;
     }
 
-    public function genCodigoOrden($prefix)
+    public function genCodigoOrden($prefix, $prefixAgency)
     {
-        $dataCurl   = ['prefix' => $prefix];
+        $dataCurl   = ['prefix' => strtoupper(!empty($prefixAgency) ? $prefixAgency : $prefix)];
         $link         = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
         $linkParam     = $link . "/app/api/genCodeOrderApp";
         $headers     = "content-type: application/x-www-form-urlencoded";
