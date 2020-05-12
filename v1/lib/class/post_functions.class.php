@@ -574,7 +574,20 @@ class post_functions extends general_functions
 		}
 		$dataGenVoucher['RaidersPax'] = '0' . $dataGenVoucher['RaidersPax'];
 
-		// if (in_array($_SERVER["REMOTE_ADDR"], array("179.32.178.119"))) {
+		///////validacion para travelkit para plase to place
+		if ($prefix == 'TK' && $tipoPagoApp == 'PAY_CREDIT_CARD') {
+			$dataGenVoucher['pagolinea'] = 'Si';
+			$allData['TDC']['pay_typeDoc'] ? $dataGenVoucher['pay_typeDoc'] = $allData['TDC']['pay_typeDoc'] : '';
+			$allData['TDC']['pay_document'] ? $dataGenVoucher['pay_document'] = $allData['TDC']['pay_document'] : '';
+			$allData['TDC']['pay_email'] ? $dataGenVoucher['pay_email'] = $allData['TDC']['pay_email'] : '';
+			$allData['TDC']['pay_country'] ? $dataGenVoucher['pay_country'] = $allData['TDC']['pay_country'] : '';
+			$allData['TDC']['pay_state'] ? $dataGenVoucher['pay_state'] = $allData['TDC']['pay_state'] : '';
+			$allData['TDC']['pay_city'] ? $dataGenVoucher['pay_city'] = $allData['TDC']['pay_city'] : '';
+			$allData['TDC']['pay_phoneCode'] ? $dataGenVoucher['pay_phoneCode'] = $allData['TDC']['pay_phoneCode'] : '';
+			$allData['TDC']['pay_phoneNumbre'] ? $dataGenVoucher['pay_phoneNumbre'] = $allData['TDC']['pay_phoneNumbre'] : '';
+		}
+
+		// if (in_array($_SERVER["REMOTE_ADDR"], array("181.33.187.85"))) {
 		// 	return $dataGenVoucher;
 		// }
 
@@ -651,6 +664,20 @@ class post_functions extends general_functions
 			'id_user'          	=> $id_user,
 			'user_type'        	=> $userType
 		];
+
+		if ($prefix == 'TK' && $tipoPagoApp == 'PAY_CREDIT_CARD') {
+			$dataAdic = [
+				'cardCurrency' 		=> $dataPreOrden['array_prices_app']['moneda_paypal'] ?: 'USD',
+				'cardTypeDoc'  		=> $allData['TDC']['pay_typeDoc'],
+				'cardDocument' 		=> $allData['TDC']['pay_document'],
+				'cardEmail'    		=> $allData['TDC']['pay_email'],
+				'cardCountry'  		=> $allData['TDC']['pay_country'],
+				'cardState'    		=> $allData['TDC']['pay_state'],
+				'cardCity'     		=> $allData['TDC']['pay_city'],
+				'cardCelphone' 		=> $allData['TDC']['pay_phoneCode'] . $allData['TDC']['pay_phoneNumbre']
+			];
+			$dataCurl = array_merge($dataCurl, $dataAdic);
+		}
 
 		$link 						= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkPlatf 					= $link . "/app/pages/async_cotizador.php";

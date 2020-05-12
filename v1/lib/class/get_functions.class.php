@@ -928,8 +928,8 @@ class get_functions extends general_functions
 				FROM
 					coupons
 				WHERE
-					codigo = '$cupon'
-				OR codigo_secundario = '$cupon'
+					(codigo = '$cupon'
+				OR codigo_secundario = '$cupon')
 				AND coupons.id_status = 1 "
 				];
 
@@ -949,7 +949,7 @@ class get_functions extends general_functions
 					$resp['SUBTOTAL']    	= (float) $subTotal;
 				}
 				$resp['CODIGO']          	= $resp2[0]['codigo'];
-				$resp['NOMBRE_AMIGABLE'] 	= $resp2[0]['codigo_secundario'];
+				$resp['NOMBRE_AMIGABLE'] 	= !empty($resp2[0]['codigo_secundario']) ? $resp2[0]['codigo_secundario'] : $resp2[0]['codigo'];
 				$resp['ID_CUPON']        	= $resp2[0]['id'];
 				$resp['NOMBRE_INGRESADO'] 	= $cupon;
 				return $resp;
@@ -1035,34 +1035,56 @@ class get_functions extends general_functions
 		}
 
 		if ($resp['NC']['STATUS'] == 'OK') { /////////si es nota de credito
+
 			$dataCurl = [
 				'querys' => "SELECT
-								id,
-								monto_nc 
-							FROM
-								credit_note
-							INNER JOIN orders ON orders.codigo = credit_note.nro_voucher
-							WHERE
-								credit_note.nro_notaCredito = '{$descOrdenados['NC']}'
-							AND (
-								ISNULL(orders.USE_nro_notaCredito)
-								OR orders.USE_nro_notaCredito = '')"
+					*
+				FROM
+					orders
+				where USE_nro_notaCredito = '{$descOrdenados['NC']}'
+				limit 1"
 			];
 
 			$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
-			$linkplatf = $link . "/app/api/selectDynamic";
+			$linkplatf  = $link . "/app/api/selectDynamic";
 			$headers 	= "content-type: application/x-www-form-urlencoded";
-			$respuesta = $this->curlGeneral($linkplatf, json_encode($dataCurl), $headers);
-			$resp1 = json_decode($respuesta, true);
+			$respuesta  = $this->curlGeneral($linkplatf, json_encode($dataCurl), $headers);
+			$respNCDisp = json_decode($respuesta, true);
 
-			$resp['NC']['VALUE_CUPON'] 		= (float) $resp1[0]['monto_nc'];
-			$resp['NC']['TIPO_CALC']   		= 'monto';
-			$resp['NC']['SUBTOTAL']    		= (float) $subTotal;
-			$resp['NC']['CODIGO']          	= $cupon;
-			$resp['NC']['NOMBRE_AMIGABLE'] 	= $cupon;
-			$resp['NC']['ID_NC']        	= $resp1[0]['id'];
-			$resp['NC']['NOMBRE_INGRESADO'] = $descOrdenados['NC'];
-			$resp['NC']['TEXT_APP'] 		= $descOrdenados['NC'];
+			if (empty($respNCDisp)) { /////aqui se valida si el cupon no ha sido aplicado para retornar la data correcta 
+				$dataCurl = [
+					'querys' => "SELECT
+									id,
+									monto_nc 
+								FROM
+									credit_note
+								INNER JOIN orders ON orders.codigo = credit_note.nro_voucher
+								WHERE
+									credit_note.nro_notaCredito = '{$descOrdenados['NC']}'
+								AND (
+									ISNULL(orders.USE_nro_notaCredito)
+									OR orders.USE_nro_notaCredito = '')"
+				];
+
+				$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+				$linkplatf = $link . "/app/api/selectDynamic";
+				$headers 	= "content-type: application/x-www-form-urlencoded";
+				$respuesta = $this->curlGeneral($linkplatf, json_encode($dataCurl), $headers);
+				$resp1 = json_decode($respuesta, true);
+
+				$resp['NC']['VALUE_CUPON'] 		= (float) $resp1[0]['monto_nc'];
+				$resp['NC']['TIPO_CALC']   		= 'monto';
+				$resp['NC']['SUBTOTAL']    		= (float) $subTotal;
+				$resp['NC']['CODIGO']          	= $cupon;
+				$resp['NC']['NOMBRE_AMIGABLE'] 	= $cupon;
+				$resp['NC']['ID_NC']        	= $resp1[0]['id'];
+				$resp['NC']['NOMBRE_INGRESADO'] = $descOrdenados['NC'];
+				$resp['NC']['TEXT_APP'] 		= $descOrdenados['NC'];
+			} else { ///// el cupon ya fue aplicado a una orden no se aplica de nuevo
+				unset($resp['NC']);
+				$resp['NC']['STATUS'] = 'ERROR';
+				$resp['NC']['MSG'] = 'Nota de credito seleccionado no es valido o expiró';
+			}
 		}
 		if ($resp['CUPON']['STATUS'] == 'OK') { ///////////////si es cupon
 			$dataCurl = [
@@ -1075,8 +1097,8 @@ class get_functions extends general_functions
 							FROM
 								coupons
 							WHERE
-								codigo = '{$descOrdenados['CUPON']}'
-							OR codigo_secundario = '{$descOrdenados['CUPON']}'
+								(codigo = '{$descOrdenados['CUPON']}'
+							OR codigo_secundario = '{$descOrdenados['CUPON']}')
 							AND coupons.id_status = 1 "
 			];
 
@@ -1096,7 +1118,7 @@ class get_functions extends general_functions
 				$resp['CUPON']['SUBTOTAL']    	= (float) $subTotal;
 			}
 			$resp['CUPON']['CODIGO']          	= $resp2[0]['codigo'];
-			$resp['CUPON']['NOMBRE_AMIGABLE'] 	= $resp2[0]['codigo_secundario'];
+			$resp['CUPON']['NOMBRE_AMIGABLE'] 	= !empty($resp2[0]['codigo_secundario']) ? $resp2[0]['codigo_secundario'] : $resp2[0]['codigo'];
 			$resp['CUPON']['ID_CUPON']        	= $resp2[0]['id'];
 			$resp['CUPON']['NOMBRE_INGRESADO'] 	= $descOrdenados['CUPON'];
 			$resp['CUPON']['TEXT_APP'] 			= $descOrdenados['CUPON'];
@@ -3450,6 +3472,9 @@ class get_functions extends general_functions
 		$response = json_decode($response, true);
 
 		for ($i = 0; $i < count($response); $i++) {
+			if (empty($response[$i]['limiteage'])) {
+				$response[$i]['limiteage'] = 'N';
+			}
 			switch ($response[$i]['rd_calc_type']) {
 				case '1':
 					$response[$i]['tipo_upgrade'] = 'Comprobante';
@@ -3503,6 +3528,34 @@ class get_functions extends general_functions
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
 		return json_decode($response, true);
+	}
+
+	public function getStatesApp($filters)
+	{
+		$pais	    = $filters['pais'];
+
+		$dataValida	= [
+			"5019"  => $pais
+		];
+		$this->validatEmpty($dataValida);
+
+		$query = "SELECT iso_state, description FROM states WHERE iso_country='$pais'";
+
+		return $this->selectDynamic('', '', '', '', $query, '', '', '');
+	}
+
+	public function getCityApp($filters)
+	{
+		$state	    = $filters['state'];
+
+		$dataValida	= [
+			"50036"  => $state
+		];
+		$this->validatEmpty($dataValida);
+
+		$query = "SELECT iso_city, description FROM cities WHERE iso_state = '$state';";
+
+		return $this->selectDynamic('', '', '', '', $query, '', '', '');
 	}
 
 	/*  public function getBrokers($filters,$limit){
