@@ -574,7 +574,7 @@ class post_functions extends general_functions
 		}
 		$dataGenVoucher['RaidersPax'] = '0' . $dataGenVoucher['RaidersPax'];
 
-		///////validacion para travelkit para plase to place
+		///////validacion para travelkit para epayco
 		if ($prefix == 'TK' && $tipoPagoApp == 'PAY_CREDIT_CARD') {
 			$dataGenVoucher['pagolinea'] = 'Si';
 			$allData['TDC']['pay_typeDoc'] ? $dataGenVoucher['pay_typeDoc'] = $allData['TDC']['pay_typeDoc'] : '';
@@ -665,16 +665,16 @@ class post_functions extends general_functions
 			'user_type'        	=> $userType
 		];
 
-		if ($prefix == 'TK' && $tipoPagoApp == 'PAY_CREDIT_CARD') {
+		if ($prefix == 'TK' && $tipoPagoApp == 'PAY_CREDIT_CARD') { ////////// data para epayco
 			$dataAdic = [
-				'cardCurrency' 		=> $dataPreOrden['array_prices_app']['moneda_paypal'] ?: 'USD',
-				'cardTypeDoc'  		=> $allData['TDC']['pay_typeDoc'],
-				'cardDocument' 		=> $allData['TDC']['pay_document'],
-				'cardEmail'    		=> $allData['TDC']['pay_email'],
-				'cardCountry'  		=> $allData['TDC']['pay_country'],
-				'cardState'    		=> $allData['TDC']['pay_state'],
-				'cardCity'     		=> $allData['TDC']['pay_city'],
-				'cardCelphone' 		=> $allData['TDC']['pay_phoneCode'] . $allData['TDC']['pay_phoneNumbre']
+				'payCurrency' 		=> $dataPreOrden['array_prices_app']['moneda_paypal'] ?: 'USD',
+				'tipoDoc'  			=> $allData['TDC']['pay_typeDoc'],
+				'document' 			=> $allData['TDC']['pay_document'],
+				'payEmail'    		=> $allData['TDC']['pay_email'],
+				'payCountry'  		=> $allData['TDC']['pay_country'],
+				'payState'    		=> $allData['TDC']['pay_state'],
+				'payCity'     		=> $allData['TDC']['pay_city'],
+				'PayCelular' 		=> $allData['TDC']['pay_phoneCode'] . $allData['TDC']['pay_phoneNumbre']
 			];
 			$dataCurl = array_merge($dataCurl, $dataAdic);
 		}
@@ -697,12 +697,12 @@ class post_functions extends general_functions
 					$response['error']['elem_app'] = 'PAY_CREDIT_CARD';
 					break;
 
-				case '6':
+				case ('6' || 'E012'):
 					///Se ha producido un error codigo de tarjeta
 					$response['error']['elem_app'] = 'codigoTarjeta';
 					break;
 
-				case '7':
+				case ('7' || 'E026'):
 					///Se ha producido un error mes de vencimiento de tarjeta 
 					$response['error']['elem_app'] = 'mesTarjetaVen';
 					break;
