@@ -1042,6 +1042,7 @@ class get_functions extends general_functions
 				FROM
 					orders
 				where USE_nro_notaCredito = '{$descOrdenados['NC']}'
+				AND status IN(1, 2, 3, 6)
 				limit 1"
 			];
 
