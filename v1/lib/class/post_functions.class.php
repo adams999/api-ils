@@ -1123,6 +1123,19 @@ class post_functions extends general_functions
 								break;
 						}
 
+						$pref_master = $this->selectDynamic('', '', '', '', "SELECT
+														broker_parameters.prefijo_ref
+														FROM
+															broker_nivel
+														INNER JOIN broker_parameters ON broker_parameters.id_broker = broker_nivel.`master`
+														AND broker_parameters.prefijo = broker_nivel.prefijo
+														WHERE
+														broker_nivel.prefijo = '$prefix'
+														AND broker_nivel.id_broker = '{$dataUser[0]["agency"]}'
+														ORDER BY
+														id_broker_nivel DESC
+														LIMIT 1", '', '', '')[0]['prefijo_ref'];
+
 						$response = [
 							'status'   		=> 'OK',
 							'userType' 		=> $dataUser[0]["user_type"],
@@ -1140,7 +1153,7 @@ class post_functions extends general_functions
 							'nivelAgency'   => (in_array($dataUser[0]["user_type"], [1, 13])) ? 'N/A' : $this->getAgencyMaster($prefix, $dataUser[0]["agency"])[0]['nivel'],
 							'agencyMaster'  => $this->getAgencyMaster($prefix, $dataUser[0]["agency"])[0]['master'] ?: 'N/A',
 							'pais'      	=> $dataUser[0]["pais"],
-							'prefAgency'    => $dataUser[0]["prefAgency"] ?: 'N/A',
+							'prefAgency'    => !empty($pref_master) ? $pref_master : 'N/A',
 							'nombreAgenMaster' => $dataUser[0]["nombreAgenMaster"] ?: 'N/A',
 							'urlPlatform' 	=> $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']),
 							'paramAgency' 	=> $dataUser[0]["prefAgency"] ? $this->selectDynamic('', '', '', '', "SELECT * FROM broker_parameters WHERE id_broker = '{$dataUser[0]['agency']}' AND prefijo = '$prefix' ORDER BY id_broker_parameters DESC limit 1", '', '', '', '')[0] : 'N/A',
