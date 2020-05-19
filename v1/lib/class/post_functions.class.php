@@ -574,9 +574,13 @@ class post_functions extends general_functions
 		}
 		$dataGenVoucher['RaidersPax'] = '0' . $dataGenVoucher['RaidersPax'];
 
+		///////validacion para enviar el parametro pagolinea en versiones vijas de cotizador
+		if (in_array($prefix, ['TK', 'VY']) && $tipoPagoApp == 'PAY_CREDIT_CARD') {
+			$dataGenVoucher['pagolinea'] = 'Si';
+		}
+
 		///////validacion para travelkit para epayco
 		if ($prefix == 'TK' && $tipoPagoApp == 'PAY_CREDIT_CARD') {
-			$dataGenVoucher['pagolinea'] = 'Si';
 			$allData['TDC']['pay_typeDoc'] ? $dataGenVoucher['pay_typeDoc'] = $allData['TDC']['pay_typeDoc'] : '';
 			$allData['TDC']['pay_document'] ? $dataGenVoucher['pay_document'] = $allData['TDC']['pay_document'] : '';
 			$allData['TDC']['pay_email'] ? $dataGenVoucher['pay_email'] = $allData['TDC']['pay_email'] : '';
@@ -665,7 +669,7 @@ class post_functions extends general_functions
 			'user_type'        	=> $userType
 		];
 
-		if ($prefix == 'TK' && $tipoPagoApp == 'PAY_CREDIT_CARD') { ////////// data para epayco
+		if (in_array($prefix, ['TK']) && $tipoPagoApp == 'PAY_CREDIT_CARD') { ////////// data para epayco
 			$dataAdic = [
 				'payCurrency' 		=> $dataPreOrden['array_prices_app']['moneda_paypal'] ?: 'USD',
 				'tipoDoc'  			=> $allData['TDC']['pay_typeDoc'],
