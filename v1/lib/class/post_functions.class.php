@@ -273,9 +273,10 @@ class post_functions extends general_functions
 		$allData['TDC']["codigoTarjeta"] = str_replace(' ', '', $allData['TDC']["codigoTarjeta"]);
 		(bool) $platfProcNuevo = (json_decode($allData['array_prices_app'], true)['calc_new'] == 'Y') ? true : false; ////// aqui se identifica si la plataforma es con la version nueva del cotizador 
 		$tipoPagoApp    = $allData['tipoPagoApp'];
+		$prefix         = $allData['prefix'];
 		switch (true) {
 			case $tipoPagoApp == 'PAY_CREDIT_CARD':
-				$tipoPago = ($platfProcNuevo) ? 1 : 2;
+				$tipoPago = ($platfProcNuevo && !in_array($prefix, ['WM'])) ? 1 : 2;
 				break;
 
 			case $tipoPagoApp == 'USE_PAYPAL':
@@ -283,7 +284,7 @@ class post_functions extends general_functions
 				break;
 
 			case $tipoPagoApp == 'CREDIT_AGENCY':
-				$tipoPago = ($platfProcNuevo) ? 0 : 1;
+				$tipoPago = ($platfProcNuevo && !in_array($prefix, ['WM'])) ? 0 : 1;
 				break;
 
 			case $tipoPagoApp == 'SHIPPING_LINK':
@@ -291,7 +292,6 @@ class post_functions extends general_functions
 				break;
 		}
 
-		$prefix         = $allData['prefix'];
 		$cardNumber   	= $allData['TDC']["codigoTarjeta"];
 		$cardExpiry   	= ($allData['TDC']["yearTarjetaVen"] && $allData['TDC']["mesTarjetaVen"]) ? (int) $allData['TDC']["yearTarjetaVen"] . '-' . (int) $allData['TDC']["mesTarjetaVen"] : '';
 		$cardCvv      	= $allData['TDC']["CCV"];
@@ -591,9 +591,9 @@ class post_functions extends general_functions
 			$allData['TDC']['pay_phoneNumbre'] ? $dataGenVoucher['pay_phoneNumbre'] = $allData['TDC']['pay_phoneNumbre'] : '';
 		}
 
-		// if (in_array($_SERVER["REMOTE_ADDR"], array("181.33.187.85"))) {
-		// 	return $dataGenVoucher;
-		// }
+		if (in_array($_SERVER["REMOTE_ADDR"], array("181.33.187.85"))) {
+			return $dataGenVoucher;
+		}
 
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkPlatf 	= $link . "/app/pages/quote.php";
