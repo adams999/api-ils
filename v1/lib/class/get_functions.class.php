@@ -282,7 +282,13 @@ class get_functions extends general_functions
 			'orders.id_orders',
 			'codigo',
 			'origen',
-			'destino',
+			"IF (
+				destino = 'XX'
+				OR destino = ''
+				OR destino IS NULL,
+				territory.desc_small,
+				destino
+			) AS destino",
 			"DATE_FORMAT(salida,'%d-%m-%Y') as fsalida",
 			'retorno',
 			"DATE_FORMAT(retorno,'%d-%m-%Y') as fretorno",
@@ -473,6 +479,8 @@ class get_functions extends general_functions
 			JOIN currency ON currency.id_currency = plans.id_currence 
 			LEFT JOIN credit_note ON credit_note.nro_voucher = orders.codigo 
 			AND credit_note.prefijo = orders.prefijo 
+			JOIN territory ON orders.territory = territory.id_territory
+			AND orders.prefijo = territory.prefijo
 			JOIN broker ON broker.id_broker = orders.agencia
 			AND broker.prefijo = orders.prefijo " . $arrJoin . "",
 			"$codeWhere",

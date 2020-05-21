@@ -273,9 +273,10 @@ class post_functions extends general_functions
 		$allData['TDC']["codigoTarjeta"] = str_replace(' ', '', $allData['TDC']["codigoTarjeta"]);
 		(bool) $platfProcNuevo = (json_decode($allData['array_prices_app'], true)['calc_new'] == 'Y') ? true : false; ////// aqui se identifica si la plataforma es con la version nueva del cotizador 
 		$tipoPagoApp    = $allData['tipoPagoApp'];
+		$prefix         = $allData['prefix'];
 		switch (true) {
 			case $tipoPagoApp == 'PAY_CREDIT_CARD':
-				$tipoPago = ($platfProcNuevo) ? 1 : 2;
+				$tipoPago = ($platfProcNuevo && !in_array($prefix, ['WM'])) ? 1 : 2;
 				break;
 
 			case $tipoPagoApp == 'USE_PAYPAL':
@@ -283,7 +284,7 @@ class post_functions extends general_functions
 				break;
 
 			case $tipoPagoApp == 'CREDIT_AGENCY':
-				$tipoPago = ($platfProcNuevo) ? 0 : 1;
+				$tipoPago = ($platfProcNuevo && !in_array($prefix, ['WM'])) ? 0 : 1;
 				break;
 
 			case $tipoPagoApp == 'SHIPPING_LINK':
@@ -291,7 +292,6 @@ class post_functions extends general_functions
 				break;
 		}
 
-		$prefix         = $allData['prefix'];
 		$cardNumber   	= $allData['TDC']["codigoTarjeta"];
 		$cardExpiry   	= ($allData['TDC']["yearTarjetaVen"] && $allData['TDC']["mesTarjetaVen"]) ? (int) $allData['TDC']["yearTarjetaVen"] . '-' . (int) $allData['TDC']["mesTarjetaVen"] : '';
 		$cardCvv      	= $allData['TDC']["CCV"];
@@ -541,7 +541,11 @@ class post_functions extends general_functions
 			$dataGenVoucher['valorplan' . $i]            = ($platfProcNuevo) ? ($dataPasajeros[$i]['subtotal']) : (($dataPreOrden['array_prices_app']['planfamiliar'] == 1) ? ($dataPreOrden['array_prices_app']['total'] / $dataPreOrden['array_prices_app']['numero_menores']) : ($dataPasajeros[$i]['subtotal'])); //////proceso y falidacion para que cuadren los montos netos y el total en la version sin calculos nuevos de las plataformas en plan familia
 			$dataGenVoucher['valorplancost' . $i]        = $dataPasajeros[$i]['costo'];
 			$dataGenVoucher['valorplanNeto' . $i]        = $dataPasajeros[$i]['neto'];
-			$dataGenVoucher['fechanaci' . $i]            = date('m/d/Y', strtotime($dataPasajeros[$i]['fechaNacimiento']));
+			if ($prefix == 'WM') {
+				$dataGenVoucher['fechanaci' . $i]            = date('Y-m-d', strtotime($dataPasajeros[$i]['fechaNacimiento']));
+			} else {
+				$dataGenVoucher['fechanaci' . $i]            = date('m/d/Y', strtotime($dataPasajeros[$i]['fechaNacimiento']));
+			}
 		}
 
 		////aqui se cargan la informacion de los raiders para realizar el guardado
@@ -553,7 +557,11 @@ class post_functions extends general_functions
 				if ($dataPreOrden['upgrades'][$i]['pasajero'][$a] == $dataPasajeros[$a]['']) {
 					$dataGenVoucher['nombre' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]]			= $dataPasajeros[$a]['nombre'];
 					$dataGenVoucher['apellido' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['apellido'];
-					$dataGenVoucher['fechanaci' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= date('m/d/Y', strtotime($dataPasajeros[$a]['fechaNacimiento']));
+					if ($prefix == 'WM') {
+						$dataGenVoucher['fechanaci' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= date('Y-m-d', strtotime($dataPasajeros[$a]['fechaNacimiento']));
+					} else {
+						$dataGenVoucher['fechanaci' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= date('m/d/Y', strtotime($dataPasajeros[$a]['fechaNacimiento']));
+					}
 					$dataGenVoucher['edad' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= $dataPasajeros[$a]['edad'];
 					$dataGenVoucher['sexo' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= strtolower($dataPasajeros[$a]['sexo']);
 					$dataGenVoucher['nacionalidad' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 	= $dataPasajeros[$a]['pais'];
