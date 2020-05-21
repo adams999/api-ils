@@ -541,7 +541,11 @@ class post_functions extends general_functions
 			$dataGenVoucher['valorplan' . $i]            = ($platfProcNuevo) ? ($dataPasajeros[$i]['subtotal']) : (($dataPreOrden['array_prices_app']['planfamiliar'] == 1) ? ($dataPreOrden['array_prices_app']['total'] / $dataPreOrden['array_prices_app']['numero_menores']) : ($dataPasajeros[$i]['subtotal'])); //////proceso y falidacion para que cuadren los montos netos y el total en la version sin calculos nuevos de las plataformas en plan familia
 			$dataGenVoucher['valorplancost' . $i]        = $dataPasajeros[$i]['costo'];
 			$dataGenVoucher['valorplanNeto' . $i]        = $dataPasajeros[$i]['neto'];
-			$dataGenVoucher['fechanaci' . $i]            = date('m/d/Y', strtotime($dataPasajeros[$i]['fechaNacimiento']));
+			if ($prefix == 'WM') {
+				$dataGenVoucher['fechanaci' . $i]            = date('Y-m-d', strtotime($dataPasajeros[$i]['fechaNacimiento']));
+			} else {
+				$dataGenVoucher['fechanaci' . $i]            = date('m/d/Y', strtotime($dataPasajeros[$i]['fechaNacimiento']));
+			}
 		}
 
 		////aqui se cargan la informacion de los raiders para realizar el guardado
@@ -553,7 +557,11 @@ class post_functions extends general_functions
 				if ($dataPreOrden['upgrades'][$i]['pasajero'][$a] == $dataPasajeros[$a]['']) {
 					$dataGenVoucher['nombre' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]]			= $dataPasajeros[$a]['nombre'];
 					$dataGenVoucher['apellido' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= $dataPasajeros[$a]['apellido'];
-					$dataGenVoucher['fechanaci' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= date('m/d/Y', strtotime($dataPasajeros[$a]['fechaNacimiento']));
+					if ($prefix == 'WM') {
+						$dataGenVoucher['fechanaci' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= date('Y-m-d', strtotime($dataPasajeros[$a]['fechaNacimiento']));
+					} else {
+						$dataGenVoucher['fechanaci' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 		= date('m/d/Y', strtotime($dataPasajeros[$a]['fechaNacimiento']));
+					}
 					$dataGenVoucher['edad' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= $dataPasajeros[$a]['edad'];
 					$dataGenVoucher['sexo' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 			= strtolower($dataPasajeros[$a]['sexo']);
 					$dataGenVoucher['nacionalidad' . $dataPreOrden['upgrades'][$i]['pasajero'][$a]] 	= $dataPasajeros[$a]['pais'];
@@ -591,9 +599,9 @@ class post_functions extends general_functions
 			$allData['TDC']['pay_phoneNumbre'] ? $dataGenVoucher['pay_phoneNumbre'] = $allData['TDC']['pay_phoneNumbre'] : '';
 		}
 
-		if (in_array($_SERVER["REMOTE_ADDR"], array("181.33.187.85"))) {
-			return $dataGenVoucher;
-		}
+		// if (in_array($_SERVER["REMOTE_ADDR"], array("181.33.187.85"))) {
+		// 	return $dataGenVoucher;
+		// }
 
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkPlatf 	= $link . "/app/pages/quote.php";
