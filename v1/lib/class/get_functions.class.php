@@ -1924,7 +1924,7 @@ class get_functions extends general_functions
 		JOIN clients ON clients.prefix = orders.prefijo
 		WHERE
 			IFNULL(inactive_platform, 0) <> 2
-		AND DATE(orders.fecha) = '$today'
+		AND orders.fecha = '$today'
 		AND orders. STATUS IN (1, 3)
 		AND clients.data_activa = 'SI'
 		GROUP BY
@@ -2508,14 +2508,9 @@ class get_functions extends general_functions
 	public function getChartVouchersStatus($filters)
 	{
 		$prefix	    = $filters['prefix'];
-		$startDate  = $filters['startDate'];
 		$endDate   	= $filters['endDate'];
 		$today 	   	= date('Y-m-d');
-		$language	= $this->funcLangApp();
-		$prefix	    = $filters['prefix'];
 		$startDate  = $filters['startDate'];
-		$endDate   	= $filters['endDate'];
-		$today 	   	= date('Y-m-d');
 		$language	= $this->funcLangApp();
 		$status     = Clients::getLabelStatusVoucher();
 
@@ -2561,7 +2556,7 @@ class get_functions extends general_functions
 			JOIN clients ON clients.prefix = orders.prefijo
 			WHERE
 				clients.data_activa = 'SI'
-			AND DATE( orders.fecha) BETWEEN '$startDate'
+			AND orders.fecha BETWEEN '$startDate'
 			AND '$endDate'
 			AND IFNULL(inactive_platform, 0) <> 2
 			AND orders.prefijo = '$prefix'
@@ -2608,7 +2603,7 @@ class get_functions extends general_functions
 			JOIN clients ON clients.prefix = orders.prefijo
 			WHERE
 				clients.data_activa = 'SI'
-			AND DATE( orders.fecha) BETWEEN '$startDate'
+			AND orders.fecha BETWEEN '$startDate'
 			AND '$endDate'
 			AND IFNULL(inactive_platform, 0) <> 2
 			AND orders.prefijo = '$prefix'
@@ -2654,7 +2649,7 @@ class get_functions extends general_functions
 				JOIN clients ON clients.prefix = orders.prefijo
 				WHERE
 					clients.data_activa = 'SI'
-				AND DATE( orders.fecha) BETWEEN '$startDate'
+				AND orders.fecha BETWEEN '$startDate'
 				AND '$endDate'
 				AND IFNULL(inactive_platform, 0) <> 2
 				AND orders.prefijo = '$prefix'
@@ -2690,7 +2685,7 @@ class get_functions extends general_functions
 				JOIN clients ON clients.prefix = orders.prefijo
 				WHERE
 					clients.data_activa = 'SI'
-				AND DATE( orders.fecha) BETWEEN '$startDate'
+				AND orders.fecha BETWEEN '$startDate'
 				AND '$endDate'
 				AND IFNULL(inactive_platform, 0) <> 2
 				AND orders.prefijo = '$prefix'
@@ -2720,7 +2715,7 @@ class get_functions extends general_functions
                 AND orders.prefijo = beneficiaries.prefijo
 				WHERE
 					clients.data_activa = 'SI'
-				AND DATE( orders.fecha) BETWEEN '$startDate'
+				AND orders.fecha BETWEEN '$startDate'
 				AND '$endDate'
 				AND IFNULL(inactive_platform, 0) <> 2
 				AND orders.prefijo = '$prefix'
@@ -2739,9 +2734,9 @@ class get_functions extends general_functions
 			statistics::EdadResult($BarD[$element['status']], $element['edad'], $element['sexo'], $element['cant']);
 		}
 		$SerEd = [];
-		foreach ($arrSt as $sex => $st) {
+		foreach ($arrSt as $sex => &$st) {
 			$SexEdad = [];
-			foreach ($st  as  $key => $val) {
+			foreach ($st  as  $key => &$val) {
 				$SexEdad[] = [
 					'name' => $status[$key],
 					'y' => (int) $val ?: 0,
@@ -2756,7 +2751,7 @@ class get_functions extends general_functions
 		$dataEdad = [];
 		foreach ($arrSt as $sex => &$st) {
 			foreach ($st as $key => &$val) {
-				foreach ($BarD[$key][strtoupper($sex)] as $k => $v) {
+				foreach ($BarD[$key][strtoupper($sex)] as $k => &$v) {
 					$dataEdad[$sex . '-' . $status[$key]][] = [
 						$k, (int) $v
 					];
@@ -2818,8 +2813,8 @@ class get_functions extends general_functions
 		INNER JOIN orders ON orders.agencia = broker.id_broker
 		AND broker.prefijo = orders.prefijo
 		WHERE
-			DATE(orders.fecha) BETWEEN DATE('$startDate')
-		AND DATE('$endDate')
+			orders.fecha BETWEEN '$startDate'
+		AND '$endDate'
 		AND orders. STATUS IN (1, 3)
 		AND orders.prefijo = '$prefix'
 		GROUP BY
@@ -2841,8 +2836,8 @@ class get_functions extends general_functions
 		INNER JOIN orders ON orders.agencia = broker.id_broker
 		AND broker.prefijo = orders.prefijo
 		WHERE
-			DATE(orders.fecha) BETWEEN DATE('$startDate')
-		AND DATE('$endDate')
+			orders.fecha BETWEEN '$startDate'
+		AND '$endDate'
 		AND orders. STATUS IN (1, 3)
 		AND orders.prefijo = '$prefix'
 		GROUP BY
@@ -3058,7 +3053,7 @@ class get_functions extends general_functions
 		JOIN clients ON clients.prefix = orders.prefijo
 		WHERE
 			orders. STATUS IN (1, 3)
-		AND DATE(orders.fecha) BETWEEN '$startDate'
+		AND orders.fecha BETWEEN '$startDate'
 		AND '$endDate'
 		AND IFNULL(inactive_platform, 0) <> 2
 		AND orders.prefijo = '$prefix'
@@ -3101,7 +3096,7 @@ class get_functions extends general_functions
 		JOIN clients ON clients.prefix = orders.prefijo
 		WHERE
 			orders. STATUS IN (1, 3)
-		AND DATE(orders.fecha) BETWEEN '$startDate'
+		AND orders.fecha BETWEEN '$startDate'
 		AND '$endDate'
 		AND IFNULL(inactive_platform, 0) <> 2
 		AND orders.prefijo = '$prefix'
@@ -3140,7 +3135,7 @@ class get_functions extends general_functions
 		JOIN clients ON clients.prefix = orders.prefijo
 		WHERE
 			orders. STATUS IN (1, 3)
-		AND DATE( orders.fecha) BETWEEN '$startDate'
+		AND orders.fecha BETWEEN '$startDate'
 		AND '$endDate'
 		AND IFNULL(inactive_platform, 0) <> 2
 		AND orders.prefijo = '$prefix'
@@ -3177,9 +3172,8 @@ class get_functions extends general_functions
 		JOIN beneficiaries ON beneficiaries.id_orden = orders.id
 		AND orders.prefijo = beneficiaries.prefijo
 		AND clients.data_activa = 'SI'
-		AND orders. STATUS IN (1, 3)
-		AND DATE(orders.fecha) BETWEEN DATE('$startDate')
-		AND DATE('$endDate')
+		AND orders.fecha BETWEEN '$startDate'
+		AND '$endDate'
 		AND IFNULL(inactive_platform, 0) <> 2
 		AND orders.prefijo = '$prefix'
 		GROUP BY
@@ -3239,9 +3233,9 @@ class get_functions extends general_functions
 		INNER JOIN orders ON orders.agencia = broker.id_broker
 		AND broker.prefijo = orders.prefijo
 		WHERE
-			DATE(orders.fecha) BETWEEN DATE('$startDate')
-		AND DATE('$endDate')
-		AND orders. STATUS IN (1, 3)
+			orders. STATUS IN (1, 3)
+		AND orders.fecha BETWEEN '$startDate'
+		AND '$endDate'
 		AND orders.prefijo = '$prefix'
 		GROUP BY
 			orders.prefijo,
@@ -3262,8 +3256,8 @@ class get_functions extends general_functions
 		INNER JOIN orders ON orders.agencia = broker.id_broker
 		AND broker.prefijo = orders.prefijo
 		WHERE
-			DATE(orders.fecha) BETWEEN DATE('$startDate')
-		AND DATE('$endDate')
+			orders.fecha BETWEEN '$startDate'
+		AND '$endDate'
 		AND orders. STATUS IN (1, 3)
 		AND orders.prefijo = '$prefix'
 		GROUP BY
@@ -3481,6 +3475,7 @@ class get_functions extends general_functions
 		$response = json_decode($response, true);
 
 		for ($i = 0; $i < count($response); $i++) {
+			$response[$i]['value_raider'] = bcdiv($response[$i]['value_raider'], 1, 2);
 			if (empty($response[$i]['limiteage'])) {
 				$response[$i]['limiteage'] = 'N';
 			}

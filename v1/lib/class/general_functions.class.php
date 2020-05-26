@@ -1806,8 +1806,8 @@ class general_functions extends Model
         WHERE
             orders.prefijo = '$prefix'
         AND orders. STATUS IN (1, 3)
-        AND DATE(orders.fecha) BETWEEN DATE('$startDate')
-        AND DATE('$endDate')
+        AND orders.fecha BETWEEN '$startDate'
+        AND '$endDate'
         GROUP BY
             orders.prefijo,
             sexo,
@@ -1832,7 +1832,7 @@ class general_functions extends Model
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $query1 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query1 .= " AND orders.fecha BETWEEN '$startDate' AND '$endDate' ";
         } else {
             $query1 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
@@ -1859,7 +1859,7 @@ class general_functions extends Model
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $query2 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query2 .= " AND orders.fecha BETWEEN '$startDate' AND '$endDate' ";
         } else {
             $query2 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
@@ -1886,7 +1886,7 @@ class general_functions extends Model
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $query3 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query3 .= " AND orders.fecha BETWEEN '$startDate' AND '$endDate' ";
         } else {
             $query3 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
@@ -1913,7 +1913,7 @@ class general_functions extends Model
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $query4 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query4 .= " AND orders.fecha BETWEEN '$startDate' AND '$endDate' ";
         } else {
             $query4 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
@@ -1940,7 +1940,7 @@ class general_functions extends Model
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $query5 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query5 .= " AND orders.fecha BETWEEN '$startDate' AND '$endDate' ";
         } else {
             $query5 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
@@ -1967,7 +1967,7 @@ class general_functions extends Model
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $query6 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query6 .= " AND orders.fecha BETWEEN '$startDate' AND '$endDate' ";
         } else {
             $query6 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
@@ -2008,7 +2008,7 @@ class general_functions extends Model
             WHERE
                 orders. STATUS IN (1, 3) ";
         if (!empty($endDate) && !empty($startDate)) {
-            $query7 .= " AND DATE (orders.fecha) BETWEEN DATE ('$startDate') AND DATE ('$endDate') ";
+            $query7 .= " AND orders.fecha BETWEEN '$startDate' AND '$endDate' ";
         } else {
             $query7 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
@@ -2075,13 +2075,13 @@ class general_functions extends Model
                 '12' => 'Diciembre',
             ];
 
-            foreach ($data ?: [['' => '']] as $element) {
+            foreach ($data ?: [['' => '']] as &$element) {
                 $array[$element['prefijo']][(int) $element['mes']] = (int) $element['cantidad'] ?: 0;
             }
 
-            foreach ($array as $key1 => $val) {
+            foreach ($array as $key1 => &$val) {
                 $serie = [];
-                foreach ($mountDesc as $key2 => $value) {
+                foreach ($mountDesc as $key2 => &$value) {
                     $serie[] = (int) $val[(int) $key2] ?: 0;
                 }
             }
@@ -2094,7 +2094,7 @@ class general_functions extends Model
             return $arrSerie;
         } else {
             $sumData = 0;
-            foreach ($data as $key => $value) {
+            foreach ($data as $key => &$value) {
                 $sumData += (int) $value['cantidad'];
             }
 
