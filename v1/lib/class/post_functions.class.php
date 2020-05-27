@@ -1093,7 +1093,7 @@ class post_functions extends general_functions
 				LIMIT 1
 			) AS colorsPlatf"
 		];
-		$userExist	= $this->selectDynamic('', 'users_extern', " users='$user' AND prefijo = '$prefix' ", $data);
+		$userExist	= $this->selectDynamic('', 'users_extern', " users='$user' AND prefijo = '$prefix' ", $data, '', '', ['field' => 'id', 'order' => 'desc']);
 		if (!empty($userExist)) {
 			$prefijExist	= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['prefix']);
 			if (!empty($prefijExist)) {
@@ -1110,13 +1110,15 @@ class post_functions extends general_functions
 																		users = '$user'
 																	AND id_status = '1'
 																	AND user_type IN ('1', '2', '5', '13')
-																	AND prefijo = '$prefix'", '', '', '', '');
+																	AND prefijo = '$prefix' 
+																	ORDER BY
+																		id DESC", '', '', '', '');
 				if (!empty($userActive)) {
 					if ($prefix == 'CT' || $prefix == 'CE') {
-						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$password'", $data);
+						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$password'", $data, '', '', ['field' => 'id', 'order' => 'desc'], '');
 					} else {
 						$passwordEncript 	= $this->encriptKey($password);
-						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$passwordEncript'", $data, '', '', '', '', '');
+						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$passwordEncript'", $data, '', '', ['field' => 'id', 'order' => 'desc'], '', '');
 					}
 					if (!empty($dataUser)) {
 
