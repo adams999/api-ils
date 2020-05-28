@@ -479,7 +479,12 @@ class get_functions extends general_functions
 			JOIN currency ON currency.id_currency = plans.id_currence 
 			LEFT JOIN credit_note ON credit_note.nro_voucher = orders.codigo 
 			AND credit_note.prefijo = orders.prefijo 
-			JOIN territory ON orders.territory = territory.id_territory
+			JOIN territory ON IF (
+				orders.territory = ''
+				OR ISNULL(orders.territory),
+				0,
+				orders.territory
+			) = territory.id_territory
 			AND orders.prefijo = territory.prefijo
 			JOIN broker ON broker.id_broker = orders.agencia
 			AND broker.prefijo = orders.prefijo " . $arrJoin . "",
