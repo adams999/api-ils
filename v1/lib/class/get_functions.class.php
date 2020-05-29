@@ -286,7 +286,12 @@ class get_functions extends general_functions
 				destino = 'XX'
 				OR destino = ''
 				OR destino IS NULL,
-				territory.desc_small,
+				IF (
+					territory.desc_small = ''
+					OR territory.desc_small IS NULL,
+					'N/A',
+					territory.desc_small
+				),
 				destino
 			) AS destino",
 			"DATE_FORMAT(salida,'%d-%m-%Y') as fsalida",
@@ -481,7 +486,7 @@ class get_functions extends general_functions
 			AND credit_note.prefijo = orders.prefijo 
 			JOIN territory ON IF (
 				orders.territory = ''
-				OR ISNULL(orders.territory),
+				OR orders.territory IS NULL,
 				0,
 				orders.territory
 			) = territory.id_territory
