@@ -238,6 +238,7 @@ class get_functions extends general_functions
 		$code	   = $filters['code'];
 		$name      = $filters['name'];
 		$prefix	   = $filters['prefix'];
+		$prefixApp = $filters['prefixApp'];
 		$userType  = ($filters['userType']) ? $filters['userType'] : 1;
 		$startDate = $filters['startDate'];
 		$endDate   = $filters['endDate'];
@@ -358,7 +359,7 @@ class get_functions extends general_functions
 		$codeWhere = '1';
 		$arrWhere = [];
 		$idBroker	= $this->getBrokersByApiKey($apikey);
-		if (!empty($idBroker) && !in_array($userType, [1, 2, 5, 13])) {
+		if (!empty($idBroker) && !in_array($userType, [1, 2, 5, 13]) && $prefixApp != 'ILS') {
 			$arrWhere['agencia'] = $idBroker;
 		}
 		if (!empty($code)) {
@@ -451,7 +452,7 @@ class get_functions extends general_functions
 		$id_agencia = [];
 		$arrBrokers = [];
 		$arr;
-		if (!empty($userType) &&  in_array($userType, [5, 2])) { ////// usuario tipo 5 broker access solo vera de su agencia y 2 es broker admin su agencia y las debajo de ella
+		if (!empty($userType) && in_array($userType, [5, 2]) && $prefixApp != 'ILS') { ////// usuario tipo 5 broker access solo vera de su agencia y 2 es broker admin su agencia y las debajo de ella
 			$id_agencia =  $this->agencyBroker($id_user, $userType, $prefix)[0]["id_associate"];
 			$arrWhere['orders.agencia'] = $id_agencia ?: 0;
 
@@ -1905,6 +1906,7 @@ class get_functions extends general_functions
 	{
 		$startDate  = $filters['startDate'];
 		$endDate   	= $filters['endDate'];
+		$typeClient = $filters['typeClient'];
 		$today 	   	= date('Y-m-d');
 		$year       = date('Y');
 		$dataValida	= [
@@ -1912,7 +1914,24 @@ class get_functions extends general_functions
 			'9068'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($endDate)	> strtotime($today)) : true,
 			'9069'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate)	> strtotime($today)) : true,
 		];
-		$validatEmpty  = $this->validatEmpty($dataValida);
+		$this->validatEmpty($dataValida);
+
+		//AQUI SE CONSULTA LOS MESES TRANSCURRIDOS EN VENTAS PARA MOSTRAR LOS MESES DINAMICAMENTE EN LAS GRAFICAS
+		$meses = "SELECT DISTINCT
+				MONTH (orders.fecha) AS mes,
+				DATE_FORMAT(orders.fecha, '%M') AS nameMes
+			FROM
+				orders
+			JOIN clients ON clients.prefix = orders.prefijo
+			WHERE
+				orders. STATUS IN (1, 3)
+			AND IFNULL(inactive_platform, 0) <> 2
+			AND YEAR (orders.fecha) = '$year'
+			AND clients.data_activa = 'SI'
+			ORDER BY
+				MONTH (orders.fecha) ASC";
+		$respMeses = $this->selectDynamic('', '', '', '', $meses);
+
 		//GRAFICA DRILLDOWN DE VENTAS DIARIAS DE TODAS LAS AGENCIAS
 		$query1 = "SELECT
 			prefijo,
@@ -1936,11 +1955,15 @@ class get_functions extends general_functions
 			IFNULL(inactive_platform, 0) <> 2
 		AND orders.fecha = '$today'
 		AND orders. STATUS IN (1, 3)
-		AND clients.data_activa = 'SI'
-		GROUP BY
+		AND clients.data_activa = 'SI'";
+		if (!empty($typeClient) && $typeClient != 'all') {
+			$query1 .= " AND clients.type_platform = {$typeClient} ";
+		}
+		$query1 .= " GROUP BY
 			prefijo,
 			producto
 		ORDER BY client";
+
 		$respGraf1 = $this->selectDynamic('', '', '', '', $query1, '', '', '', '');
 		foreach ($respGraf1 as &$element) {
 			$sumatori[$element['prefijo']] += (int) $element['cantidad'] ?: 0;
@@ -1972,7 +1995,11 @@ class get_functions extends general_functions
 			orders. STATUS IN (1, 3)
 		AND YEAR (orders.fecha) = '$year'
 		AND IFNULL(inactive_platform, 0) <> 2
-		AND clients.data_activa = 'SI'
+		AND clients.data_activa = 'SI'";
+		if (!empty($typeClient) && $typeClient != 'all') {
+			$query2 .= " AND clients.type_platform = {$typeClient} ";
+		}
+		$query2 .= "
 		GROUP BY
 			orders.prefijo,
 			mes
@@ -2023,27 +2050,17 @@ class get_functions extends general_functions
 			orders. STATUS IN (1, 3)
 		AND IFNULL(inactive_platform, 0) <> 2
 		AND clients.data_activa = 'SI'
-		AND YEAR (orders.fecha) = '$year'
+		AND YEAR (orders.fecha) = '$year'";
+		if (!empty($typeClient) && $typeClient != 'all') {
+			$query3 .= " AND clients.type_platform = {$typeClient} ";
+		}
+		$query3 .= "
 		GROUP BY
 			orders.prefijo,
 			mes
 		ORDER BY description ASC";
 		$respGraf3 = $this->selectDynamic('', '', '', '', $query3);
-		//AQUI SE CONSULTA LOS MESES TRANSCURRIDOS EN VENTAS PARA MOSTRAR LOS MESES DINAMICAMENTE EN LAS GRAFICAS
-		$meses = "SELECT DISTINCT
-			MONTH (orders.fecha) AS mes,
-			DATE_FORMAT(orders.fecha, '%M') AS nameMes
-		FROM
-			orders
-		JOIN clients ON clients.prefix = orders.prefijo
-		WHERE
-			orders. STATUS IN (1, 3)
-		AND IFNULL(inactive_platform, 0) <> 2
-		AND YEAR (orders.fecha) = '$year'
-		AND clients.data_activa = 'SI'
-		ORDER BY
-			MONTH (orders.fecha) ASC";
-		$respMeses = $this->selectDynamic('', '', '', '', $meses);
+
 		foreach ($respMeses as &$element) {
 			$Months[(int) $element['mes']] = $element['nameMes'];
 		}
@@ -2069,6 +2086,7 @@ class get_functions extends general_functions
 	{
 		$yearBus  = $filters['yearBus'];
 		$mesBus   = $filters['mesBus'];
+		$typeClient = $filters['typeClient'];
 		$yearActual = date('Y');
 		$dataValida	= [
 			'50002'	=> $yearBus,
@@ -2111,13 +2129,16 @@ class get_functions extends general_functions
 			$query .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus' ";
 		}
+		if (!empty($typeClient) && $typeClient != 'all') {
+			$query .= " AND clients.type_platform = {$typeClient} ";
+		}
 		$query .= " AND IFNULL(inactive_platform, 0) <> 2
 				AND clients.data_activa = 'SI'
 				GROUP BY
 					status,
 					orders.prefijo";
 
-		$dataSql = $this->selectDynamic('', '', '', '', $query, '', '', '', '');
+		$dataSql = $this->selectDynamic('', '', '', '', $query, '', '', '', '', '');
 		foreach ($dataSql as &$element) {
 			$ordersTot[$status[$element['status']]] += (int) $element['total'] ?: 0;
 			$ordersSt[$status[$element['status']]] = $element['client'] ?: "N/A";
@@ -2166,6 +2187,9 @@ class get_functions extends general_functions
 		} else {
 			$query2 .= "AND YEAR (orders.fecha) = '$yearBus'
 				AND MONTH (orders.fecha) = '$mesBus'";
+		}
+		if (!empty($typeClient) && $typeClient != 'all') {
+			$query2 .= " AND clients.type_platform = {$typeClient} ";
 		}
 		$query2 .= "AND IFNULL(inactive_platform, 0) <> 2
 			GROUP BY
@@ -2221,6 +2245,9 @@ class get_functions extends general_functions
 			$query3 .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus'";
 		}
+		if (!empty($typeClient) && $typeClient != 'all') {
+			$query3 .= " AND clients.type_platform = {$typeClient} ";
+		}
 		$query3 .= "AND IFNULL(inactive_platform, 0) <> 2
 		GROUP BY
 			prefijo,origen
@@ -2266,6 +2293,9 @@ class get_functions extends general_functions
 		} else {
 			$query4 .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus'";
+		}
+		if (!empty($typeClient) && $typeClient != 'all') {
+			$query4 .= " AND clients.type_platform = {$typeClient} ";
 		}
 		$query4 .= " GROUP BY
 			orders.prefijo,
@@ -2326,6 +2356,9 @@ class get_functions extends general_functions
 			$query5 .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus'";
 		}
+		if (!empty($typeClient) && $typeClient != 'all') {
+			$query5 .= " AND clients.type_platform = {$typeClient} ";
+		}
 		$query5 .= " GROUP BY
 			orders.prefijo,
 			mes
@@ -2361,7 +2394,11 @@ class get_functions extends general_functions
 		WHERE
 			IFNULL(inactive_platform, 0) <> 2
 		AND id_status = '1'
-		AND data_activa = 'SI'
+		AND data_activa = 'SI'";
+		if (!empty($typeClient) && $typeClient != 'all') {
+			$queryClientes .= " AND clients.type_platform = {$typeClient} ";
+		}
+		$queryClientes .= "
 		ORDER BY
 			client ASC";
 		$respClientes = $this->selectDynamic('', '', '', '', $queryClientes, '', '', '', '');
@@ -2388,6 +2425,9 @@ class get_functions extends general_functions
 		} else {
 			$query6 .= "AND YEAR (orders.fecha) = '$yearBus'
 			AND MONTH (orders.fecha) = '$mesBus'";
+		}
+		if (!empty($typeClient) && $typeClient != 'all') {
+			$query6 .= " AND clients.type_platform = {$typeClient} ";
 		}
 		$query6 .= "GROUP BY
 			prefijo,
@@ -2476,7 +2516,11 @@ class get_functions extends general_functions
 			orders. STATUS IN (1, 3)
 		AND YEAR (orders.fecha) IN ($yearsBus)
 		AND IFNULL(inactive_platform, 0) <> 2
-		AND clients.data_activa = 'SI'
+		AND clients.data_activa = 'SI'";
+		if (!empty($typeClient) && $typeClient != 'all') {
+			$query7 .= " AND clients.type_platform = {$typeClient} ";
+		}
+		$query7 .= "
 		GROUP BY
 			orders.prefijo,
 			anio
