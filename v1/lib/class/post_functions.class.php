@@ -962,10 +962,10 @@ class post_functions extends general_functions
 		];
 		$userExist	= $this->selectDynamic('', 'users', "users='$user'", $data);
 		if ($userExist) {
-			$userActive	= $this->selectDynamic(['id_status' => '1'], 'users', "users='$user' AND user_type IN (1,2)", $data);
+			$userActive	= $this->selectDynamic(['id_status' => '1'], 'users', "users='$user' AND user_type IN (1,2,30)", $data);
 			if ($userActive) {
 				$passwordEncript 	= $this->encriptKey($password);
-				$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1'], 'users', "password='$passwordEncript'", $data);
+				$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1'], 'users', " user_type IN (1,2,30) AND password='$passwordEncript'", $data);
 				if ($dataUser) {
 
 					switch ($dataUser[0]["language_id"]) {
