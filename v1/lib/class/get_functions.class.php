@@ -248,6 +248,8 @@ class get_functions extends general_functions
 		$status	   = ($filters['status']) ? $filters['status'] : 1;
 		$today 	   = date('Y-m-d');
 		$id_user   = $filters['id_user'];
+		$estatus   = $filters['estatus'];
+		$agencyFilter = $filters['agencyFilter'];
 		$lang_app  = $this->funcLangApp();
 
 		$dataCurl = [
@@ -363,7 +365,13 @@ class get_functions extends general_functions
 			$arrWhere['agencia'] = $idBroker;
 		}
 		if (!empty($code)) {
-			$codeWhere = " codigo LIKE '%$code%' ";
+			$codeWhere .= " AND codigo LIKE '%$code%' ";
+		}
+		if (!empty($estatus) && $estatus != 'all') {
+			$codeWhere .= " AND orders.status IN ('$estatus') ";
+		}
+		if (!empty($agencyFilter)) {
+			$codeWhere .= " AND orders.agencia = '$agencyFilter' ";
 		}
 
 		$arrWhere['orders.prefijo'] = $prefix;
@@ -530,6 +538,56 @@ class get_functions extends general_functions
 		}
 
 		return $dataOrders;
+	}
+
+	public function getAgencys($filters)
+	{
+		$prefix  = $filters['prefix'];
+		$idAgency = $filters['agency'];
+
+		$dataValida	= [
+			"9092"  => $prefix
+		];
+
+		$this->validatEmpty($dataValida);
+
+		if (empty($idAgency) || $idAgency == 'N/A') {
+			$query = "SELECT
+					id_broker as id,
+					broker AS name
+				FROM
+					broker
+				WHERE
+					prefijo = '$prefix'
+				AND id_status = 1
+				ORDER BY
+					broker ASC";
+
+			return $this->selectDynamic('', '', '', '', $query, '', '', '');
+		}
+		if (!empty($idAgency) && $idAgency != 'N/A') {
+			$idagencys = $this->agencysChildren($idAgency, $prefix);
+			if ($idagencys) {
+				$arrBrokers = $idagencys;
+				array_push($arrBrokers, (($idAgency) ?: 0));
+				$arrBrokers = array_values($arrBrokers); //agencias hijas y su agencia master
+				$arr = implode(',', array_unique($arrBrokers));
+			} else {
+				$arr = $idAgency;
+			}
+			$query = "SELECT
+						id_broker as id,
+						broker AS name
+					FROM
+						broker
+					WHERE
+						prefijo = '$prefix'
+					AND id_status = 1
+					AND id_broker IN ($arr)
+					ORDER BY
+						broker ASC";
+			return $this->selectDynamic('', '', '', '', $query, '', '', '');
+		}
 	}
 
 	public function getInfoSocialsPlatform($filters)
