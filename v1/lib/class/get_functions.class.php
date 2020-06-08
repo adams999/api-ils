@@ -370,7 +370,7 @@ class get_functions extends general_functions
 		if (!empty($estatus) && $estatus != 'all') {
 			$codeWhere .= " AND orders.status IN ('$estatus') ";
 		}
-		if (!empty($agencyFilter)) {
+		if (!empty($agencyFilter) && $agencyFilter != 'all') {
 			$codeWhere .= " AND orders.agencia = '$agencyFilter' ";
 		}
 
