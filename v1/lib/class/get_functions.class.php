@@ -232,6 +232,400 @@ class get_functions extends general_functions
 		return $this->selectDynamic('', 'clients', "prefix = '$prefix' AND data_activa = 'si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2", ['client', 'phone1', 'cod_phone2', 'phone2', 'cod_phone3', 'phone3', 'cod_phone4', 'phone4', 'address', 'id_country', 'img_cliente', 'id_country', 'id_city', 'zip_code', 'date_up', 'id_state', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '', '');
 	}
 
+	public function getOrdersPrueba($filters, $apikey)
+	{
+		$document  = $filters['document'];
+		$code	   = $filters['code'];
+		$name      = $filters['name'];
+		$prefix	   = $filters['prefix'];
+		$prefixApp = $filters['prefixApp'];
+		$userType  = ($filters['userType']) ? $filters['userType'] : 1;
+		$startDate = $filters['startDate'];
+		$endDate   = $filters['endDate'];
+		$source    = $filters['source'];
+		$min	   = ($filters['min'] <= 0 || empty($filters['min'])) ? 0 : $filters['min'];
+		$max	   = ($filters['max'] <= 0 || empty($filters['max'] || ($filters['max'] <= $filters['min']))) ? 50 : $filters['max'];
+		$status	   = ($filters['status']) ? $filters['status'] : 1;
+		$today 	   = date('Y-m-d');
+		$id_user   = $filters['id_user'];
+		$estatus   = $filters['estatus'];
+		$agencyFilter = $filters['agencyFilter'];
+		$lang_app  = $this->funcLangApp();
+
+		$dataValida	= [
+			"9092"  => $prefix,
+			"9017"  => !empty($status) ? in_array($status, [1, 2, 3, 4, 5]) : true,
+			'3030'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate) > strtotime($endDate)) : true,
+			'9068'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($endDate)	> strtotime($today)) : true,
+			'9069'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate)	> strtotime($today)) : true,
+		];
+
+
+		$validatEmpty	= $this->validatEmpty($dataValida);
+		if (!empty($validatEmpty)) {
+			return $validatEmpty;
+		}
+
+		$dataCurl = [
+			'querys' => "SELECT
+							parameter_value
+						FROM
+							parameters
+						WHERE
+							parameters.parameter_key = 'GRACE_PERIOD'
+						AND show_parameter = 1 LIMIT 1"
+		];
+
+		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+		$linkplatf 	= $link . "/app/api/selectDynamic";
+		$headers 	= "content-type: application/x-www-form-urlencoded";
+		$periodGrace = json_decode($this->curlGeneral($linkplatf, json_encode($dataCurl), $headers), true)[0]['parameter_value'];
+
+		$valueOrders = [
+			'orders.id',
+			'orders.id_orders',
+			'codigo',
+			'origen',
+			"IF (
+				destino = 'XX'
+				OR destino = ''
+				OR destino IS NULL,
+				IF (
+					territory.desc_small = ''
+					OR territory.desc_small IS NULL,
+					'N/A',
+					territory.desc_small
+				),
+				destino
+			) AS destino",
+			"DATE_FORMAT(salida,'%d-%m-%Y') as fsalida",
+			'retorno',
+			"DATE_FORMAT(retorno,'%d-%m-%Y') as fretorno",
+			"DATE_FORMAT(fecha,'%d-%m-%Y') as ffecha",
+			"REPLACE( orders.nombre_contacto,'''','') AS nombre_contacto",
+			'email_contacto',
+			'telefono_contacto',
+			'agencia',
+			'nombre_agencia',
+			'status',
+			'cantidad',
+			'referencia',
+			'territory',
+			'producto',
+			'(DATEDIFF(orders.retorno, orders.salida) + 1 ) as diasViaje',
+			'plan_categoria_detail.name_plan AS categoria',
+			'v_authorizado',
+			'currency.value_iso AS moneda',
+			'credito_tipo',
+			'credito_nombre',
+			'orders.prefijo'
+		];
+
+		if ($source != 'public') {
+			array_push(
+				$valueOrders,
+				'orders.family_plan',
+				'comentario_medicas',
+				'total',
+				'vendedor',
+				'cupon',
+				'cupon_descto',
+				'codeauto',
+				'procesado',
+				'response',
+				'v_authorizado',
+				'neto_prov',
+				'tasa_cambio',
+				'alter_cur',
+				'total_mlc',
+				'orders.forma_pago',
+				'neto_prov_mlc',
+				'total_mlc',
+				'orders.compra_minima',
+				'pareja_plan',
+				'orders.Voucher_Individual',
+				'v_authorizado',
+				'credito_numero',
+				'broker.id_broker as id_agencia',
+				'broker.code_phone1 AS code1_agencia',
+				'broker.phone1 AS phone1_agencia',
+				'broker.code_phone2 AS code2_agencia',
+				'broker.phone2 AS phone2_agencia',
+				'broker.code_phone3 AS code3_agencia',
+				'broker.phone3 AS phone3_agencia',
+				'orders.type_anulacion',
+				'credit_note.monto_nc',
+				"DATE_FORMAT(credit_note.Fecha_aplicado,'%d-%m-%Y') as Fecha_aplicado",
+				'orders.USE_nro_notaCredito'
+			);
+		}
+
+		$codeWhere = '1';
+		$arrWhere = [];
+		// $idBroker	= $this->getBrokersByApiKey($apikey);
+		// if (!empty($idBroker) && in_array($userType, [2, 5]) && $prefixApp != 'ILS') {
+		// 	$arrWhere['agencia'] = $idBroker;
+		// }
+		if (!empty($code)) {
+			$codeWhere .= " AND codigo LIKE '%$code%' ";
+		}
+		if (!empty($estatus) && $estatus != 'all') {
+			$codeWhere .= " AND orders.status IN ('$estatus') ";
+		}
+		if (!empty($agencyFilter) && $agencyFilter != 'all') {
+			$codeWhere .= " AND orders.agencia = '$agencyFilter' ";
+		}
+
+		$arrWhere['orders.prefijo'] = $prefix;
+		$arrLimit = ['min' => $min, 'max' => $max];
+		if (!empty($name)) {
+			$name = trim($name);
+			$nameSearch = explode(' ', $name);
+			$arrJoin = " INNER JOIN beneficiaries ON orders.id = beneficiaries.id_orden
+			AND beneficiaries.prefijo = orders.prefijo 
+			AND (
+				concat_ws(
+					' ',
+					TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.nombre
+					),
+					TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.apellido
+					)
+				) LIKE '%$name%'
+				OR (
+					TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.nombre
+					) LIKE '%$nameSearch[0]%'
+					AND TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.apellido
+					) LIKE '%$nameSearch[1]%'
+				)
+				OR (
+					TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.nombre
+					) LIKE '%$nameSearch[1]%'
+					AND TRIM(
+						BOTH ' '
+						FROM
+							beneficiaries.apellido
+					) LIKE '%$nameSearch[0]%'
+				)
+			) ";
+			// $arrJoin = [
+			// 	'table'		=> 'beneficiaries',
+			// 	'field'		=> "id_orden AND beneficiaries.prefijo = orders.prefijo AND (concat_ws(' ', TRIM(BOTH ' ' FROM beneficiaries.nombre),
+			// 		TRIM(BOTH ' ' FROM beneficiaries.apellido)) LIKE '%$name%'
+			// 		OR (TRIM(BOTH ' ' FROM beneficiaries.nombre) LIKE '%$nameSearch[0]%'
+			// 		AND TRIM(BOTH ' ' FROM beneficiaries.apellido) LIKE '%$nameSearch[1]%')
+			// 		OR (TRIM(BOTH ' ' FROM beneficiaries.nombre) LIKE '%$nameSearch[1]%'
+			// 		AND TRIM(BOTH ' ' FROM beneficiaries.apellido) LIKE '%$nameSearch[0]%'))",
+			// 	'fieldComp'	=> 'id'
+			// ];
+		}
+
+		if (!empty($document)) {
+			$arrJoin = " INNER JOIN beneficiaries ON orders.id = beneficiaries.id_orden
+			AND beneficiaries.prefijo = orders.prefijo AND beneficiaries.documento LIKE '%$document%' ";
+			// $arrJoin = [
+			// 	'table' => "beneficiaries",
+			// 	'field' => "id_orden AND beneficiaries.prefijo = orders.prefijo AND beneficiaries.documento LIKE '%$document%'",
+			// 	'fieldComp' => "id"
+			// ];
+			$arrLimit = ['min' => $min, 'max' => $max];
+			array_push($valueOrders, 'beneficiaries.documento');
+		}
+
+		if (!empty($startDate) && !empty($endDate)) {
+			$between = [
+				'start' => $startDate,
+				'end'   => $endDate,
+				'field' => 'fecha'
+			];
+		}
+		if (!empty($pagination)) {
+			$arrPagination  = implode(',', $pagination);
+			if (is_array($arrPagination)) {
+			}
+		}
+
+		$id_agencia = [];
+		$arrBrokers = [];
+		$arr;
+		if (!empty($userType) && in_array($userType, [5, 2]) && $prefixApp != 'ILS') { ////// usuario tipo 5 broker access solo vera de su agencia y 2 es broker admin su agencia y las debajo de ella
+			$id_agencia =  $this->agencyBroker($id_user, $userType, $prefix)[0]["id_associate"];
+			$arrWhere['orders.agencia'] = $id_agencia ?: 0;
+
+			if (in_array($userType, [2])) { ////// usuario tipo 2 broker admin vera vouchers de ella y sus agencias hijas
+				$arrWhere['orders.agencia'] = null;
+				$broker_nivel = $this->agencysChildren($id_agencia, $prefix);
+				if ($broker_nivel) {
+					$arrBrokers = $broker_nivel;
+					array_push($arrBrokers, (($id_agencia) ?: 0));
+					$arrBrokers = array_values($arrBrokers); //agencias hijas y su agencia master
+					$arr = implode(',', array_unique($arrBrokers));
+				} else {
+					$arr = $id_agencia;
+				}
+				$arr = ' AND orders.agencia IN (' . $arr . ') ';
+				$codeWhere .= $arr;
+			}
+		}
+
+		//$arrWhere['status']=$status;
+		$dataOrders = $this->selectDynamic(
+			$arrWhere,
+			" orders 
+			JOIN plans ON orders.producto = plans.id
+			AND orders.prefijo = plans.prefijo
+			JOIN plan_category ON plan_category.id_plan_categoria = plans.id_plan_categoria
+			AND plan_category.prefijo = plans.prefijo
+			JOIN plan_categoria_detail ON plan_category.id_plan_categoria = plan_categoria_detail.id_plan_categoria
+			AND plan_categoria_detail.prefijo = plan_category.prefijo AND plan_categoria_detail.language_id = '$lang_app' 
+			JOIN currency ON currency.id_currency = plans.id_currence 
+			LEFT JOIN credit_note ON credit_note.nro_voucher = orders.codigo 
+			AND credit_note.prefijo = orders.prefijo 
+			JOIN territory ON IF (
+				orders.territory = ''
+				OR orders.territory IS NULL,
+				0,
+				orders.territory
+			) = territory.id_territory
+			AND orders.prefijo = territory.prefijo
+			JOIN broker ON broker.id_broker = orders.agencia
+			AND broker.prefijo = orders.prefijo " . $arrJoin . "",
+			"$codeWhere",
+			$valueOrders,
+			false,
+			$arrLimit,
+			["field" => "fecha", "order" => "DESC"],
+			$between,
+			false //$arrJoin,
+
+		);
+		$dataIdsOrder = array_column($dataOrders, 'id');
+
+		$sqlBeneficiaries = "SELECT
+				beneficiaries.id,
+				id_orden,
+				REPLACE (
+					beneficiaries.nombre,
+					'''',
+					''
+				) AS nombre,
+				REPLACE (
+					beneficiaries.apellido,
+					'''',
+					''
+				) AS apellido,
+				documento,
+				email,
+				DATE_FORMAT(nacimiento, '%d-%m-%Y') AS nacimiento,
+				nacionalidad,
+				tipo_doc,
+				telefono,
+				precio_vta,
+				precio_cost,
+				TIMESTAMPDIFF(
+					YEAR,
+					beneficiaries.nacimiento,
+					orders.retorno
+				) AS edad,
+				condicion_medica
+			FROM
+				beneficiaries
+			INNER JOIN orders ON orders.prefijo = beneficiaries.prefijo
+			AND orders.id = beneficiaries.id_orden
+			WHERE
+				beneficiaries.id_orden IN (" . implode(',', $dataIdsOrder) . ")
+			AND beneficiaries.prefijo = '$prefix'
+			ORDER BY
+				nombre ASC";
+
+		$databeneficiaries = $this->selectDynamic('', '', '', '', $sqlBeneficiaries, '', '', '');
+
+		$sqlraidersOrders = "SELECT
+			orders_raider.id,
+			orders_raider.id_orden,
+			orders_raider.id_raider,
+			orders_raider.value_raider,
+			orders_raider.cost_raider,
+			orders_raider.id_beneft,
+			raiders_detail.name_raider,
+			raiders.rd_calc_type,
+			raiders.specific_benefit,
+			raiders.promocion,
+			raiders_detail.language_id,
+			orders.codigo,
+			beneficiaries.nombre,
+			beneficiaries.apellido,
+			TIMESTAMPDIFF(
+				YEAR,
+				beneficiaries.nacimiento,
+				orders.retorno
+			) AS edad
+		FROM
+			orders_raider
+		INNER JOIN raiders ON orders_raider.id_raider = raiders.id_raider
+		AND orders_raider.prefijo = raiders.prefijo
+		INNER JOIN raiders_detail ON raiders.id_raider = raiders_detail.id_raider
+		AND orders_raider.prefijo = raiders_detail.prefijo
+		LEFT JOIN orders ON orders.id = orders_raider.id_orden
+		AND orders.prefijo = orders_raider.prefijo
+		LEFT JOIN beneficiaries ON beneficiaries.id = orders_raider.id_beneft
+		AND orders_raider.prefijo = beneficiaries.prefijo
+		WHERE
+			orders_raider.id_orden IN (" . implode(',', $dataIdsOrder) . ")
+		AND orders_raider.prefijo = '$prefix'
+		AND raiders_detail.language_id = '$lang_app'
+		AND (
+			orders_raider.id_status IS NULL
+			OR orders_raider.id_status <> '2'
+		)
+		GROUP BY
+			id_raider,
+			id_beneft
+		ORDER BY
+			nombre ASC";
+
+		$dataOrdersRaiders = $this->selectDynamic('', '', '', '', $sqlraidersOrders, '', '', '');
+
+		foreach ($dataOrders as $key => &$value) {
+			$value['response'] = json_decode($value['response'], true);
+			$value['period_grace'] = (int) $periodGrace ?: 3;
+			$value['total']    = bcdiv($value['total'], 1, 2);
+			$value['total_mlc']  = bcdiv($value['total_mlc'], 1, 2);
+			foreach ($databeneficiaries as $key2 => &$value2) {
+				if ($value['id'] == $value2['id_orden']) {
+					$dataOrders[$key]['beneficiaries'][] = $databeneficiaries[$key2];
+				}
+			}
+			foreach ($dataOrdersRaiders as $key2 => &$value2) {
+				if ($value['id'] == $value2['id_orden']) {
+					$dataOrders[$key]['raiders'][] = $dataOrdersRaiders[$key2];
+				}
+			}
+			if (empty($dataOrders[$key]['beneficiaries'])) {
+				$dataOrders[$key]['beneficiaries'] = [];
+			}
+			if (empty($dataOrders[$key]['raiders'])) {
+				$dataOrders[$key]['raiders'] = [];
+			}
+		}
+		unset($databeneficiaries, $dataOrdersRaiders);
+		return $dataOrders;
+	}
+
 	public function getOrders($filters, $apikey)
 	{
 		$document  = $filters['document'];
@@ -252,6 +646,19 @@ class get_functions extends general_functions
 		$agencyFilter = $filters['agencyFilter'];
 		$lang_app  = $this->funcLangApp();
 
+		$dataValida	= [
+			"9092"  => $prefix,
+			"9017"  => !empty($status) ? in_array($status, [1, 2, 3, 4, 5]) : true,
+			'3030'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate) > strtotime($endDate)) : true,
+			'9068'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($endDate)	> strtotime($today)) : true,
+			'9069'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate)	> strtotime($today)) : true,
+		];
+
+		$validatEmpty	= $this->validatEmpty($dataValida);
+		if (!empty($validatEmpty)) {
+			return $validatEmpty;
+		}
+
 		$dataCurl = [
 			'querys' => "SELECT
 							parameter_value
@@ -267,19 +674,6 @@ class get_functions extends general_functions
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$periodGrace = json_decode($this->curlGeneral($linkplatf, json_encode($dataCurl), $headers), true)[0]['parameter_value'];
 
-		$dataValida	= [
-			"9092"  => $prefix,
-			"9017"  => !empty($status) ? in_array($status, [1, 2, 3, 4, 5]) : true,
-			'3030'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate) > strtotime($endDate)) : true,
-			'9068'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($endDate)	> strtotime($today)) : true,
-			'9069'	=> (!empty($endDate) && !empty($endDate)) ? !(strtotime($startDate)	> strtotime($today)) : true,
-		];
-
-
-		$validatEmpty	= $this->validatEmpty($dataValida);
-		if (!empty($validatEmpty)) {
-			return $validatEmpty;
-		}
 		$valueOrders = [
 			'orders.id',
 			'orders.id_orders',
@@ -360,10 +754,10 @@ class get_functions extends general_functions
 
 		$codeWhere = '1';
 		$arrWhere = [];
-		$idBroker	= $this->getBrokersByApiKey($apikey);
-		if (!empty($idBroker) && !in_array($userType, [1, 2, 5, 13]) && $prefixApp != 'ILS') {
-			$arrWhere['agencia'] = $idBroker;
-		}
+		// $idBroker	= $this->getBrokersByApiKey($apikey);
+		// if (!empty($idBroker) && !in_array($userType, [1, 2, 5, 13]) && $prefixApp != 'ILS') {
+		// 	$arrWhere['agencia'] = $idBroker;
+		// }
 		if (!empty($code)) {
 			$codeWhere .= " AND codigo LIKE '%$code%' ";
 		}

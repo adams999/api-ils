@@ -120,7 +120,7 @@ class general_functions extends Model
                 $query .= " INNER JOIN $tableJoin ON $table.$fieldComp = $tableJoin.$fieldJoin";
             }
             $query .= " WHERE $where ";
-            foreach ($filters as $campo => $value) {
+            foreach ($filters as $campo => &$value) {
                 if (!empty($campo) && !empty($value)) {
                     $valor = addslashes($value);
                     $query .= " AND $campo = '$valor'";
