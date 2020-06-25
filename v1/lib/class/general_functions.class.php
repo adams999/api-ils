@@ -334,7 +334,7 @@ class general_functions extends Model
 
     public function logsave($request, $response, $operacion, $procedencia, $apikey = '', $id_error = '', $num_voucher = '', $num_referencia = '')
     {
-        $datAgency        = $this->datAgency($apikey);
+        //$datAgency        = $this->datAgency($apikey);
         $id_user        = $_GET['id_user'];
         $prefijo        = !empty($request['prefix']) ? $request['prefix'] : 'ILS';
         $prefixApp      = $request['prefixApp'];
