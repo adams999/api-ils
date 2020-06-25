@@ -22,8 +22,6 @@ function API()
 
     global $getFunctions, $postFunctions, $putFunctions;
 
-
-
     $method = $_SERVER['REQUEST_METHOD'];
     $function = $_GET['function'];
     $api    = $_GET['token'];
@@ -42,7 +40,7 @@ function API()
             break;
         case 'POST':
             $filters = $_GET;
-            
+
             if (empty($api)) {
                 $getFunctions->getError(6020, '');
             } else {
