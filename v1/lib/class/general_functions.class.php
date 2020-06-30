@@ -284,9 +284,7 @@ class general_functions extends Model
                 $lang = 'spa';
                 break;
         }
-        if (($lang != 'spa') && ($lang != 'por') && (strtoupper($_GET['prefix']) == 'RC')) {
-            $lang = 'spa';
-        }
+
         return $lang;
     }
 
