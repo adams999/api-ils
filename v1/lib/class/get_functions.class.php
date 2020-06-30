@@ -2407,7 +2407,8 @@ class get_functions extends general_functions
 			IFNULL(inactive_platform, 0) <> 2
 		AND orders.fecha = '$today'
 		AND orders. STATUS IN (1, 3)
-		AND clients.data_activa = 'SI'";
+		AND clients.data_activa = 'SI'
+		AND orders.prefijo != 'IX' ";
 		if (!empty($typeClient) && $typeClient != 'all') {
 			$query1 .= " AND clients.type_platform = {$typeClient} ";
 		}
@@ -2447,7 +2448,8 @@ class get_functions extends general_functions
 			orders. STATUS IN (1, 3)
 		AND YEAR (orders.fecha) = '$year'
 		AND IFNULL(inactive_platform, 0) <> 2
-		AND clients.data_activa = 'SI'";
+		AND clients.data_activa = 'SI'
+		AND orders.prefijo != 'IX' ";
 		if (!empty($typeClient) && $typeClient != 'all') {
 			$query2 .= " AND clients.type_platform = {$typeClient} ";
 		}
@@ -2473,14 +2475,19 @@ class get_functions extends general_functions
 			'11' => 'Noviembre',
 			'12' => 'Diciembre',
 		];
+
+		$mesMax = 0;
 		foreach ($respGraf2 as &$element) {
 			$clientsAnual[$element['prefijo']][(int) $element['mes']] = (int) $element['cantidad'] ?: 0;
 			$clientsAnual[$element['prefijo']]['description'] = $element['description'];
+			if ((int) $element['mes'] > $mesMax) {
+				$mesMax = (int) $element['mes'];
+			}
 		}
 		foreach ($clientsAnual as $key1 => &$val) {
 			$seriesAnual = [];
 			foreach ($mountDesc as $key2 => &$value) {
-				if ($key2 <= date('m')) {
+				if ($key2 <= ($mesMax > date('m') ? $mesMax : date('m'))) {
 					$seriesAnual[] = (int) $val[(int) $key2] ?: 0;
 				}
 			}
@@ -2502,7 +2509,8 @@ class get_functions extends general_functions
 			orders. STATUS IN (1, 3)
 		AND IFNULL(inactive_platform, 0) <> 2
 		AND clients.data_activa = 'SI'
-		AND YEAR (orders.fecha) = '$year'";
+		AND YEAR (orders.fecha) = '$year'
+		AND orders.prefijo != 'IX' ";
 		if (!empty($typeClient) && $typeClient != 'all') {
 			$query3 .= " AND clients.type_platform = {$typeClient} ";
 		}
@@ -2516,21 +2524,27 @@ class get_functions extends general_functions
 		foreach ($respMeses as &$element) {
 			$Months[(int) $element['mes']] = $element['nameMes'];
 		}
+		$mesMax = 0;
 		foreach ($respGraf3 as &$element) {
 			$SalInt[$element['prefijo']]['ventas'][(int) $element['mes']] = (float) $element['neto'] ?: 0;
 			$SalInt[$element['prefijo']]['description'] = $element['description'];
+			if ((int) $element['mes'] > $mesMax) {
+				$mesMax = (int) $element['mes'];
+			}
 		}
 		foreach ($SalInt as &$val) {
 			$setSal = [];
 			foreach ($Months as $key2 => &$value) {
-				$setSal[] = (float) $val['ventas'][(int) $key2] ?: 0;
+				if ($key2 <= ($mesMax > date('m') ? $mesMax : date('m'))) {
+					$setSal[] = (float) $val['ventas'][(int) $key2] ?: 0;
+				}
 			}
 			$AnSales[] = [
 				'name' => $val['description'],
 				'data' => $setSal,
 			];
 		}
-		return [[$series, $drilldown], [$clientAnual], [$AnSales]];
+		return [[$series, $drilldown], [$clientAnual], [$AnSales], $Months];
 	}
 
 	////////////////////////GRAFICOS PARA LA SEGUNDA PESTAÑA DE GENERAL/TOTAL HOME ILS
@@ -2540,6 +2554,7 @@ class get_functions extends general_functions
 		$mesBus   = $filters['mesBus'];
 		$typeClient = $filters['typeClient'];
 		$yearActual = date('Y');
+		$lang_app   = $this->funcLangAppShort($this->funcLangApp());
 		$dataValida	= [
 			'50002'	=> $yearBus,
 			'50003'	=> $mesBus,
@@ -2564,8 +2579,9 @@ class get_functions extends general_functions
 		foreach ($respMeses as &$element) {
 			$Months[(int) $element['mes']] = $element['nameMes'];
 		}
+
 		////////////////////GRAFICA DE TORTA DRILLDOWN DE AGENCIAS VOUCHERS ACTIVOS GENERAL/TOTAL
-		$status = Clients::getLabelStatusVoucher();
+		$status = Clients::getLabelStAssist(false, $lang_app);
 		$query = "SELECT
 					orders.status,
 					COUNT(orders.status) AS total,
@@ -2574,7 +2590,8 @@ class get_functions extends general_functions
 				FROM
 					orders
 				JOIN clients ON clients.prefix = orders.prefijo
-				WHERE 1 ";
+				WHERE 1 
+		AND orders.prefijo != 'IX' ";
 		if ($mesBus == 'ALL') {
 			$query .= "AND YEAR(orders.fecha) = '$yearBus' ";
 		} else {
@@ -2633,7 +2650,8 @@ class get_functions extends general_functions
 			JOIN clients ON clients.prefix = orders.prefijo
 			WHERE
 				clients.data_activa = 'SI'
-			AND orders.`status` IN (1, 3)";
+			AND orders.`status` IN (1, 3)
+			AND orders.prefijo != 'IX' ";
 		if ($mesBus == 'ALL') {
 			$query2 .= "AND YEAR(orders.fecha) = '$yearBus'";
 		} else {
@@ -2690,7 +2708,8 @@ class get_functions extends general_functions
 		JOIN clients ON clients.prefix = orders.prefijo
 		WHERE
 			clients.data_activa = 'SI'
-		AND orders.`status` IN (1, 3)";
+		AND orders.`status` IN (1, 3)
+		AND orders.prefijo != 'IX' ";
 		if ($mesBus == 'ALL') {
 			$query3 .= "AND YEAR(orders.fecha) = '$yearBus'";
 		} else {
@@ -2739,7 +2758,8 @@ class get_functions extends general_functions
 		WHERE
 			orders. STATUS IN (1, 3)
 		AND IFNULL(inactive_platform, 0) <> 2
-		AND clients.data_activa = 'SI'";
+		AND clients.data_activa = 'SI'
+		AND orders.prefijo != 'IX' ";
 		if ($mesBus == 'ALL') {
 			$query4 .= "AND YEAR(orders.fecha) = '$yearBus'";
 		} else {
@@ -2770,22 +2790,20 @@ class get_functions extends general_functions
 			'11' => 'Noviembre',
 			'12' => 'Diciembre',
 		];
-		$monts1 = [];
-		foreach ($respGraf4 as &$element) {
-			$timeInt[$element['prefijo']]['ventas'][$element['nameMes']] = (int) $element['cantidad'] ?: 0;
+
+		foreach ($respGraf4 as $element) {
+			$timeInt[$element['prefijo']]['ventas'][(int) $element['mes']] = (int) $element['cantidad'] ?: 0;
 			$timeInt[$element['prefijo']]['description'] = $element['description'];
-			$monts1[$element['mes']] = $element['nameMes'];
 		}
-		foreach ($timeInt as &$val) {
+
+		foreach ($timeInt as $val) {
 			$setMonth = [];
-			foreach ($val as $key2 => &$value) {
-				foreach ($value as $key3 => &$value2) {
-					$setMonth[] = (int) $val['ventas'][$key3] ?: 0;
-				}
+			foreach ($Months as $key2 => $value) {
+				$setMonth[] = (int) $val['ventas'][(int) $key2] ?: 0;
 			}
 			$MonthInt[] = [
 				'name' => $val['description'],
-				'data' => $setMonth,
+				'data' => $setMonth
 			];
 		}
 		///////////////////GRAFICO DE COLUMNAS DE NETO DE VENTAS 
@@ -2801,7 +2819,8 @@ class get_functions extends general_functions
 		WHERE
 			orders. STATUS IN (1, 3)
 		AND IFNULL(inactive_platform, 0) <> 2
-		AND clients.data_activa = 'SI'";
+		AND clients.data_activa = 'SI'
+		AND orders.prefijo != 'IX' ";
 		if ($mesBus == 'ALL') {
 			$query5 .= "AND YEAR(orders.fecha) = '$yearBus'";
 		} else {
@@ -2820,20 +2839,18 @@ class get_functions extends general_functions
 		$respGraf5 = $this->selectDynamic('', '', '', '', $query5, '', '', '', '');
 		$monts = [];
 		foreach ($respGraf5 as &$element) {
-			$SalInt[$element['prefijo']]['ventas'][$element['nameMes']] = (float) $element['neto'] ?: 0;
+			$SalInt[$element['prefijo']]['ventas'][(int) $element['mes']] = (float) $element['neto'] ?: 0;
 			$SalInt[$element['prefijo']]['description'] = $element['description'];
 			$monts[$element['mes']] = $element['nameMes'];
 		}
 		foreach ($SalInt as &$val) {
 			$setSal = [];
-			foreach ($val as $key2 => &$value) {
-				foreach ($value as $key3 => &$value2) {
-					$setSal[] = (float) $val['ventas'][$key3] ?: 0;
-				}
+			foreach ($Months as $key2 => &$value) {
+				$setSal[] = (float) $val['ventas'][$key2] ?: 0;
 			}
 			$AnSales[] = [
 				'name' => $val['description'],
-				'data' => $setSal,
+				'data' => $setSal
 			];
 		}
 		/////////////GRAFICA DRILL DOWN COLUMNAS DE EDADES CON FILTRO DE FECHA
@@ -2846,7 +2863,8 @@ class get_functions extends general_functions
 		WHERE
 			IFNULL(inactive_platform, 0) <> 2
 		AND id_status = '1'
-		AND data_activa = 'SI'";
+		AND data_activa = 'SI'
+		AND clients.prefix != 'IX' ";
 		if (!empty($typeClient) && $typeClient != 'all') {
 			$queryClientes .= " AND clients.type_platform = {$typeClient} ";
 		}
@@ -2871,7 +2889,8 @@ class get_functions extends general_functions
 		WHERE
 			orders. STATUS IN (1, 3)
 		AND IFNULL(inactive_platform, 0) <> 2
-		AND clients.data_activa = 'SI'";
+		AND clients.data_activa = 'SI'
+		AND orders.prefijo != 'IX' ";
 		if ($mesBus == 'ALL') {
 			$query6 .= "AND YEAR(orders.fecha) = '$yearBus'";
 		} else {
@@ -2968,7 +2987,8 @@ class get_functions extends general_functions
 			orders. STATUS IN (1, 3)
 		AND YEAR (orders.fecha) IN ($yearsBus)
 		AND IFNULL(inactive_platform, 0) <> 2
-		AND clients.data_activa = 'SI'";
+		AND clients.data_activa = 'SI'
+		AND orders.prefijo != 'IX' ";
 		if (!empty($typeClient) && $typeClient != 'all') {
 			$query7 .= " AND clients.type_platform = {$typeClient} ";
 		}
@@ -3002,8 +3022,8 @@ class get_functions extends general_functions
 			[$seriesOrd, $drilldownOrd],
 			[$seriesNeto, $drilldownNeto],
 			[$seriesOrig, $drilldownOrig],
-			[$MonthInt, array_values($monts1)],
-			[$AnSales, array_values($monts)],
+			[$MonthInt, array_values($Months)],
+			[$AnSales, array_values($Months)],
 			[$SerEd, $DrillEd],
 			[$final, $platName],
 			'YEAR' => $yearBus
@@ -3018,7 +3038,8 @@ class get_functions extends general_functions
 		$today 	   	= date('Y-m-d');
 		$startDate  = $filters['startDate'];
 		$language	= $this->funcLangApp();
-		$status     = Clients::getLabelStatusVoucher();
+		$lang_app   = $this->funcLangAppShort($this->funcLangApp());
+		$status     = Clients::getLabelStAssist(false, $lang_app);
 
 		$dataValida	= [
 			"9092"  => $prefix,
