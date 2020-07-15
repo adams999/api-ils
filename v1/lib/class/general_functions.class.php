@@ -765,11 +765,14 @@ class general_functions extends Model
             $this->getError('2001');
         } elseif (!$checkDeparture or empty($departure)) {
             $this->getError('2002');
-        } elseif ($departure < $today or $arrival < $today) {
+        }
+        elseif ($departure < $today or $arrival < $today) {
             $this->getError('2004');
-        } elseif (!$checkArrival or !$checkDeparture) {
+        }
+        elseif (!$checkArrival or !$checkDeparture) {
             $this->getError('3020');
-        } elseif ($arrival == $departure || $departure > $arrival) {
+        }
+        elseif ($arrival == $departure || $departure > $arrival) {
             $this->getError('3030');
         }
     }
@@ -980,7 +983,8 @@ class general_functions extends Model
             return  DOMAIN_APP . "/admin/server/php/files/" . $termsPlan;
         } elseif (!empty($termsAgency) && $typeBroker == "1") {
             return  DOMAIN_APP . "upload_files/broker_parameters/" . $agency . "/condicionados/" . $termsAgency;
-        } elseif (!empty($termsInsurance)) {
+        }
+        elseif (!empty($termsInsurance)) {
             return  DOMAIN_APP . "/admin/server/php/files/" . $termsInsurance;
         }
     }
@@ -1099,9 +1103,11 @@ class general_functions extends Model
             return  DOMAIN_APP . "upload_files/logo_Agencia/" . $logoAgency;
         } elseif (!empty($logoAgencyMaster) && $datAgency[0]["type_broker"] == "1") {
             return  DOMAIN_APP . "upload_files/broker_parameters/" . $agency . "/logos/" . $logoAgencyMaster;
-        } elseif (!empty($logoInsurance)) {
+        }
+        elseif (!empty($logoInsurance)) {
             return  DOMAIN_APP . "/admin/pictures/thumbnail/" . $logoInsurance;
-        } else {
+        }
+        else {
             return  DOMAIN_APP . "/admin/pictures/thumbnail/logo.png";
         }
     }
@@ -1785,34 +1791,66 @@ class general_functions extends Model
     public function grafVentEd($prefix, $startDate, $endDate)
     {
         $sql = "SELECT
-            orders.prefijo,
-            beneficiaries.sexo AS sexo,
-            SUM(beneficiaries.precio_vta ) AS neto,
-            IFNULL(
-                TIMESTAMPDIFF(
-                    YEAR,
-                    beneficiaries.nacimiento,
-                    orders.fecha
-                ),
-                'S-E'
-            ) AS edad,
-            COUNT(*) AS cant
-        FROM
-            orders
-        INNER JOIN beneficiaries ON beneficiaries.id_orden = orders.id
-        AND orders.prefijo = beneficiaries.prefijo
-        WHERE
-            orders.prefijo = '$prefix'
-        AND orders. STATUS IN (1, 3)
-        AND orders.fecha BETWEEN '$startDate'
-        AND '$endDate'
-        GROUP BY
-            orders.prefijo,
-            sexo,
-            edad
-        ORDER BY
-            orders.prefijo,
-            edad ASC";
+                    SUM(total_beneficiario) AS neto,
+	                SUM(cant) AS cant,
+                    prefijo,
+                    sexo,
+                    edad
+                FROM
+                    (
+                        SELECT
+                            count(*) as cant,
+                            orders.prefijo,
+                            beneficiaries.sexo,
+                IFNULL(
+                        TIMESTAMPDIFF(
+                            YEAR,
+                            beneficiaries.nacimiento,
+                            orders.fecha
+                        ),
+                        'S-E'
+                    ) AS edad,
+                            IFNULL(
+                                SUM(
+                                    beneficiaries.total_neto_benefit
+                                ),
+                                SUM(beneficiaries.precio_vta) + IFNULL(
+                                    (
+                                        SELECT
+                                            SUM(orders_raider.value_raider)
+                                        FROM
+                                            orders_raider
+                                        WHERE
+                                            orders_raider.id_orden = orders.id
+                                        AND orders_raider.prefijo = orders.prefijo
+                                    ),
+                                    0
+                                )
+                            ) AS total_beneficiario,
+                            MONTH (orders.fecha) AS mes,
+                            YEAR (orders.fecha) AS anio
+                        FROM
+                            orders
+                        LEFT JOIN beneficiaries ON beneficiaries.id_orden = orders.id
+                        AND beneficiaries.prefijo = orders.prefijo
+                        AND beneficiaries.ben_status = 1
+                        WHERE
+                            orders. STATUS IN (1, 3)
+                        AND orders.fecha BETWEEN '$startDate'
+                        AND '$endDate'
+                        AND orders.prefijo = '$prefix'
+                        GROUP BY
+                            orders.id,
+                            edad,
+                            sexo
+                    ) tableTemp
+                    GROUP BY
+                        prefijo,
+                        sexo,
+                        edad
+                    ORDER BY
+                        prefijo,
+                        edad ASC";
 
         return $this->selectDynamic('', '', '', '', $sql, '', '', '', '');
     }
@@ -1834,9 +1872,9 @@ class general_functions extends Model
         } else {
             $query1 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
-        $query1 .= " AND orders.family_plan = 'si' 
+        $query1 .= " AND orders.family_plan IN ('SI', 'Y') 
             AND (
-                orders.id_cotiza = 0
+                orders.id_cotiza = 0 
                 OR orders.id_cotiza IS NULL
             )
             AND orders.prefijo = '$prefix'
@@ -1863,7 +1901,7 @@ class general_functions extends Model
         }
         $query2 .= " AND orders.es_emision_corp > 0 
             AND (
-                orders.id_cotiza = 0
+                orders.id_cotiza = 0 
                 OR orders.id_cotiza IS NULL
             )
             AND orders.prefijo = '$prefix'
@@ -1890,7 +1928,7 @@ class general_functions extends Model
         }
         $query3 .= " AND orders.id_emision_type = 2 
             AND (
-                orders.id_cotiza = 0
+                orders.id_cotiza = 0 
                 OR orders.id_cotiza IS NULL
             )
             AND orders.prefijo = '$prefix'
@@ -1915,9 +1953,9 @@ class general_functions extends Model
         } else {
             $query4 .= " AND YEAR (orders.fecha) = '$yearActual' ";
         }
-        $query4 .= " AND orders.pareja_plan = 'Y'  
+        $query4 .= " AND orders.pareja_plan IN ('Y', 'SI')
             AND (
-                orders.id_cotiza = 0
+                orders.id_cotiza = 0 
                 OR orders.id_cotiza IS NULL
             )
             AND orders.prefijo = '$prefix'
@@ -1944,7 +1982,7 @@ class general_functions extends Model
         }
         $query5 .= " AND orders.id_group > 0 
             AND (
-                orders.id_cotiza = 0
+                orders.id_cotiza = 0 
                 OR orders.id_cotiza IS NULL
             )
             AND orders.prefijo = '$prefix'
@@ -1974,20 +2012,24 @@ class general_functions extends Model
                 OR orders.es_emision_corp IS NULL
             )
             AND (
-                orders.family_plan = 'no'
+                orders.family_plan IN ('NO', '', 'N') 
                 OR orders.family_plan IS NULL
             )
             AND (
-                orders.id_emision_type <= 1
+                orders.id_emision_type <> 2
                 OR orders.id_emision_type IS NULL
             )
             AND (
-                orders.pareja_plan = 'n'
+                orders.pareja_plan IN ('N', '', 'NO')
                 OR orders.pareja_plan IS NULL
             ) 
             AND (
                 orders.id_cotiza = 0 
                 OR orders.id_cotiza IS NULL
+            )
+            AND (
+                orders.id_group = 0
+                OR orders.id_group IS NULL
             )
             AND orders.prefijo = '$prefix'
             GROUP BY
@@ -2080,7 +2122,9 @@ class general_functions extends Model
             foreach ($array as $key1 => &$val) {
                 $serie = [];
                 foreach ($mountDesc as $key2 => &$value) {
-                    $serie[] = (int) $val[(int) $key2] ?: 0;
+                    if ($key2 <= date('m')) {
+                        $serie[] = (int) $val[(int) $key2] ?: 0;
+                    }
                 }
             }
 
