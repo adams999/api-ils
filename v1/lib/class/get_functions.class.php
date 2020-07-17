@@ -232,7 +232,8 @@ class get_functions extends general_functions
 		return $this->selectDynamic('', 'clients', "prefix = '$prefix' AND data_activa = 'si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2", ['client', 'phone1', 'cod_phone2', 'phone2', 'cod_phone3', 'phone3', 'cod_phone4', 'phone4', 'address', 'id_country', 'img_cliente', 'id_country', 'id_city', 'zip_code', 'date_up', 'id_state', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '', '');
 	}
 
-	public function getOrdersPrueba($filters)
+	///FUNCION OPTIMIZADA PARA ALIVIANAR SUBCONSULTAS EN SERVIDOR MAS OPTIMA
+	public function getOrders($filters)
 	{
 		$document  = $filters['document'];
 		$code	   = $filters['code'];
@@ -450,7 +451,7 @@ class get_functions extends general_functions
 			$between = [
 				'start' => $startDate,
 				'end'   => $endDate,
-				'field' => 'fecha'
+				'field' => 'orders.fecha'
 			];
 		}
 		if (!empty($pagination)) {
@@ -515,7 +516,9 @@ class get_functions extends general_functions
 		);
 		$dataIdsOrder = array_column($dataOrders, 'id');
 
-		$sqlBeneficiaries = "SELECT
+		////si tiene ids procedo a buscar ordenes y raiders si no retorno vacio
+		if (!empty($dataIdsOrder)) {
+			$sqlBeneficiaries = "SELECT
 				beneficiaries.id,
 				id_orden,
 				REPLACE (
@@ -552,9 +555,9 @@ class get_functions extends general_functions
 			ORDER BY
 				nombre ASC";
 
-		$databeneficiaries = $this->selectDynamic('', '', '', '', $sqlBeneficiaries, '', '', '');
+			$databeneficiaries = $this->selectDynamic('', '', '', '', $sqlBeneficiaries, '', '', '');
 
-		$sqlraidersOrders = "SELECT
+			$sqlraidersOrders = "SELECT
 			orders_raider.id,
 			orders_raider.id_orden,
 			orders_raider.id_raider,
@@ -598,35 +601,38 @@ class get_functions extends general_functions
 		ORDER BY
 			nombre ASC";
 
-		$dataOrdersRaiders = $this->selectDynamic('', '', '', '', $sqlraidersOrders, '', '', '');
+			$dataOrdersRaiders = $this->selectDynamic('', '', '', '', $sqlraidersOrders, '', '', '');
 
-		foreach ($dataOrders as $key => &$value) {
-			$value['response'] = json_decode($value['response'], true);
-			$value['period_grace'] = (int) $periodGrace ?: 3;
-			$value['total']    = bcdiv($value['total'], 1, 2);
-			$value['total_mlc']  = bcdiv($value['total_mlc'], 1, 2);
-			foreach ($databeneficiaries as $key2 => &$value2) {
-				if ($value['id'] == $value2['id_orden']) {
-					$dataOrders[$key]['beneficiaries'][] = $databeneficiaries[$key2];
+			foreach ($dataOrders as $key => &$value) {
+				$value['response'] = json_decode($value['response'], true);
+				$value['period_grace'] = (int) $periodGrace ?: 3;
+				$value['total']    = bcdiv($value['total'], 1, 2);
+				$value['total_mlc']  = bcdiv($value['total_mlc'], 1, 2);
+				foreach ($databeneficiaries as $key2 => &$value2) {
+					if ($value['id'] == $value2['id_orden']) {
+						$dataOrders[$key]['beneficiaries'][] = $databeneficiaries[$key2];
+					}
+				}
+				foreach ($dataOrdersRaiders as $key2 => &$value2) {
+					if ($value['id'] == $value2['id_orden']) {
+						$dataOrders[$key]['raiders'][] = $dataOrdersRaiders[$key2];
+					}
+				}
+				if (empty($dataOrders[$key]['beneficiaries'])) {
+					$dataOrders[$key]['beneficiaries'] = [];
+				}
+				if (empty($dataOrders[$key]['raiders'])) {
+					$dataOrders[$key]['raiders'] = [];
 				}
 			}
-			foreach ($dataOrdersRaiders as $key2 => &$value2) {
-				if ($value['id'] == $value2['id_orden']) {
-					$dataOrders[$key]['raiders'][] = $dataOrdersRaiders[$key2];
-				}
-			}
-			if (empty($dataOrders[$key]['beneficiaries'])) {
-				$dataOrders[$key]['beneficiaries'] = [];
-			}
-			if (empty($dataOrders[$key]['raiders'])) {
-				$dataOrders[$key]['raiders'] = [];
-			}
+			unset($databeneficiaries, $dataOrdersRaiders);
+			return $dataOrders;
+		} else {
+			return [];
 		}
-		unset($databeneficiaries, $dataOrdersRaiders);
-		return $dataOrders;
 	}
 
-	public function getOrders($filters)
+	public function getOrdersPrueba($filters)
 	{
 		$document  = $filters['document'];
 		$code	   = $filters['code'];
@@ -842,7 +848,7 @@ class get_functions extends general_functions
 			$between = [
 				'start' => $startDate,
 				'end'   => $endDate,
-				'field' => 'fecha'
+				'field' => 'orders.fecha'
 			];
 		}
 		if (!empty($pagination)) {
@@ -2056,23 +2062,17 @@ class get_functions extends general_functions
 					return $this->getError(50010);
 				} elseif ($value['error_broker'] == 0) {
 					return $this->getError(50011);
-				}
-				elseif ($value['error_country'] == 0) {
+				} elseif ($value['error_country'] == 0) {
 					return $this->getError(50012);
-				}
-				elseif ($value['error_time'] == 0) {
+				} elseif ($value['error_time'] == 0) {
 					return $this->getError(50013);
-				}
-				elseif ($value['error_territory'] == 0) {
+				} elseif ($value['error_territory'] == 0) {
 					return $this->getError(50014);
-				}
-				elseif ($value['error_cant_passenger'] == 0) {
+				} elseif ($value['error_cant_passenger'] == 0) {
 					return $this->getError(50015);
-				}
-				elseif ($value['error_local_plans'] == 0) {
+				} elseif ($value['error_local_plans'] == 0) {
 					return $this->getError(50016);
-				}
-				elseif (count($response) == 0) {
+				} elseif (count($response) == 0) {
 					return $this->getError(1060);
 				}
 			} else {
