@@ -2153,8 +2153,8 @@ class get_functions extends general_functions
 
 		$dataValida	= [
 			"9092"  => $prefix,
-			"6021"  => $lang,
-			"5022"  => $idPlan
+			"6021"  => $lang
+			//,"5022"  => $idPlan
 		];
 		$this->validatEmpty($dataValida);
 		$dataCurl1 = [
