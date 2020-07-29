@@ -232,7 +232,8 @@ class get_functions extends general_functions
 		return $this->selectDynamic('', 'clients', "prefix = '$prefix' AND data_activa = 'si' AND id_status= '1' AND IFNULL(inactive_platform, 0) <> 2", ['client', 'phone1', 'cod_phone2', 'phone2', 'cod_phone3', 'phone3', 'cod_phone4', 'phone4', 'address', 'id_country', 'img_cliente', 'id_country', 'id_city', 'zip_code', 'date_up', 'id_state', 'web', 'urlPrueba', 'prefix', 'type_platform', 'id_broker', 'email', 'colors_platform'], '', '', '', '', '', '');
 	}
 
-	public function getOrdersPrueba($filters, $apikey)
+	///FUNCION OPTIMIZADA PARA ALIVIANAR SUBCONSULTAS EN SERVIDOR MAS OPTIMA
+	public function getOrders($filters)
 	{
 		$document  = $filters['document'];
 		$code	   = $filters['code'];
@@ -450,7 +451,7 @@ class get_functions extends general_functions
 			$between = [
 				'start' => $startDate,
 				'end'   => $endDate,
-				'field' => 'fecha'
+				'field' => 'orders.fecha'
 			];
 		}
 		if (!empty($pagination)) {
@@ -515,7 +516,9 @@ class get_functions extends general_functions
 		);
 		$dataIdsOrder = array_column($dataOrders, 'id');
 
-		$sqlBeneficiaries = "SELECT
+		////si tiene ids procedo a buscar ordenes y raiders si no retorno vacio
+		if (!empty($dataIdsOrder)) {
+			$sqlBeneficiaries = "SELECT
 				beneficiaries.id,
 				id_orden,
 				REPLACE (
@@ -552,9 +555,9 @@ class get_functions extends general_functions
 			ORDER BY
 				nombre ASC";
 
-		$databeneficiaries = $this->selectDynamic('', '', '', '', $sqlBeneficiaries, '', '', '');
+			$databeneficiaries = $this->selectDynamic('', '', '', '', $sqlBeneficiaries, '', '', '');
 
-		$sqlraidersOrders = "SELECT
+			$sqlraidersOrders = "SELECT
 			orders_raider.id,
 			orders_raider.id_orden,
 			orders_raider.id_raider,
@@ -598,35 +601,38 @@ class get_functions extends general_functions
 		ORDER BY
 			nombre ASC";
 
-		$dataOrdersRaiders = $this->selectDynamic('', '', '', '', $sqlraidersOrders, '', '', '');
+			$dataOrdersRaiders = $this->selectDynamic('', '', '', '', $sqlraidersOrders, '', '', '');
 
-		foreach ($dataOrders as $key => &$value) {
-			$value['response'] = json_decode($value['response'], true);
-			$value['period_grace'] = (int) $periodGrace ?: 3;
-			$value['total']    = bcdiv($value['total'], 1, 2);
-			$value['total_mlc']  = bcdiv($value['total_mlc'], 1, 2);
-			foreach ($databeneficiaries as $key2 => &$value2) {
-				if ($value['id'] == $value2['id_orden']) {
-					$dataOrders[$key]['beneficiaries'][] = $databeneficiaries[$key2];
+			foreach ($dataOrders as $key => &$value) {
+				$value['response'] = json_decode($value['response'], true);
+				$value['period_grace'] = (int) $periodGrace ?: 3;
+				$value['total']    = bcdiv($value['total'], 1, 2);
+				$value['total_mlc']  = bcdiv($value['total_mlc'], 1, 2);
+				foreach ($databeneficiaries as $key2 => &$value2) {
+					if ($value['id'] == $value2['id_orden']) {
+						$dataOrders[$key]['beneficiaries'][] = $databeneficiaries[$key2];
+					}
+				}
+				foreach ($dataOrdersRaiders as $key2 => &$value2) {
+					if ($value['id'] == $value2['id_orden']) {
+						$dataOrders[$key]['raiders'][] = $dataOrdersRaiders[$key2];
+					}
+				}
+				if (empty($dataOrders[$key]['beneficiaries'])) {
+					$dataOrders[$key]['beneficiaries'] = [];
+				}
+				if (empty($dataOrders[$key]['raiders'])) {
+					$dataOrders[$key]['raiders'] = [];
 				}
 			}
-			foreach ($dataOrdersRaiders as $key2 => &$value2) {
-				if ($value['id'] == $value2['id_orden']) {
-					$dataOrders[$key]['raiders'][] = $dataOrdersRaiders[$key2];
-				}
-			}
-			if (empty($dataOrders[$key]['beneficiaries'])) {
-				$dataOrders[$key]['beneficiaries'] = [];
-			}
-			if (empty($dataOrders[$key]['raiders'])) {
-				$dataOrders[$key]['raiders'] = [];
-			}
+			unset($databeneficiaries, $dataOrdersRaiders);
+			return $dataOrders;
+		} else {
+			return [];
 		}
-		unset($databeneficiaries, $dataOrdersRaiders);
-		return $dataOrders;
 	}
 
-	public function getOrders($filters, $apikey)
+	public function getOrdersPrueba($filters)
 	{
 		$document  = $filters['document'];
 		$code	   = $filters['code'];
@@ -842,7 +848,7 @@ class get_functions extends general_functions
 			$between = [
 				'start' => $startDate,
 				'end'   => $endDate,
-				'field' => 'fecha'
+				'field' => 'orders.fecha'
 			];
 		}
 		if (!empty($pagination)) {
@@ -1780,13 +1786,13 @@ class get_functions extends general_functions
 			case 'MULTI_TRIP':
 				$bloquesMultiViaje = $this->bloquesMultiViajes($prefix);
 
-				return $resp = [
+				return [
 					[
 						'dias_min'          	=> (int) '365',
 						'dias_max'          	=> (int) '365',
 						'id_plan_categoria' 	=> (int) $response[0]['id_plan_categoria'],
 						'type_category'     	=> $response[0]['type_category'],
-						'bloques_multi_viajes' 	=> $bloquesMultiViaje ?: $bloquesMultiViaje = [['dias_multiviajes' => 365]]
+						'bloques_multi_viajes' 	=> (!empty($bloquesMultiViaje) && !$bloquesMultiViaje['ERROR_CODE'])  ? $bloquesMultiViaje : $bloquesMultiViaje = [['dias_multiviajes' => 365]]
 					]
 				];
 				break;
@@ -1794,7 +1800,7 @@ class get_functions extends general_functions
 				if (!empty($response[0]['dias_min']) && !empty($response[0]['dias_max']) && (int) $response[0]['dias_min'] == (int) $response[0]['dias_max'] && (int) $response[0]['dias_max'] < 365) {
 					(int) $response[0]['dias_max'] = (int) $response[0]['dias_min'] + 1;
 				}
-				return $resp = [
+				return [
 					[
 						'dias_min'          	=> (int) $response[0]['dias_min'] ?: 1,
 						'dias_max'          	=> (int) $response[0]['dias_max'] ?: 120,
@@ -2050,7 +2056,7 @@ class get_functions extends general_functions
 			}
 		}
 
-		foreach ($response as $key => $value) {
+		foreach ($response as $key => &$value) {
 			if (empty($value['total'])) {
 				if ($value['error_age'] == 0) {
 					return $this->getError(50010);
@@ -2147,8 +2153,8 @@ class get_functions extends general_functions
 
 		$dataValida	= [
 			"9092"  => $prefix,
-			"6021"  => $lang,
-			"5022"  => $idPlan
+			"6021"  => $lang
+			//,"5022"  => $idPlan
 		];
 		$this->validatEmpty($dataValida);
 		$dataCurl1 = [
@@ -3230,7 +3236,7 @@ class get_functions extends general_functions
 		//////GRAFICA DE EDADES STATUS ILS
 		$query5 = "SELECT
 					orders.status,
-                 	IFNULL(beneficiaries.sexo,'N/A') AS sexo,
+					UPPER(IFNULL(beneficiaries.sexo,'N/A')) AS sexo,
                 	TIMESTAMPDIFF(
                         YEAR,
                         beneficiaries.nacimiento,
@@ -3240,6 +3246,7 @@ class get_functions extends general_functions
                 JOIN clients ON clients.prefix = orders.prefijo
                 JOIN beneficiaries ON beneficiaries.id_orden = orders.id
                 AND orders.prefijo = beneficiaries.prefijo
+				AND beneficiaries.ben_status = 1
 				WHERE
 					clients.data_activa = 'SI'
 				AND orders.fecha BETWEEN '$startDate'
@@ -3336,8 +3343,8 @@ class get_functions extends general_functions
 			SUM(orders.total) AS monto,
 			broker.id_broker AS id_broker
 		FROM
-			broker
-		INNER JOIN orders ON orders.agencia = broker.id_broker
+			orders 
+		INNER JOIN broker ON orders.agencia = broker.id_broker
 		AND broker.prefijo = orders.prefijo
 		WHERE
 			orders.fecha BETWEEN '$startDate'
@@ -3359,8 +3366,8 @@ class get_functions extends general_functions
 			SUM(orders.total) AS monto,
 			broker.id_broker AS id_broker
 		FROM
-			broker
-		INNER JOIN orders ON orders.agencia = broker.id_broker
+			orders
+		INNER JOIN broker ON orders.agencia = broker.id_broker
 		AND broker.prefijo = orders.prefijo
 		WHERE
 			orders.fecha BETWEEN '$startDate'
@@ -3429,10 +3436,17 @@ class get_functions extends general_functions
 			$arrAmount[$group][] = [$arrAmountData[$i]['broker'], $totalPrice];
 		}
 
-		$arrDataCnt[0]['data'] = $arrCount[0];
+		$arrDataCnt[0]['data'] = $arrCount[0]; //?: [['' => 0], ['' => 0]];
 		$arrDataCnt[1]['data'] = $arrCount[1];
-		$arrDataAmn[0]['data'] = $arrAmount[0];
+		$arrDataAmn[0]['data'] = $arrAmount[0]; //?: [['' => 0], ['' => 0]];
 		$arrDataAmn[1]['data'] = $arrAmount[1];
+
+		// if (empty($arrDataCnt[1]['data'])) {
+		// 	unset($arrDataCnt[1]);
+		// }
+		// if (empty($arrDataAmn[1]['data'])) {
+		// 	unset($arrDataAmn[1]);
+		// }
 
 		$seriesCnt = [
 			[
@@ -3686,7 +3700,7 @@ class get_functions extends general_functions
 		//GRAFICA DE LINEAS EDAD Y SEXO
 		$query4 = "SELECT
 		orders.prefijo,
-		beneficiaries.sexo AS sexo,
+		UPPER(IFNULL(beneficiaries.sexo,'N/A')) AS sexo,
 			TIMESTAMPDIFF(
 				YEAR,
 				beneficiaries.nacimiento,
@@ -3698,6 +3712,7 @@ class get_functions extends general_functions
 		JOIN clients ON clients.prefix = orders.prefijo
 		JOIN beneficiaries ON beneficiaries.id_orden = orders.id
 		AND orders.prefijo = beneficiaries.prefijo
+		AND beneficiaries.ben_status = 1
 		AND clients.data_activa = 'SI'
 		AND orders.fecha BETWEEN '$startDate'
 		AND '$endDate'
