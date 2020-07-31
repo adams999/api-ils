@@ -765,14 +765,11 @@ class general_functions extends Model
             $this->getError('2001');
         } elseif (!$checkDeparture or empty($departure)) {
             $this->getError('2002');
-        }
-        elseif ($departure < $today or $arrival < $today) {
+        } elseif ($departure < $today or $arrival < $today) {
             $this->getError('2004');
-        }
-        elseif (!$checkArrival or !$checkDeparture) {
+        } elseif (!$checkArrival or !$checkDeparture) {
             $this->getError('3020');
-        }
-        elseif ($arrival == $departure || $departure > $arrival) {
+        } elseif ($arrival == $departure || $departure > $arrival) {
             $this->getError('3030');
         }
     }
@@ -983,8 +980,7 @@ class general_functions extends Model
             return  DOMAIN_APP . "/admin/server/php/files/" . $termsPlan;
         } elseif (!empty($termsAgency) && $typeBroker == "1") {
             return  DOMAIN_APP . "upload_files/broker_parameters/" . $agency . "/condicionados/" . $termsAgency;
-        }
-        elseif (!empty($termsInsurance)) {
+        } elseif (!empty($termsInsurance)) {
             return  DOMAIN_APP . "/admin/server/php/files/" . $termsInsurance;
         }
     }
@@ -1103,11 +1099,9 @@ class general_functions extends Model
             return  DOMAIN_APP . "upload_files/logo_Agencia/" . $logoAgency;
         } elseif (!empty($logoAgencyMaster) && $datAgency[0]["type_broker"] == "1") {
             return  DOMAIN_APP . "upload_files/broker_parameters/" . $agency . "/logos/" . $logoAgencyMaster;
-        }
-        elseif (!empty($logoInsurance)) {
+        } elseif (!empty($logoInsurance)) {
             return  DOMAIN_APP . "/admin/pictures/thumbnail/" . $logoInsurance;
-        }
-        else {
+        } else {
             return  DOMAIN_APP . "/admin/pictures/thumbnail/logo.png";
         }
     }
@@ -2153,27 +2147,46 @@ class general_functions extends Model
     public function intervaloDias($prefix, $idCategory, $paisOrigen)
     {
         $query = "SELECT
-                MIN(min_tiempo) AS dias_min,
-                MAX(max_tiempo) AS dias_max,
-                plan_category.id_plan_categoria,
-                plan_category.type_category
-            FROM
-                plan_category
-            INNER JOIN plans ON plans.id_plan_categoria = plan_category.id_plan_categoria
-            AND plans.activo = 1
-            AND plans.eliminado = 1
-            WHERE
-                plan_category.id_plan_categoria = '$idCategory'";
+                    MIN(min_tiempo) AS dias_min,
+                    MAX(max_tiempo) AS dias_max,
+                    plan_category.id_plan_categoria,
+                	CASE
+                        WHEN plan_category.id_master_category = 1 THEN
+                            'SHORT_TRIP'
+                        WHEN plan_category.id_master_category = 2 THEN
+                            'LONG_STAY'
+                        WHEN plan_category.id_master_category = 3 THEN
+                            'MULTI_TRIP'
+                        WHEN plan_category.id_master_category = 4 THEN
+                            'CORPORATE'
+                        WHEN plan_category.id_master_category = 5 THEN
+                            'STUDENT'
+                        ELSE
+                            plan_category.id_master_category
+                    END AS type_category
+                FROM
+                    plan_category
+                INNER JOIN plans ON plans.id_plan_categoria = plan_category.id_plan_categoria
+                AND plans.prefijo = plan_category.prefijo
+                AND plans.activo = 1
+                AND (
+                    plans.eliminado = 1
+                    OR plans.eliminado IS NULL
+                )
+                WHERE
+                    plan_category.prefijo = '$prefix'
+                AND plan_category.id_plan_categoria = '$idCategory'";
 
-        $data = [
-            'querys' => $query
-        ];
+        // $data = [
+        //     'querys' => $query
+        // ];
 
-        $link          = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
-        $linkParam     = $link . "/app/api/selectDynamic";
-        $headers     = "content-type: application/x-www-form-urlencoded";
-        $response = $this->curlGeneral($linkParam, json_encode($data), $headers);
-        return json_decode($response, true);
+        // $link          = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+        // $linkParam     = $link . "/app/api/selectDynamic";
+        // $headers     = "content-type: application/x-www-form-urlencoded";
+        //$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
+        $response = $this->selectDynamic('', '', '', '', $query, '', '', '');
+        return $response;
     }
 
 

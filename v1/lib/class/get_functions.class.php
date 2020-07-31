@@ -1782,8 +1782,8 @@ class get_functions extends general_functions
 		$this->validatEmpty($dataValida);
 
 		$response = $this->intervaloDias($prefix, $idCategory, $paisOrigen);
-		switch ($response[0]['type_category']) {
-			case 'MULTI_TRIP':
+		switch (true) {
+			case ($response[0]['type_category'] == 'MULTI_TRIP' || $response[0]['type_category'] == 3):
 				$bloquesMultiViaje = $this->bloquesMultiViajes($prefix);
 
 				return [
@@ -1791,7 +1791,7 @@ class get_functions extends general_functions
 						'dias_min'          	=> (int) '365',
 						'dias_max'          	=> (int) '365',
 						'id_plan_categoria' 	=> (int) $response[0]['id_plan_categoria'],
-						'type_category'     	=> $response[0]['type_category'],
+						'type_category'     	=> 'MULTI_TRIP',
 						'bloques_multi_viajes' 	=> (!empty($bloquesMultiViaje) && !$bloquesMultiViaje['ERROR_CODE'])  ? $bloquesMultiViaje : $bloquesMultiViaje = [['dias_multiviajes' => 365]]
 					]
 				];
