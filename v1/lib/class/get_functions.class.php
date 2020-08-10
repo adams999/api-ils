@@ -319,7 +319,8 @@ class get_functions extends general_functions
 			'currency.value_iso AS moneda',
 			'credito_tipo',
 			'credito_nombre',
-			'orders.prefijo'
+			'orders.prefijo',
+			'credito_expira'
 		];
 
 		if ($source != 'public') {
@@ -603,11 +604,42 @@ class get_functions extends general_functions
 
 			$dataOrdersRaiders = $this->selectDynamic('', '', '', '', $sqlraidersOrders, '', '', '');
 
+			$coloresFondo = [
+				'actSVig' => '#CEE3F6',
+				'actVig'  => '#CEF6CE',
+				'actExp'  => '#F5F6CE',
+				'invAnul' => '#F6CECE',
+				'oter'    => '#FFFFFF'
+			];
+
 			foreach ($dataOrders as $key => &$value) {
 				$value['response'] = json_decode($value['response'], true);
 				$value['period_grace'] = (int) $periodGrace ?: 3;
 				$value['total']    = bcdiv($value['total'], 1, 2);
 				$value['total_mlc']  = bcdiv($value['total_mlc'], 1, 2);
+
+				switch (true) {
+					case (strtotime($value['fsalida']) < strtotime(date('d-m-Y')) && $value['status'] == 1):
+						$value['bg'] = $coloresFondo['actSVig'];
+						break;
+
+					case (strtotime($value['fsalida']) >= strtotime(date('d-m-Y')) && $value['status'] == 1):
+						$value['bg'] = $coloresFondo['actVig'];
+						break;
+
+					case ($value['status'] == 3):
+						$value['bg'] = $coloresFondo['actExp'];
+						break;
+
+					case ($value['status'] == 5 || $value['status'] == 4):
+						$value['bg'] = $coloresFondo['invAnul'];
+						break;
+
+					default:
+						$value['bg'] = $coloresFondo['oter'];
+						break;
+				}
+
 				foreach ($databeneficiaries as $key2 => &$value2) {
 					if ($value['id'] == $value2['id_orden']) {
 						$dataOrders[$key]['beneficiaries'][] = $databeneficiaries[$key2];
@@ -716,7 +748,8 @@ class get_functions extends general_functions
 			'v_authorizado',
 			'currency.value_iso AS moneda',
 			'credito_tipo',
-			'credito_nombre'
+			'credito_nombre',
+			'credito_expira'
 		];
 
 		if ($source != 'public') {
