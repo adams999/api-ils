@@ -1973,6 +1973,33 @@ class get_functions extends general_functions
 		$respons    = $this->curlGeneral($linkParam, json_encode($dataCurl), $headers);
 		$response   = json_decode($respons, true);
 
+		foreach ($response as $key => &$value) {
+			$idPlans[] = $value['idp'];
+		}
+
+		$idPlans = implode(",", $idPlans);
+
+		$queryPlanHabit = "SELECT
+							id,
+							dir_habitacion
+						FROM
+							plans
+						WHERE
+							prefijo = '$prefix'
+						AND id IN (" . $idPlans . ")";
+
+		$resultHabit = $this->selectDynamic('', '', '', '', $queryPlanHabit, '', '', '');
+
+		for ($i = 0; $i < count($response); $i++) { ///aqui traigo el parametro para saber si tiene direccion de habitacion o no
+			for ($a = 0; $a < count($resultHabit); $a++) {
+				if ($response[$i]['idp'] == $resultHabit[$a]['id'] && $resultHabit[$a]['dir_habitacion'] == 'Y') {
+					$response[$i]['dir_habit'] = 'Y';
+				} else {
+					$response[$i]['dir_habit'] = 'N';
+				}
+			}
+		}
+
 		$PreOrd = $this->preOrderApp($dataPreOrdn);
 
 		for ($i = 0; $i < count($response); $i++) { //Simplifica precios
