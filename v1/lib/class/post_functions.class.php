@@ -508,6 +508,15 @@ class post_functions extends general_functions
 			'referencia'                    => $allData['referencia']
 		];
 
+		if ($dataPreOrden['array_prices_app']['dir_habit'] == 'Y') {
+			$dataGenVoucher['hab_country']     = $allData['hab_country'];
+			$dataGenVoucher['hab_state']       = $allData['hab_state'];
+			$dataGenVoucher['hab_city']        = $allData['hab_city'];
+			$dataGenVoucher['hab_postal']      = $allData['hab_postal'];
+			$dataGenVoucher['hab_address']     = $allData['hab_address'];
+			$dataGenVoucher['hab_address_alt'] = $allData['hab_address_alt'];
+		}
+
 		if (($dataPreOrden['cupon']['VALUE_CUPON'] == 100 && $dataPreOrden['cupon']['TIPO_CALC'] == '%') || ($dataPreOrden['cupon']['PAGO_CUPON'] == 'Si')) { //////validacion para cupon
 			$dataGenVoucher['pagocupon'] = 'Si';
 			$dataGenVoucher['pago_cupon'] = 'Si';
