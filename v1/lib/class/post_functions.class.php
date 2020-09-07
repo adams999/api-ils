@@ -768,7 +768,7 @@ class post_functions extends general_functions
 		$id_broker 					= ($allData['agency'] != 'N/A' && !empty($allData['agency'])) ? $allData['agency'] : 118;
 		$userType 	  				= $allData['userType'];
 		$id_user	  				= !empty($allData['id_user']) ? $allData['id_user'] : 0;
-		$payment_status             = ($allData['resp_paypal_all']['details_paypal']['status'] == "APPROVED") ? 'Completed' : '';
+		$payment_status             = (strtoupper($allData['resp_paypal_all']['details_paypal']['status'])  == "APPROVED" && strtoupper($allData['resp_paypal_all']['transaction_complete_paypal']['status']) == "COMPLETED") ? 'Completed' : '';
 		$payer_id                   = $allData['resp_paypal_all']['details_paypal']['payer']['payer_id'];
 
 		$dataValida			= [
