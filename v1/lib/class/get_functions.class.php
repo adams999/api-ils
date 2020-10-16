@@ -973,6 +973,11 @@ class get_functions extends general_functions
 		return $dataOrders;
 	}
 
+	public function getAgencyParent($filters)
+	{
+		return [$filters, $this->agencysParent($filters['prefix'], $filters['idAgency'])];
+	}
+
 	public function getAgencys($filters)
 	{
 		$prefix  = $filters['prefix'];
