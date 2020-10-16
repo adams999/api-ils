@@ -110,7 +110,7 @@ class post_functions extends general_functions
 		FROM
 			parameters
 		WHERE
-			description = 'APPIONIC'
+			parameter_key IN('DOWNLOAD_PDF_VOUCHER_APP', 'SEND_EMAIL_APP', 'SEND_SMS_APP')
 		ORDER BY
 			parameter_key ASC"
 		];
@@ -118,31 +118,8 @@ class post_functions extends general_functions
 		$linkParam 	= $link . "/app/api/selectDynamic";
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response   = $this->curlGeneral($linkParam, json_encode($data), $headers);
-		if (empty($response) || $response == '[]') {
-			$data = [
-				'querys' => "INSERT INTO parameters (parameter_key, parameter_value, description) VALUES
-				('DOWNLOAD_PDF_VOUCHER_APP', 'Y', 'APPIONIC'),
-				('SEND_EMAIL_APP', 'Y', 'APPIONIC'),
-				('SEND_SMS_APP', 'Y', 'APPIONIC')"
-			];
-			$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
 
-			$data = [
-				'querys' => "SELECT
-				parameter_key,
-				parameter_value
-			FROM
-				parameters
-			WHERE
-				description = 'APPIONIC'
-			ORDER BY
-				parameter_key ASC"
-			];
-			$response = $this->curlGeneral($linkParam, json_encode($data), $headers);
-			return json_decode($response);
-		} else {
-			return json_decode($response);
-		}
+		return json_decode($response);
 	}
 	public function postInformAgency()
 	{
@@ -257,7 +234,7 @@ class post_functions extends general_functions
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 		$response = $this->curlGeneral($linkSms, http_build_query($dataSms), $headers);
 		$this->curlGeneral($linkSms, http_build_query($dataSmsResponse), $headers);
-		return $response;
+		return trim(strip_tags($response));
 	}
 	public function postUpdatePreorden()
 	{
@@ -814,6 +791,7 @@ class post_functions extends general_functions
 		$userType  = $allData['userType'];
 		$cupon     = $allData['cupon'];
 		$id_user   = !empty($allData['id_user']) ? $allData['id_user'] : 0;
+		$versionPhp = $this->generalPhpInfo($prefix);
 
 		$dataValida			= [
 			'9092'	=> $prefix,
@@ -834,48 +812,67 @@ class post_functions extends general_functions
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$headers 	= "content-type: application/x-www-form-urlencoded";
 
-		//curl para la plataforma en el envio de correo
-		$dataAddCurlEmail = [
-			'broker_sesion'    		=> $id_broker,
-			'selectLanguage'  		=> $lang_app,
-			'id_user'           	=> $id_user,
-			'user_type'         	=> $userType,
-			'act'                   => 'update_order',
-			'idorder'               => $dataOrden['id'],
-			'id_order'              => $dataOrden['id'],
-			'Anulado_Por_Admin'     => $userType == 13 ? 1 : 0, /////si es usuario master 13
-			'id_emision_type'       => $dataOrden['id_emision_type'],
-			'id_group'		        => $dataOrden['id_group'],
-			'codigo'				=> $dataOrden['codigo'],
-			'id_status'             => $statusNew == 'NC' ? '0' : $statusNew,
-			'cupon'                 => $dataOrden['cupon'],
-			'nombre_contacto'		=> $dataOrden['nombre_contacto'],
-			'telefono_contacto'		=> $dataOrden['telefono_contacto'],
-			'email_contacto'		=> $dataOrden['email_contacto'],
-			'origin'				=> $dataOrden['origen'],
-			'destino'				=> $dataOrden['destino'],
-			'territory'				=> $dataOrden['territory'],
-			'id_broker'				=> $dataOrden['agencia'],
-			'idplan'				=> $dataOrden['producto'],
-			'idorder'				=> $dataOrden['id'],
-			'precio'				=> $dataOrden['total'],
-			'nombre_agencia'		=> $dataOrden['nombre_agencia'],
-			'comentarios'			=> $dataOrden['comentarios'],
-			'vendedor'				=> $dataOrden['vendedor'],
-			'agente_vendedor'		=> $dataOrden['vendedor'],
-			'comentario_interno'	=> $dataOrden['comentario_interno'],
-			'name_broker'			=> $dataOrden['nombre_agencia'],
-			'comentariolog'			=> 'Update status voucher ' . $dataOrden['codigo'],
-			'cupon'                 => $cupon
-		];
+		if ((float)$versionPhp['Core']['PHP Version'] > 7) {
+			$dataStatus = [
+				'status' 			=> $statusNew == 'NC' ? '5' : $statusNew,
+				'id' 				=> $idOrden,
+				'voucher' 			=> $dataOrden['codigo'],
+				'total' 			=> $dataOrden['total'],
+				'notecredit' 		=> $statusNew == 'NC' ? 'Y' : 'N',
+				'type' 				=> 'change_status',
+				'broker_sesion'    	=> $id_broker,
+				'selectLanguage'  	=> $lang_app,
+				'id_user'           => $id_user,
+				'user_type'         => $userType,
+			];
 
-		if (!empty($cupon)) {
-			$queryCupon = [
+			$linkCurl 	= $link . "/app/admin/async_manage_orders.php";
+			$curlStatus  = strip_tags(preg_replace("/[\r\n|\n|\r|\t|\t\n|\n\n|\R]+/", PHP_EOL, $this->curlGeneral($linkCurl, http_build_query($dataStatus), $headers)));
+			return ['data' => $curlStatus, "status" => 'OK'];
+		} else {
+
+			//curl para la plataforma en el envio de correo
+			$dataAddCurlEmail = [
 				'broker_sesion'    		=> $id_broker,
 				'selectLanguage'  		=> $lang_app,
 				'id_user'           	=> $id_user,
 				'user_type'         	=> $userType,
-				"querys"  =>  "SELECT
+				'act'                   => 'update_order',
+				'idorder'               => $dataOrden['id'],
+				'id_order'              => $dataOrden['id'],
+				'Anulado_Por_Admin'     => $userType == 13 ? 1 : 0, /////si es usuario master 13
+				'id_emision_type'       => $dataOrden['id_emision_type'],
+				'id_group'		        => $dataOrden['id_group'],
+				'codigo'				=> $dataOrden['codigo'],
+				'id_status'             => $statusNew == 'NC' ? '0' : $statusNew,
+				'cupon'                 => $dataOrden['cupon'],
+				'nombre_contacto'		=> $dataOrden['nombre_contacto'],
+				'telefono_contacto'		=> $dataOrden['telefono_contacto'],
+				'email_contacto'		=> $dataOrden['email_contacto'],
+				'origin'				=> $dataOrden['origen'],
+				'destino'				=> $dataOrden['destino'],
+				'territory'				=> $dataOrden['territory'],
+				'id_broker'				=> $dataOrden['agencia'],
+				'idplan'				=> $dataOrden['producto'],
+				'idorder'				=> $dataOrden['id'],
+				'precio'				=> $dataOrden['total'],
+				'nombre_agencia'		=> $dataOrden['nombre_agencia'],
+				'comentarios'			=> $dataOrden['comentarios'],
+				'vendedor'				=> $dataOrden['vendedor'],
+				'agente_vendedor'		=> $dataOrden['vendedor'],
+				'comentario_interno'	=> $dataOrden['comentario_interno'],
+				'name_broker'			=> $dataOrden['nombre_agencia'],
+				'comentariolog'			=> 'Update status voucher ' . $dataOrden['codigo'],
+				'cupon'                 => $cupon
+			];
+
+			if (!empty($cupon)) {
+				$queryCupon = [
+					'broker_sesion'    		=> $id_broker,
+					'selectLanguage'  		=> $lang_app,
+					'id_user'           	=> $id_user,
+					'user_type'         	=> $userType,
+					"querys"  =>  "SELECT
 									*
 								FROM
 									coupons
@@ -888,36 +885,37 @@ class post_functions extends general_functions
 								AND NOW() BETWEEN DATE(fecha_desde)
 								AND DATE(fecha_hasta)
 								AND ussage > 0"
-			];
-			$linkCurl 	= $link . "/app/api/selectDynamic";
-			$dataCupon   = json_decode($this->curlGeneral($linkCurl, json_encode($queryCupon), $headers), true)[0];
+				];
+				$linkCurl 	= $link . "/app/api/selectDynamic";
+				$dataCupon   = json_decode($this->curlGeneral($linkCurl, json_encode($queryCupon), $headers), true)[0];
 
-			if (empty($dataCupon)) {
-				switch ($lang_app) {
-					case 'es':
-						return [['notes' => 'Cupón Ingresado Inválido']];
-						break;
+				if (empty($dataCupon)) {
+					switch ($lang_app) {
+						case 'es':
+							return [['notes' => 'Cupón Ingresado Inválido']];
+							break;
 
-					case 'pr':
-						return [['notes' => 'Cupom inserido inválido']];
-						break;
+						case 'pr':
+							return [['notes' => 'Cupom inserido inválido']];
+							break;
 
-					case 'en':
-						return [['notes' => 'Coupon Entered Invalid']];
-						break;
+						case 'en':
+							return [['notes' => 'Coupon Entered Invalid']];
+							break;
 
-					default:
-						return [['notes' => 'Cupon Ingresado Inválido']];
-						break;
+						default:
+							return [['notes' => 'Cupon Ingresado Inválido']];
+							break;
+					}
 				}
 			}
+
+			//return $dataCurlEmail = $dataAddCurlEmail;
+			$linkCurl 	= $link . "/app/admin/async_report_man_serv.php";
+			$curlEmail   = $this->curlGeneral($linkCurl, http_build_query($dataAddCurlEmail), $headers);
+
+			return ['data' => $curlEmail, "status" => 'OK'];
 		}
-
-		//return $dataCurlEmail = $dataAddCurlEmail;
-		$linkCurl 	= $link . "/app/admin/async_report_man_serv.php";
-		$curlEmail   = $this->curlGeneral($linkCurl, http_build_query($dataAddCurlEmail), $headers);
-
-		return ['data' => $curlEmail, "status" => 'OK'];
 	}
 
 	public function sendVouchEmail()
@@ -1023,6 +1021,7 @@ class post_functions extends general_functions
 		if (!empty($validatEmpty)) {
 			return $validatEmpty;
 		}
+
 		$data				= [
 			"user_type",
 			"language_id",
@@ -1102,6 +1101,7 @@ class post_functions extends general_functions
 				LIMIT 1
 			) AS colorsPlatf"
 		];
+
 		$userExist	= $this->selectDynamic('', 'users_extern', " users='$user' AND prefijo = '$prefix' ", $data, '', '', ['field' => 'id', 'order' => 'desc']);
 		if (!empty($userExist)) {
 			$prefijExist	= $this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['prefix']);
@@ -1130,15 +1130,17 @@ class post_functions extends general_functions
 						$dataUser			= $this->selectDynamic(['users' => $user, 'id_status' => '1', 'prefijo' => $prefix], 'users_extern', "password='$passwordEncript'", $data, '', '', ['field' => 'id', 'order' => 'desc'], '', '');
 					}
 					if (!empty($dataUser)) {
+						$dataBasicMaster = $this->agencysParent($prefix, $dataUser[0]['agency']);
+						$versionPhp = $this->generalPhpInfo($prefix);
 
 						switch ($dataUser[0]["language_id"]) {
-							case 'eng':
+							case ($dataUser[0]["language_id"] == 'eng' || $dataUser[0]["language_id"] == 'en'):
 								$dataUser[0]["language_id"] = 'eng';
 								break;
-							case 'spa':
+							case ($dataUser[0]["language_id"] == 'spa' || $dataUser[0]["language_id"] == 'es'):
 								$dataUser[0]["language_id"] = 'spa';
 								break;
-							case 'por':
+							case ($dataUser[0]["language_id"] == 'por' || $dataUser[0]["language_id"] == 'pt'):
 								$dataUser[0]["language_id"] = 'por';
 								break;
 							default:
@@ -1153,10 +1155,10 @@ class post_functions extends general_functions
 														INNER JOIN broker_parameters ON broker_parameters.id_broker = broker_nivel.`master`
 														AND broker_parameters.prefijo = broker_nivel.prefijo
 														WHERE
-														broker_nivel.prefijo = '$prefix'
-														AND broker_nivel.id_broker = '{$dataUser[0]["agency"]}'
+															broker_nivel.prefijo = '$prefix'
+														AND broker_nivel.id_broker = '{$dataBasicMaster["id_broker"]}'
 														ORDER BY
-														id_broker_nivel DESC
+															id_broker_nivel DESC
 														LIMIT 1", '', '', '')[0]['prefijo_ref'];
 
 						$response = [
@@ -1173,32 +1175,26 @@ class post_functions extends general_functions
 							'code_phone'    => $dataUser[0]["code_phone"],
 							'phone'     	=> $dataUser[0]["phone"],
 							'agency'    	=> $dataUser[0]["agency"] ?: 'N/A',
-							'nivelAgency'   => (in_array($dataUser[0]["user_type"], [1, 13])) ? 'N/A' : $this->getAgencyMaster($prefix, $dataUser[0]["agency"])[0]['nivel'],
-							'agencyMaster'  => $this->getAgencyMaster($prefix, $dataUser[0]["agency"])[0]['master'] ?: 'N/A',
+							'nivelAgency'   => (in_array($dataUser[0]["user_type"], [1, 13])) ? 'N/A' : $this->getAgencyMaster($prefix, $dataBasicMaster["id_broker"])[0]['nivel'],
+							'agencyMaster'  => $dataBasicMaster['master'] == 'Y' ? $dataBasicMaster['id_broker'] : 'N/A',
 							'pais'      	=> $dataUser[0]["pais"],
 							'prefAgency'    => !empty($pref_master) ? $pref_master : 'N/A',
-							'nombreAgenMaster' => $dataUser[0]["nombreAgenMaster"] ?: 'N/A',
+							'nombreAgenMaster' => !empty($dataBasicMaster['name_broker']) ? $dataBasicMaster['name_broker'] : 'N/A',
 							'urlPlatform' 	=> $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']),
-							'paramAgency' 	=> $dataUser[0]["prefAgency"] ? $this->selectDynamic('', '', '', '', "SELECT * FROM broker_parameters WHERE id_broker = '{$dataUser[0]['agency']}' AND prefijo = '$prefix' ORDER BY id_broker_parameters DESC limit 1", '', '', '', '')[0] : 'N/A',
-							'langApp'       => $dataUser[0]["language_id"]
+							'paramAgency' 	=> ($dataBasicMaster['master'] == 'Y') ? $this->selectDynamic('', '', '', '', "SELECT * FROM broker_parameters WHERE id_broker = '{$dataBasicMaster['id_broker']}' AND prefijo = '$prefix' ORDER BY id_broker_parameters DESC limit 1", '', '', '', '')[0] : 'N/A',
+							'langApp'       => $dataUser[0]["language_id"],
+							'platfNew'      => (((float)$versionPhp['Core']['PHP Version'] > 7) ? 'Y' : 'N')
 						];
 
-						switch ($response['paramAgency']) {
-							case !isset($response['paramAgency']['dominio']):
-								$idAgencyPadre = $this->getAgencyMaster($prefix, $response['agency'])[0]['master'];
-								$response['paramAgency'] = $this->selectDynamic('', '', '', '', "SELECT * FROM broker_parameters WHERE id_broker = '$idAgencyPadre' AND prefijo = '$prefix' ORDER BY id_broker_parameters DESC limit 1", '', '', '', '')[0] ?: 'N/A';
-								break;
-
-							case $response['agencyMaster'] != 'N/A':
-								$idAgencyPadre = $this->getAgencyMaster($prefix, $response['agency'])[0]['master'];
-								$response['paramAgency'] = $this->selectDynamic('', '', '', '', "SELECT * FROM broker_parameters WHERE id_broker = '$idAgencyPadre' AND prefijo = '$prefix' ORDER BY id_broker_parameters DESC limit 1", '', '', '', '')[0] ?: 'N/A';
-								break;
-
-							default:
-								$response['paramAgency'] = 'N/A';
-								break;
+						if (empty($response['paramAgency']['color_fuente'])) {
+							$response['paramAgency']['color_fuente'] = '#FFFFFF';
 						}
-
+						if (!empty($response['paramAgency']['dominio'])) {
+							$response['paramAgency']['dominio'] = $this->baseURL($response['paramAgency']['dominio']);
+						}
+						if (!is_array($response['paramAgency'])) {
+							$response['paramAgency'] = 'N/A';
+						}
 						return $response;
 					} else {
 						return $this->getError(9090);

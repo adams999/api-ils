@@ -1751,9 +1751,102 @@ class general_functions extends Model
         }
     }
 
+    public function agencysParent($prefix, $idAgency = '0')
+    {
+        $resp = $this->recursiveAgency($prefix, $idAgency);
+
+        if (!empty($idAgency) && $resp['parent'] == 0 || $resp['parent'] == $idAgency || $resp['nivel'] == 1) {
+            $respTot = $resp;
+            return $this->validityAgencyMaster($respTot, $prefix);
+        } else {
+            $resp1 = $this->recursiveAgency($prefix, $resp['parent']);
+            if (!empty($resp1) && $resp1['parent'] == 0 || $resp1['nivel'] == 1) {
+                $respTot = $resp1;
+                return $this->validityAgencyMaster($respTot, $prefix);
+            } else {
+                $resp2 = $this->recursiveAgency($prefix, $resp1['parent']);
+                if (!empty($resp2['parent'])) {
+                    $resp3 = $this->recursiveAgency($prefix, $resp2['parent']);
+                    if (!empty($resp3['parent'])) {
+                        $resp4 = $this->recursiveAgency($prefix, $resp3['parent']);
+                        if (!empty($resp4['parent'])) {
+                            $respTot = $resp4;
+                            return $this->validityAgencyMaster($respTot, $prefix);
+                        } else {
+                            $respTot = $resp4;
+                            return $this->validityAgencyMaster($respTot, $prefix);
+                        }
+                    } else {
+                        $respTot = $resp3;
+                        return $this->validityAgencyMaster($respTot, $prefix);
+                    }
+                } else {
+                    $respTot = $resp2;
+                    return $this->validityAgencyMaster($respTot, $prefix);
+                }
+            }
+        }
+    }
+
+    public function recursiveAgency($prefix, $idAgency)
+    {
+        $sqlAgency = "SELECT broker_nivel.id, 
+                        broker_nivel.id_broker, 
+                        broker_nivel.nivel, 
+                        broker_nivel.parent, 
+                        broker_nivel.master 
+                    FROM broker_nivel 
+                    WHERE id_broker = '$idAgency'
+                    AND prefijo = '$prefix'";
+
+        return $this->selectDynamic('', '', '', '', $sqlAgency, '', '', '', '')[0];
+    }
+
+    public function validityAgencyMaster($data, $prefix)
+    {
+        $sqlAgencyMaster = "SELECT
+                                type_broker,
+                                id_broker,
+                                broker
+                            FROM
+                                broker
+                            WHERE
+                                prefijo = '$prefix'
+                            AND id_broker = '{$data['id_broker']}'";
+
+        $respAgncyMaster = $this->selectDynamic('', '', '', '', $sqlAgencyMaster, '', '', '', '')[0];
+
+        if (!empty($respAgncyMaster)) {
+            return [
+                'id_broker'     => $respAgncyMaster['id_broker'],
+                'type_broker'   => $respAgncyMaster['type_broker'],
+                'name_broker'   => $respAgncyMaster['broker'],
+                'master'        => $respAgncyMaster['type_broker'] == 1 ? 'Y' : 'N'
+            ];
+        } else {
+            return [
+                'id_broker'     => '0',
+                'type_broker'   => '2',
+                'name_broker'   => 'N/A',
+                'master'        => 'N'
+            ];
+        }
+    }
+
     public function getAgencyMaster($prefix, $idAgency)
     {
         return  $this->selectDynamic('', '', '', '', "SELECT * FROM broker_nivel WHERE prefijo = '$prefix' AND id_broker = '$idAgency' ORDER BY id_broker_nivel DESC LIMIT 1", '', '', '');
+    }
+
+    public function generalPhpInfo($prefix)
+    {
+        $url = $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
+        $url = $url . "/app/api/phpinfo2array";
+        $headers     = "content-type: application/x-www-form-urlencoded";
+
+        $data = ['data' => true];
+
+        return json_decode($this->curlGeneral($url, $data, $headers), true);
     }
 
     public function addResources($prefix, $location, $filename)
