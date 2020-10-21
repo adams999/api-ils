@@ -556,7 +556,7 @@ class get_functions extends general_functions
 			ORDER BY
 				nombre ASC";
 
-			$databeneficiaries = $this->selectDynamic('', '', '', '', $sqlBeneficiaries, '', '', '');
+			$databeneficiaries = $this->selectDynamic('', '', '', '', $sqlBeneficiaries, '', '', '', '');
 
 			$sqlraidersOrders = "SELECT
 			orders_raider.id,
@@ -602,7 +602,7 @@ class get_functions extends general_functions
 		ORDER BY
 			nombre ASC";
 
-			$dataOrdersRaiders = $this->selectDynamic('', '', '', '', $sqlraidersOrders, '', '', '');
+			$dataOrdersRaiders = $this->selectDynamic('', '', '', '', $sqlraidersOrders, '', '', '', '');
 
 			$coloresFondo = [
 				'actSVig' => '#CEE3F6',
@@ -1984,7 +1984,8 @@ class get_functions extends general_functions
 
 		$idPlans = implode(",", $idPlans);
 
-		$queryPlanHabit = "SELECT
+		if (!empty($idPlans)) {
+			$queryPlanHabit = "SELECT
 							id,
 							dir_habitacion
 						FROM
@@ -1993,7 +1994,8 @@ class get_functions extends general_functions
 							prefijo = '$prefix'
 						AND id IN (" . $idPlans . ")";
 
-		$resultHabit = $this->selectDynamic('', '', '', '', $queryPlanHabit, '', '', '');
+			$resultHabit = $this->selectDynamic('', '', '', '', $queryPlanHabit, '', '', '');
+		}
 
 		for ($i = 0; $i < count($response); $i++) { ///aqui traigo el parametro para saber si tiene direccion de habitacion o no
 			for ($a = 0; $a < count($resultHabit); $a++) {

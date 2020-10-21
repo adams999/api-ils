@@ -422,6 +422,7 @@ class post_functions extends general_functions
 			'x_id_orden'                    => $id_orden, ////id de la orden
 			'x_id_benefi'                   => $ids_pasaj, ///ids de los benifiarios con ,
 			'active_overage'                => 0,
+			'array_' . $dataPreOrden['id_plan'] => json_encode($dataPreOrden['array_prices_app']),
 			'tiepoid'                       => $dataPreOrden['array_prices_app']['tiepoid'],
 			'n_riders'                      => count($dataPreOrden['upgrades']),
 			'activofactor'                  => ($platfProcNuevo) ? (($dataPreOrden['array_prices_app']['activofactor']) == 'si' ? 'Y' : 'N') : (($dataPreOrden['array_prices_app']['activofactor']) == 'si' ? 'si' : 'no'),
@@ -584,10 +585,6 @@ class post_functions extends general_functions
 			$allData['TDC']['pay_phoneCode'] ? $dataGenVoucher['pay_phoneCode'] = $allData['TDC']['pay_phoneCode'] : '';
 			$allData['TDC']['pay_phoneNumbre'] ? $dataGenVoucher['pay_phoneNumbre'] = $allData['TDC']['pay_phoneNumbre'] : '';
 		}
-
-		// if (in_array($_SERVER["REMOTE_ADDR"], array("181.33.187.85"))) {
-		// 	return $dataGenVoucher;
-		// }
 
 		$link 		= $this->baseURL($this->selectDynamic(['prefix' => $prefix], 'clients', "data_activa='si'", ['web'])[0]['web']);
 		$linkPlatf 	= $link . "/app/pages/quote.php";
