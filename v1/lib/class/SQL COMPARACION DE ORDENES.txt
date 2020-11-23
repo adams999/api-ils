@@ -1,5 +1,7 @@
 SELECT
 	tabTtest.id AS id_orden,
+	tabTtest.id_emision_type,
+	tabTtest.nombre_agencia,
 	tabTtest.fecha,
 	tabTtest.codigo,
 	tabTtest. STATUS,
@@ -8,6 +10,7 @@ SELECT
 	tabTtest.cantidad AS Cant_Pasj,
 	SUM(tabTtest.ben_raider) AS raider_total,
 	sum(tabTtest.precio_vta) AS precio_vta,
+	sum(tabTtest.total_benef) AS total_benefit,
 	sum(tabTtest.cupon_descto) AS descuento,
 	tabTtest.total,
 	(
@@ -18,8 +21,13 @@ SELECT
 	(
 		(
 			tabTtest.total - SUM(tabTtest.ben_raider) - sum(tabTtest.precio_vta)
-		) - sum(tabTtest.cupon_descto)
-	) AS Diferencia,
+		) + sum(tabTtest.cupon_descto)
+	) AS Diff_de_tot,
+	(
+		(
+			sum(tabTtest.precio_vta) + SUM(tabTtest.ben_raider) - sum(tabTtest.cupon_descto)
+		) - sum(tabTtest.total_benef)
+	) AS Diff_neto_benef,
 
 IF (
 	abs(
@@ -34,6 +42,8 @@ FROM
 	(
 		SELECT
 			orders.id,
+			id_emision_type,
+			nombre_agencia,
 			beneficiaries.id AS id_benefit,
 			orders.fecha,
 			orders.codigo,
@@ -88,12 +98,14 @@ FROM
 				IFNULL(cupon_descto, 0) / cantidad
 			) AS cupon_descto,
 			cupon_descto AS desc_tot,
-			orders.total
+			orders.total,
+			total_neto_benefit AS total_benef
 		FROM
 			orders
 		INNER JOIN beneficiaries ON orders.id = beneficiaries.id_orden
+		AND beneficiaries.ben_status = 1
 		WHERE
-			orders.fecha BETWEEN '2019-01-01'
+			orders.fecha BETWEEN '2018-01-01'
 		AND '2020-12-31'
 	) AS tabTtest
 GROUP BY
@@ -101,10 +113,16 @@ GROUP BY
 HAVING
 	(
 		(
-			(tabTtest.total - SumaTotal) > 0.1
+			(tabTtest.total - SumaTotal) > 0.01
 		)
 		OR (
-			(tabTtest.total - SumaTotal) < - 0.1
+			(tabTtest.total - SumaTotal) < - 0.01
+		)
+		OR (
+			(SumaTotal - total_benefit) > 0.01
+		)
+		OR (
+			(SumaTotal - total_benefit) < - 0.01
 		)
 	)
 ORDER BY
