@@ -9,7 +9,7 @@ SELECT
 	GROUP_CONCAT('  |  ', tabTtest.nombre) AS Nombre_Pasajeros,
 	tabTtest.cantidad AS Cant_Pasj,
 	SUM(tabTtest.ben_raider) AS raider_total,
-	SUM(tabTtest.ben_raider_cost) AS raider_neto,
+	SUM(tabTtest.ben_raider_cost) AS raider_costo,
 	sum(tabTtest.precio_vta) AS precio_vta,
 	sum(tabTtest.total_benef) AS total_benefit,
 	sum(tabTtest.precio_cost) AS total_costo_benefit,
@@ -39,7 +39,7 @@ SELECT
 	(
 		(
 			sum(tabTtest.precio_cost) + SUM(tabTtest.ben_raider_cost)
-		) - sum(tabTtest.neto_cost)
+		) - tabTtest.neto_prov
 	) AS Diff_cost_benef
 FROM
 	(
@@ -173,10 +173,14 @@ HAVING
 			(SumaTotal - total_benefit) < - 0.01
 		)
 		OR (
-			(tabTtest.neto_prov - SumaTotalCosto) > 0.01
+			(
+				tabTtest.neto_prov - SumaTotalCosto
+			) > 0.01
 		)
 		OR (
-			(tabTtest.neto_prov - SumaTotalCosto) < - 0.01
+			(
+				tabTtest.neto_prov - SumaTotalCosto
+			) < - 0.01
 		)
 	)
 ORDER BY
